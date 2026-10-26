@@ -1905,7 +1905,10 @@ def main() -> None:
     if "windows" in target:
         sign_windows_file(app_binary)
         sign_windows_file(update_helper)
-        create_windows_installer(app_binary, update_helper, target, version, label, identity)
+        if find_makensis():
+            create_windows_installer(app_binary, update_helper, target, version, label, identity)
+        else:
+            print("==> NSIS (makensis) not found; skipping Windows setup installer (.exe).", flush=True)
     if "apple-darwin" in target:
         sign_macos_path(app_binary)
     # Every target should publish a self-contained portable artifact; Windows

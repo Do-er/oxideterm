@@ -113,6 +113,17 @@ fn app_icon_resource_roots() -> Vec<PathBuf> {
         roots.push(exe_dir.join("resources").join("icons"));
         roots.push(exe_dir.join("..").join("Resources").join("icons"));
         roots.push(exe_dir.join("icons"));
+        for ancestor in exe_dir.ancestors() {
+            let candidate = ancestor
+                .join("crates")
+                .join("oxideterm-gpui-app")
+                .join("resources")
+                .join("icons");
+            if candidate.exists() {
+                roots.push(candidate);
+                break;
+            }
+        }
     }
     if let Ok(cwd) = std::env::current_dir() {
         roots.push(

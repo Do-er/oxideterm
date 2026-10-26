@@ -1,6 +1,7 @@
 # Rust / Cargo
 target/
 **/*.rs.bk
+TODO*
 
 # macOS
 .DS_Store
