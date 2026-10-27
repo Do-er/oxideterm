@@ -34,6 +34,8 @@ pub fn settings_tab_from_ai_section(section: &str) -> Option<SettingsTab> {
         "ai" | "assistant" => Some(SettingsTab::Ai),
         "knowledge" | "rag" => Some(SettingsTab::Knowledge),
         "keybindings" | "keyboard" => Some(SettingsTab::Keybindings),
+        "extensions" | "plugins" | "plugin_manager" => Some(SettingsTab::Extensions),
+        "cloud_sync" | "sync" => Some(SettingsTab::CloudSync),
         "help" => Some(SettingsTab::Help),
         _ => None,
     }

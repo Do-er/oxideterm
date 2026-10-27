@@ -219,6 +219,8 @@ pub fn settings_tab_section_count(
         SettingsTab::Keybindings => {
             keybinding_settings_section_count(dynamic.visible_keybinding_scope_count)
         }
+        SettingsTab::Extensions => 1,
+        SettingsTab::CloudSync => 1,
         SettingsTab::Help => 6,
     }
 }

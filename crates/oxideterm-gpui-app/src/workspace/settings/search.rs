@@ -803,6 +803,18 @@ fn settings_search_specs() -> Vec<SettingsSearchEntrySpec> {
                 "settings_view.help.license",
             ],
         ),
+        settings_search_entry(
+            SettingsTab::Extensions,
+            0,
+            "settings_view.extensions.title",
+            &["sidebar.panels.plugins"],
+        ),
+        settings_search_entry(
+            SettingsTab::CloudSync,
+            0,
+            "settings_view.cloud_sync.title",
+            &["plugin.cloud_sync.panel_title"],
+        ),
     ];
 
     #[cfg(any(target_os = "windows", target_os = "macos"))]

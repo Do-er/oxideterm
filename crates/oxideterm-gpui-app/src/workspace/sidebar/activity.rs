@@ -11,20 +11,8 @@ impl WorkspaceApp {
         cx: &mut Context<Self>,
     ) -> AnyElement {
         let theme = self.tokens.ui;
-        let top_items = [
-            (SidebarSection::Sessions, LucideIcon::Link2),
-            (SidebarSection::Connections, LucideIcon::LayoutList),
-            (SidebarSection::Runtime, LucideIcon::Gauge),
-            (SidebarSection::Extensions, LucideIcon::Puzzle),
-            (SidebarSection::CloudSync, LucideIcon::Cloud),
-            (SidebarSection::Knowledge, LucideIcon::BookOpen),
-        ];
-        let bottom_items = [
-            (SidebarSection::Workspace, LucideIcon::Square),
-            (SidebarSection::Files, LucideIcon::FolderOpen),
-            (SidebarSection::Notifications, LucideIcon::Bell),
-            (SidebarSection::Settings, LucideIcon::Settings),
-        ];
+        let top_items = [(SidebarSection::Sessions, LucideIcon::Link2)];
+        let bottom_items = [(SidebarSection::Workspace, LucideIcon::Square)];
         let mut bar = div()
             .w(px(self.tokens.metrics.activity_bar_width))
             .h_full()
@@ -114,50 +102,6 @@ impl WorkspaceApp {
         for (section, icon) in top_items {
             primary_items = primary_items.child(self.render_activity_icon(section, icon, cx));
         }
-        let plugin_activity_items = self
-            .plugin_entity
-            .read(cx)
-            .registry()
-            .contributions()
-            .runtime_activity_bar_items();
-        let plugin_sidebar_panels = self
-            .plugin_entity
-            .read(cx)
-            .registry()
-            .contributions()
-            .runtime_sidebar_panels();
-        // Keep built-in entries stationary as plugins are enabled or disabled.
-        if plugin_sidebar_panels
-            .iter()
-            .any(|panel| panel.position == "top")
-            || plugin_activity_items
-                .iter()
-                .any(|item| item.position == "top")
-        {
-            primary_items = primary_items.child(
-                div()
-                    .flex_none()
-                    .w(px(self.tokens.metrics.divider_width))
-                    .h(px(self.tokens.metrics.divider_height))
-                    .mb(px(self.tokens.metrics.activity_icon_gap))
-                    .bg(self.workspace_divider_color(theme.divider, 0xff)),
-            );
-        }
-        for panel in plugin_sidebar_panels
-            .iter()
-            .filter(|panel| panel.position == "top")
-            .cloned()
-        {
-            primary_items =
-                primary_items.child(self.render_plugin_sidebar_activity_icon(panel, cx));
-        }
-        for item in plugin_activity_items
-            .iter()
-            .filter(|item| item.position == "top")
-            .cloned()
-        {
-            primary_items = primary_items.child(self.render_plugin_activity_action_icon(item, cx));
-        }
 
         let mut bottom = div().relative().flex().flex_col().items_center().child(
             div()
@@ -165,18 +109,6 @@ impl WorkspaceApp {
                 .h(px(self.tokens.metrics.divider_height))
                 .bg(self.workspace_divider_color(theme.divider, 0xff)),
         );
-        for panel in plugin_sidebar_panels
-            .into_iter()
-            .filter(|panel| panel.position == "bottom")
-        {
-            bottom = bottom.child(self.render_plugin_sidebar_activity_icon(panel, cx));
-        }
-        for item in plugin_activity_items
-            .into_iter()
-            .filter(|item| item.position == "bottom")
-        {
-            bottom = bottom.child(self.render_plugin_activity_action_icon(item, cx));
-        }
         bottom = bottom.children(
             bottom_items
                 .into_iter()
@@ -329,33 +261,12 @@ impl WorkspaceApp {
         let theme = self.tokens.ui;
         let active = match section {
             SidebarSection::Terminal => false,
-            SidebarSection::Runtime => self
-                .active_content_tab(cx)
-                .is_some_and(|tab| tab.kind == TabKind::Runtime),
             SidebarSection::Network => {
                 self.active_content_tab(cx)
                     .is_some_and(|tab| tab.kind == TabKind::Runtime)
                     && self.host_tools.read(cx).active_runtime_section
                         == ConnectionRuntimeSection::Topology
             }
-            SidebarSection::Files => self
-                .active_content_tab(cx)
-                .is_some_and(|tab| tab.kind == TabKind::FileManager),
-            SidebarSection::Notifications => self
-                .active_content_tab(cx)
-                .is_some_and(|tab| tab.kind == TabKind::NotificationCenter),
-            SidebarSection::Extensions => self
-                .active_content_tab(cx)
-                .is_some_and(|tab| tab.kind == TabKind::PluginManager),
-            SidebarSection::CloudSync => self
-                .active_content_tab(cx)
-                .is_some_and(|tab| tab.kind == TabKind::CloudSync),
-            SidebarSection::Knowledge => self
-                .active_content_tab(cx)
-                .is_some_and(|tab| tab.kind == TabKind::Knowledge),
-            SidebarSection::Settings => self
-                .active_content_tab(cx)
-                .is_some_and(|tab| tab.kind == TabKind::Settings),
             SidebarSection::Assistant => self.ai_sidebar_visible(),
             SidebarSection::HostTools => {
                 self.context_sidebar_visible()
@@ -366,31 +277,19 @@ impl WorkspaceApp {
         let tooltip = self.activity_icon_tooltip(section);
         let tooltip_id = format!("activity-icon-{}", section.as_settings_key());
         let tooltip_id_for_move = tooltip_id.clone();
-        let badge_count = if section == SidebarSection::Notifications {
-            let notification_count = if self.notification_center.notifications.dnd_enabled {
-                0
-            } else {
-                self.notification_center.notifications.unread_count
-            };
-            notification_count
-        } else if section == SidebarSection::Workspace {
+        let badge_count = if section == SidebarSection::Workspace {
             self.visible_local_terminal_session_count(cx)
                 .saturating_add(self.detached_local_terminals.len())
                 .min(u32::MAX as usize) as u32
         } else {
             0
         };
-        let badge_is_error = section == SidebarSection::Notifications
-            && !self.notification_center.notifications.dnd_enabled
-            && self.notification_center.notifications.unread_critical_count > 0;
-        let badge_color = if badge_is_error {
-            theme.error
-        } else if section == SidebarSection::Workspace && !self.detached_local_terminals.is_empty()
-        {
-            theme.warning
-        } else {
-            theme.accent
-        };
+        let badge_color =
+            if section == SidebarSection::Workspace && !self.detached_local_terminals.is_empty() {
+                theme.warning
+            } else {
+                theme.accent
+            };
         let badge_text_color = if badge_color == theme.accent {
             theme.accent_text
         } else {
@@ -474,17 +373,7 @@ impl WorkspaceApp {
             .on_mouse_down(
                 MouseButton::Left,
                 cx.listener(move |this, _event, window, cx| {
-                    if section == SidebarSection::Settings {
-                        this.open_settings(window, cx);
-                    } else if section == SidebarSection::Connections {
-                        this.open_session_manager_tab(window, cx);
-                    } else if section == SidebarSection::Terminal {
-                        this.open_connection_runtime_tab(
-                            ConnectionRuntimeSection::Overview,
-                            window,
-                            cx,
-                        );
-                    } else if section == SidebarSection::Runtime {
+                    if section == SidebarSection::Terminal {
                         this.open_connection_runtime_tab(
                             ConnectionRuntimeSection::Overview,
                             window,
@@ -501,21 +390,11 @@ impl WorkspaceApp {
                         } else {
                             let _ = this.create_local_terminal_tab(window, cx);
                         }
-                    } else if section == SidebarSection::Files {
-                        this.open_file_manager_tab(window, cx);
-                    } else if section == SidebarSection::Notifications {
-                        this.open_notification_center_tab(window, cx);
                     } else if section == SidebarSection::Assistant {
                         let _ = this.toggle_ai_sidebar(cx);
-                    } else if section == SidebarSection::Knowledge {
-                        this.open_knowledge_workspace_tab(window, cx);
                     } else if section == SidebarSection::HostTools {
                         let _ =
                             this.toggle_context_sidebar_panel(ContextSidebarPanel::HostTools, cx);
-                    } else if section == SidebarSection::CloudSync {
-                        this.open_cloud_sync_tab(window, cx);
-                    } else if section == SidebarSection::Extensions {
-                        this.open_plugin_manager_tab(window, cx);
                     } else {
                         this.active_surface = ActiveSurface::Terminal;
                         this.toggle_sidebar_section(section, cx);
@@ -528,22 +407,33 @@ impl WorkspaceApp {
     pub(in crate::workspace) fn activity_icon_tooltip(&self, section: SidebarSection) -> String {
         match section {
             SidebarSection::Sessions => self.i18n.t("sidebar.panels.sessions"),
-            SidebarSection::Connections => self.i18n.t("sidebar.panels.open_session_manager"),
             SidebarSection::Forwards => self.i18n.t("forwards.table.title"),
             SidebarSection::Terminal => self.i18n.t("sidebar.panels.runtime_overview"),
-            SidebarSection::Runtime => self.i18n.t("sidebar.panels.runtime"),
             SidebarSection::Network => self.i18n.t("sidebar.panels.connection_matrix"),
-            SidebarSection::Extensions => self.i18n.t("sidebar.panels.plugins"),
-            SidebarSection::CloudSync => self.i18n.t("plugin.cloud_sync.panel_title"),
-            SidebarSection::Knowledge => self.i18n.t("sidebar.panels.knowledge"),
             SidebarSection::Assistant => self.i18n.t("sidebar.panels.ai"),
             SidebarSection::HostTools => self.i18n.t("sidebar.panels.host_tools"),
             SidebarSection::Automation => self.i18n.t("sidebar.panels.activity"),
             SidebarSection::Workspace => self.i18n.t("sidebar.actions.new_local_terminal"),
-            SidebarSection::Files => self.i18n.t("sidebar.panels.files"),
-            SidebarSection::Notifications => self.i18n.t("sidebar.panels.notifications"),
-            SidebarSection::Settings => self.i18n.t("sidebar.tooltips.settings"),
         }
+    }
+
+    /// A plugin panel is active only while the context drawer shows it, so the
+    /// rail highlight and the panel body always describe the same surface.
+    pub(in crate::workspace) fn plugin_sidebar_panel_visible(
+        &self,
+        plugin_id: &str,
+        panel_id: &str,
+        cx: &App,
+    ) -> bool {
+        self.context_sidebar_visible()
+            && self.active_context_sidebar_panel == ContextSidebarPanel::PluginPanel
+            && self
+                .plugin_manager_state(cx)
+                .active_sidebar_panel
+                .as_ref()
+                .is_some_and(|selection| {
+                    selection.plugin_id == plugin_id && selection.panel_id == panel_id
+                })
     }
 
     pub(in crate::workspace) fn render_plugin_sidebar_activity_icon(
@@ -556,12 +446,7 @@ impl WorkspaceApp {
             plugin_id: panel.plugin_id.clone(),
             panel_id: panel.panel_id.clone(),
         };
-        let active = self.active_sidebar_section == SidebarSection::Extensions
-            && self
-                .plugin_manager_state(cx)
-                .active_sidebar_panel
-                .as_ref()
-                .is_some_and(|active_panel| active_panel == &selection);
+        let active = self.plugin_sidebar_panel_visible(&panel.plugin_id, &panel.panel_id, cx);
         let tooltip = panel.title.clone();
         let tooltip_id = format!("activity-plugin-{}-{}", panel.plugin_id, panel.panel_id);
         let tooltip_id_for_move = tooltip_id.clone();
@@ -619,26 +504,24 @@ impl WorkspaceApp {
             .on_mouse_down(
                 MouseButton::Left,
                 cx.listener(move |this, _event, _window, cx| {
-                    let requested_panel_is_visible = !this.sidebar_collapsed
-                        && this.active_sidebar_section == SidebarSection::Extensions
-                        && this
-                            .plugin_manager_state(cx)
-                            .active_sidebar_panel
-                            .as_ref()
-                            .is_some_and(|active_panel| active_panel == &selection);
+                    let requested_panel_is_visible = this.plugin_sidebar_panel_visible(
+                        &selection.plugin_id,
+                        &selection.panel_id,
+                        cx,
+                    );
                     if requested_panel_is_visible {
-                        this.toggle_sidebar(cx);
+                        this.collapse_context_sidebar(cx);
                         cx.stop_propagation();
                         return;
                     }
-                    // Mirrors Tauri's `sidebarActiveSection = "plugin:<id>:<panel>"`
-                    // path: choosing a plugin panel switches only the sidebar
-                    // content, while Plugin Manager remains a separate tab.
+                    // Choosing a plugin panel switches only the context drawer
+                    // content; Plugin Manager remains a separate workspace tab.
+                    // Selecting through the entity also drops the previous
+                    // panel's UI state, including sensitive input drafts.
                     this.plugin_entity.update(cx, |plugins, _cx| {
                         plugins.select_sidebar_panel(selection.clone());
                     });
-                    this.active_surface = ActiveSurface::Terminal;
-                    this.set_sidebar_section(SidebarSection::Extensions, cx);
+                    this.open_context_sidebar_panel(ContextSidebarPanel::PluginPanel, cx);
                     cx.stop_propagation();
                 }),
             )

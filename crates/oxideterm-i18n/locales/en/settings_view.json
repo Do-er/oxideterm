@@ -116,7 +116,9 @@
       "help": "Help & About",
       "keybindings": "Keybindings",
       "graphics": "Graphics",
-      "network": "Network & External Access"
+      "network": "Network & External Access",
+      "extensions": "Plugins",
+      "cloud_sync": "Cloud Sync"
     },
     "general": {
       "portable_status_unlocked": "Unlocked",
@@ -2220,6 +2222,14 @@
       "testing": "Testing...",
       "test_success": "Connected in {{elapsed}} ms",
       "test_error": "Test failed: {{error}}"
+    },
+    "extensions": {
+      "title": "Plugins",
+      "description": "Manage installed plugins and browse the marketplace."
+    },
+    "cloud_sync": {
+      "title": "Cloud Sync",
+      "description": "Synchronize settings, connections, and sessions with remote cloud storage."
     }
   },
   "terminal": {

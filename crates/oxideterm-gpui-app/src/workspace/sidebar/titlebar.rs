@@ -156,6 +156,111 @@ impl ClientTitlebarIcon {
     }
 }
 
+/// Pages that used to have an entry in the left activity rail. Each one now
+/// owns a single title-bar entry, so the rail must not keep a second copy.
+#[derive(Clone, Copy, Debug, Eq, PartialEq)]
+enum TitlebarEntry {
+    Files,
+    Connections,
+    Runtime,
+    Knowledge,
+    Notifications,
+    Settings,
+}
+
+impl TitlebarEntry {
+    // Left-to-right order of the title-bar feature entries.
+    const ALL: [Self; 6] = [
+        Self::Files,
+        Self::Connections,
+        Self::Runtime,
+        Self::Knowledge,
+        Self::Notifications,
+        Self::Settings,
+    ];
+
+    fn element_id(self) -> &'static str {
+        match self {
+            Self::Files => "titlebar-feature-files",
+            Self::Connections => "titlebar-feature-connections",
+            Self::Runtime => "titlebar-feature-runtime",
+            Self::Knowledge => "titlebar-feature-knowledge",
+            Self::Notifications => "titlebar-feature-notifications",
+            Self::Settings => "titlebar-feature-settings",
+        }
+    }
+
+    fn wrapper_id(self) -> &'static str {
+        match self {
+            Self::Files => "titlebar-feature-files-button",
+            Self::Connections => "titlebar-feature-connections-button",
+            Self::Runtime => "titlebar-feature-runtime-button",
+            Self::Knowledge => "titlebar-feature-knowledge-button",
+            Self::Notifications => "titlebar-feature-notifications-button",
+            Self::Settings => "titlebar-feature-settings-button",
+        }
+    }
+
+    fn icon(self) -> LucideIcon {
+        match self {
+            Self::Files => LucideIcon::FolderOpen,
+            Self::Connections => LucideIcon::LayoutList,
+            Self::Runtime => LucideIcon::Gauge,
+            Self::Knowledge => LucideIcon::BookOpen,
+            Self::Notifications => LucideIcon::Bell,
+            Self::Settings => LucideIcon::Settings,
+        }
+    }
+
+    fn tooltip_key(self) -> &'static str {
+        match self {
+            Self::Files => "sidebar.panels.files",
+            Self::Connections => "sidebar.panels.session_manager",
+            Self::Runtime => "sidebar.panels.runtime",
+            Self::Knowledge => "sidebar.panels.knowledge",
+            Self::Notifications => "sidebar.panels.notifications",
+            Self::Settings => "sidebar.tooltips.settings",
+        }
+    }
+
+    /// Selected while the page this entry opens is the active content tab. The
+    /// tab kind is the page identity, so the entry stays correct after tab
+    /// reordering, detaching, and switching away from the terminal surface.
+    fn is_active(self, active_tab_kind: Option<&TabKind>) -> bool {
+        matches!(
+            (self, active_tab_kind),
+            (Self::Files, Some(TabKind::FileManager))
+                | (Self::Connections, Some(TabKind::SessionManager))
+                | (Self::Runtime, Some(TabKind::Runtime))
+                | (Self::Knowledge, Some(TabKind::Knowledge))
+                | (Self::Notifications, Some(TabKind::NotificationCenter))
+                | (Self::Settings, Some(TabKind::Settings))
+        )
+    }
+
+    /// Every page stays a singleton tab, so repeated clicks only focus the
+    /// existing page instead of creating a second tab or runtime.
+    fn open(
+        self,
+        workspace: &mut WorkspaceApp,
+        window: &mut Window,
+        cx: &mut Context<WorkspaceApp>,
+    ) {
+        match self {
+            Self::Files => workspace.open_file_manager_tab(window, cx),
+            Self::Connections => workspace.open_session_manager_tab(window, cx),
+            Self::Runtime => workspace.open_connection_runtime_tab(
+                ConnectionRuntimeSection::Overview,
+                window,
+                cx,
+            ),
+            Self::Knowledge => workspace.open_knowledge_workspace_tab(window, cx),
+            Self::Notifications => workspace.open_notification_center_tab(window, cx),
+            Self::Settings => workspace.open_settings(window, cx),
+        }
+    }
+}
+
 impl WorkspaceApp {
     pub(in crate::workspace) fn window_titlebar_visible(&self, window: &Window) -> bool {
         !self.settings_store.settings().sidebar_ui.zen_mode
@@ -245,6 +350,113 @@ impl WorkspaceApp {
             .into_any_element()
     }
 
+    /// Renders the six page entries that live next to the left caption
+    /// controls. Selected state follows the active content tab, and the
+    /// notification entry keeps the unread badge that the activity rail owned
+    /// before the migration.
+    fn render_feature_entries(
+        &self,
+        action_button_size: f32,
+        text_color: u32,
+        cx: &mut Context<Self>,
+    ) -> AnyElement {
+        let theme = self.tokens.ui;
+        let active_tab_kind = self.active_content_tab(cx).map(|tab| tab.kind.clone());
+        // Do Not Disturb suppresses the count, but a critical notification
+        // still upgrades the badge color once the count is visible again.
+        let notifications_silenced = self.notification_center.notifications.dnd_enabled;
+        let notification_badge_count = if notifications_silenced {
+            0
+        } else {
+            self.notification_center.notifications.unread_count
+        };
+        let notification_badge_is_error = !notifications_silenced
+            && self.notification_center.notifications.unread_critical_count > 0;
+
+        div()
+            .flex_none()
+            .h_full()
+            .flex()
+            .items_center()
+            .children(TitlebarEntry::ALL.into_iter().map(|entry| {
+                let label = self.i18n.t(entry.tooltip_key());
+                let active = entry.is_active(active_tab_kind.as_ref());
+                let workspace = cx.entity().downgrade();
+                let options = oxideterm_gpui_ui::button::IconButtonOptions {
+                    has_background: active,
+                    background: active.then(|| self.settings_panel_background(theme.bg_panel)),
+                    border: active.then(|| rgb(theme.border)),
+                    hover_background: Some(rgb(theme.bg_hover)),
+                    ..IconButtonOptions::opaque_toolbar(action_button_size, ButtonRadius::Md)
+                };
+                let badge = (entry == TitlebarEntry::Notifications && notification_badge_count > 0)
+                    .then(|| {
+                        let badge_color = if notification_badge_is_error {
+                            theme.error
+                        } else {
+                            theme.accent
+                        };
+                        let badge_text_color = if badge_color == theme.accent {
+                            theme.accent_text
+                        } else {
+                            theme.bg
+                        };
+                        div()
+                            .absolute()
+                            // Straddle the button corner like the activity rail
+                            // badge did. The -3px offsets land exactly on the
+                            // title bar's own edge, so the pill stays visible
+                            // without growing the bar height.
+                            .right(px(-3.0))
+                            .top(px(-3.0))
+                            .min_w(px(14.0))
+                            .h(px(14.0))
+                            .px(px(3.0))
+                            .flex()
+                            .items_center()
+                            .justify_center()
+                            .rounded_full()
+                            .bg(rgb(badge_color))
+                            .text_color(rgb(badge_text_color))
+                            .text_size(px(9.0))
+                            .child(if notification_badge_count > 99 {
+                                "99+".to_string()
+                            } else {
+                                notification_badge_count.to_string()
+                            })
+                    });
+
+                div()
+                    .id(entry.wrapper_id())
+                    .relative()
+                    .flex_none()
+                    .px(px(self.tokens.spacing.one / 2.0))
+                    .role(gpui::Role::Button)
+                    .aria_label(label.clone())
+                    .on_a11y_action(gpui::AccessibleAction::Click, move |_, window, cx| {
+                        let _ = workspace.update(cx, |this, cx| entry.open(this, window, cx));
+                    })
+                    .child(self.workspace_tooltip_icon_button(
+                        entry.icon(),
+                        self.tokens.metrics.sidebar_action_icon_size,
+                        rgb(if active { theme.accent } else { text_color }),
+                        options,
+                        label.clone(),
+                        entry.element_id(),
+                        true,
+                        cx.listener(move |this, _, window, cx| {
+                            this.clear_workspace_tooltip(&label, cx);
+                            entry.open(this, window, cx);
+                            cx.stop_propagation();
+                        }),
+                        cx.entity(),
+                    ))
+                    .when_some(badge, |button, badge| button.child(badge))
+                    .into_any_element()
+            }))
+            .into_any_element()
+    }
+
     pub(in crate::workspace) fn render_title_bar(
         &self,
         window: &mut Window,
@@ -295,7 +507,11 @@ impl WorkspaceApp {
         } else {
             0.0
         };
-        let side_min_width = left_controls_width.max(
+        // Feature entries share the left side with the platform caption
+        // controls, so their width must join the left minimum. Otherwise the
+        // centered scope filter can be squeezed or overlapped on narrow windows.
+        let feature_entries_width = TitlebarEntry::ALL.len() as f32 * action_button_width;
+        let side_min_width = (left_controls_width + feature_entries_width).max(
             right_controls_width + action_button_width * 3.0 + background_width + show_all_width,
         );
         let scope_available_width = f32::from(window.viewport_size().width)
@@ -371,6 +587,9 @@ impl WorkspaceApp {
                             cx,
                         ))
                     })
+                    .child(self.render_feature_entries(action_button_size, text_color, cx))
+                    // Feature entries are interactive chrome, so the drag
+                    // filler stays after them and never wraps a button.
                     .child(self.render_window_drag_region("workspace-titlebar-drag-left", cx)),
             )
             .child(self.render_tab_scope_trigger(window, scope_available_width, cx))

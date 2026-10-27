@@ -116,7 +116,9 @@
       "help": "Aide et À propos",
       "keybindings": "Raccourcis clavier",
       "graphics": "Graphiques",
-      "network": "Réseau et accès externe"
+      "network": "Réseau et accès externe",
+      "extensions": "Extensions",
+      "cloud_sync": "Synchronisation cloud"
     },
     "general": {
       "portable_status_unlocked": "Déverrouillé",
@@ -2220,6 +2222,14 @@
       "testing": "Test en cours...",
       "test_success": "Connecté en {{elapsed}} ms",
       "test_error": "Échec du test : {{error}}"
+    },
+    "extensions": {
+      "title": "Extensions",
+      "description": "Gérer les extensions installées et explorer le catalogue."
+    },
+    "cloud_sync": {
+      "title": "Synchronisation cloud",
+      "description": "Synchroniser les paramètres, connexions et sessions avec le stockage distant."
     }
   },
   "terminal": {

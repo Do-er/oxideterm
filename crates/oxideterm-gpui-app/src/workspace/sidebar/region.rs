@@ -111,19 +111,56 @@ impl WorkspaceApp {
             .into_any_element()
     }
 
+    /// Resolves the plugin panel currently selected in the context drawer.
+    /// The selection itself stays owned by the plugin manager state; this only
+    /// joins it with the registry contribution needed for title and schema.
+    pub(in crate::workspace) fn active_plugin_sidebar_panel(
+        &self,
+        cx: &App,
+    ) -> Option<plugin_host::NativePluginRuntimeSidebarPanelContribution> {
+        let selection = self.plugin_manager_state(cx).active_sidebar_panel.clone()?;
+        self.plugin_entity
+            .read(cx)
+            .registry()
+            .contributions()
+            .runtime_sidebar_panels()
+            .into_iter()
+            .find(|panel| {
+                panel.plugin_id == selection.plugin_id && panel.panel_id == selection.panel_id
+            })
+    }
+
     pub(in crate::workspace) fn render_context_right_sidebar_region(
         &mut self,
         cx: &mut Context<Self>,
     ) -> AnyElement {
         let theme = self.tokens.ui;
-        let (title_key, title_role, icon) = match self.active_context_sidebar_panel {
-            ContextSidebarPanel::Assistant => {
-                ("sidebar.panels.ai", "assistant", LucideIcon::Sparkles)
-            }
+        let (title, panel_key, icon) = match self.active_context_sidebar_panel {
+            ContextSidebarPanel::Assistant => (
+                self.i18n.t("sidebar.panels.ai"),
+                "assistant".to_string(),
+                LucideIcon::Sparkles,
+            ),
             ContextSidebarPanel::HostTools => {
                 let tool = self.host_tools.read(cx).active_tool();
-                (tool.label_key(), "host-tools", tool.icon())
+                (
+                    self.i18n.t(tool.label_key()),
+                    "host-tools".to_string(),
+                    tool.icon(),
+                )
             }
+            ContextSidebarPanel::PluginPanel => match self.active_plugin_sidebar_panel(cx) {
+                Some(panel) => (
+                    panel.title.clone(),
+                    format!("plugin:{}/{}", panel.plugin_id, panel.panel_id),
+                    LucideIcon::from_plugin_name(&panel.icon),
+                ),
+                None => (
+                    self.i18n.t("sidebar.panels.plugins"),
+                    "plugin-placeholder".to_string(),
+                    LucideIcon::Puzzle,
+                ),
+            },
         };
         context_sidebar_region_chrome()
             .child(
@@ -155,9 +192,11 @@ impl WorkspaceApp {
                             .occlude()
                             .border_b_1()
                             .border_color(self.workspace_chrome_divider())
-                            .child(self.render_context_sidebar_panel_title(
-                                title_key, title_role, icon, cx,
-                            ))
+                            .child(
+                                self.render_context_sidebar_panel_title(
+                                    &panel_key, title, icon, cx,
+                                ),
+                            )
                             .when(
                                 self.active_context_sidebar_panel == ContextSidebarPanel::HostTools,
                                 |header| header.child(self.render_host_tool_monitoring_toggle(cx)),
@@ -183,11 +222,14 @@ impl WorkspaceApp {
                                     ContextSidebarPanel::HostTools => {
                                         self.render_host_tools_context_panel(cx)
                                     }
+                                    ContextSidebarPanel::PluginPanel => {
+                                        self.render_native_plugin_sidebar_content(cx)
+                                    }
                                 };
                                 oxideterm_gpui_ui::motion::slide_fade_in_x(
                                     &self.tokens,
                                     gpui::ElementId::Name(
-                                        format!("context-panel-{title_key}").into(),
+                                        format!("context-panel-{panel_key}").into(),
                                     ),
                                     div().size_full().child(content),
                                     6.0,
@@ -283,8 +325,8 @@ impl WorkspaceApp {
 
     pub(in crate::workspace) fn render_context_sidebar_panel_title(
         &self,
-        title_key: &'static str,
-        title_role: &'static str,
+        panel_key: &str,
+        title: String,
         icon: LucideIcon,
         cx: &mut Context<Self>,
     ) -> AnyElement {
@@ -310,8 +352,8 @@ impl WorkspaceApp {
                         .child(self.render_display_text_with_role(
                             SelectableTextRole::NonSelectable,
                             "context-sidebar-title",
-                            title_role,
-                            self.i18n.t(title_key),
+                            panel_key,
+                            title,
                             theme.text,
                             cx,
                         )),
@@ -376,34 +418,11 @@ impl WorkspaceApp {
     pub(in crate::workspace) fn render_sidebar_header(&self, cx: &mut Context<Self>) -> AnyElement {
         let theme = self.tokens.ui;
         let panel_section = self.effective_sidebar_panel_section();
-        let plugin_panel_title = (panel_section == SidebarSection::Extensions)
-            .then(|| {
-                self.plugin_manager_state(cx)
-                    .active_sidebar_panel
-                    .as_ref()
-                    .and_then(|selection| {
-                        self.plugin_entity
-                            .read(cx)
-                            .registry()
-                            .contributions()
-                            .runtime_sidebar_panels()
-                            .into_iter()
-                            .find(|panel| {
-                                panel.plugin_id == selection.plugin_id
-                                    && panel.panel_id == selection.panel_id
-                            })
-                            .map(|panel| panel.title)
-                    })
-            })
-            .flatten();
         let title_key = match panel_section {
             SidebarSection::Forwards => "forwards.table.title",
-            SidebarSection::Extensions => "sidebar.panels.plugins",
-            SidebarSection::CloudSync => "plugin.cloud_sync.panel_title",
-            SidebarSection::Notifications => "sidebar.panels.event_log",
             _ => "sidebar.panels.sessions",
         };
-        let title = plugin_panel_title.unwrap_or_else(|| self.i18n.t(title_key).to_uppercase());
+        let title = self.i18n.t(title_key).to_uppercase();
         let mut header = div()
             // Align sidebar titles with the neighboring workspace tab bar.
             .h(px(self.tokens.metrics.tabbar_height))
@@ -609,12 +628,6 @@ impl WorkspaceApp {
                         .child(sftp),
                 )
                 .into_any_element();
-        }
-        if panel_section == SidebarSection::Extensions {
-            return self.render_native_plugin_sidebar_content(cx);
-        }
-        if panel_section == SidebarSection::CloudSync {
-            return self.render_cloud_sync_sidebar_content(cx);
         }
         if panel_section == SidebarSection::Forwards {
             // Tauri only persists these command-palette section keys here; it

@@ -62,11 +62,11 @@ pub(in crate::workspace) fn context_sidebar_panel_visible(
         return false;
     }
 
-    // Host Tools shares the companion sidebar shell, but its visibility must
-    // remain independent from the optional AI feature.
+    // Host Tools and plugin panels share the companion sidebar shell, but their
+    // visibility must remain independent from the optional AI feature.
     match active_panel {
         ContextSidebarPanel::Assistant => ai_enabled,
-        ContextSidebarPanel::HostTools => true,
+        ContextSidebarPanel::HostTools | ContextSidebarPanel::PluginPanel => true,
     }
 }
 
@@ -201,9 +201,6 @@ impl WorkspaceApp {
     ) {
         self.clear_ai_sidebar_keyboard_focus(cx);
         self.active_sidebar_section = section;
-        if section == SidebarSection::Extensions {
-            self.bootstrap_native_plugin_runtime(cx);
-        }
         if self.sidebar_collapsed {
             self.set_sidebar_collapsed_with_motion(false, cx);
         }
@@ -448,6 +445,11 @@ impl WorkspaceApp {
             // Non-AI context panels share the old right-sidebar shell, but must
             // not keep AI-specific focus or floating popovers alive.
             self.close_ai_sidebar_popovers(cx);
+        }
+        if panel == ContextSidebarPanel::PluginPanel {
+            // Plugin panel schemas and their host runtime are owned by the
+            // plugin entity, so the drawer must start it before rendering.
+            self.bootstrap_native_plugin_runtime(cx);
         }
         self.sync_host_tools_lifecycle(panel == ContextSidebarPanel::HostTools, cx);
         self.clear_ai_sidebar_keyboard_focus(cx);

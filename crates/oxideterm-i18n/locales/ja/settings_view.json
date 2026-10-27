@@ -116,7 +116,9 @@
       "help": "ヘルプと詳細",
       "keybindings": "キーバインド",
       "graphics": "グラフィックス",
-      "network": "ネットワークと外部アクセス"
+      "network": "ネットワークと外部アクセス",
+      "extensions": "プラグイン",
+      "cloud_sync": "クラウド同期"
     },
     "general": {
       "portable_status_unlocked": "ロック解除済み",
@@ -2220,6 +2222,14 @@
       "testing": "テスト中...",
       "test_success": "{{elapsed}} ms で接続しました",
       "test_error": "テスト失敗: {{error}}"
+    },
+    "extensions": {
+      "title": "プラグイン",
+      "description": "インストール済みプラグインの管理とマーケットプレイスの閲覧。"
+    },
+    "cloud_sync": {
+      "title": "クラウド同期",
+      "description": "設定、接続、セッションをリモートクラウドストレージと同期します。"
     }
   },
   "terminal": {

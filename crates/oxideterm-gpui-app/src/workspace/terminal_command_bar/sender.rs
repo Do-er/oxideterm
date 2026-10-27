@@ -645,32 +645,44 @@ impl WorkspaceApp {
             .child(self.render_terminal_sender_stepper(
                 self.i18n.t("terminal.sender.interval"),
                 format!("{} ms", snapshot.interval_ms),
-                move |this, cx| {
+                move |this, _event, cx| {
                     this.terminal_command_sender.update(cx, |sender, cx| {
                         sender.adjust_interval(sender_id, -interval_step, cx);
                     });
                 },
-                move |this, cx| {
+                move |this, _event, cx| {
                     this.terminal_command_sender.update(cx, |sender, cx| {
                         sender.adjust_interval(sender_id, interval_step, cx);
                     });
                 },
+                None,
                 cx,
             ))
             .child(self.render_terminal_sender_control_divider())
             .child(self.render_terminal_sender_stepper(
                 self.i18n.t("terminal.sender.repeat"),
-                format!("{}×", snapshot.repeat_count),
-                move |this, cx| {
+                if snapshot.repeat_count == 0 {
+                    "♾️".to_string()
+                } else {
+                    format!("{}×", snapshot.repeat_count)
+                },
+                move |this, event, cx| {
+                    let step = Self::sender_step_from_modifiers(&event.modifiers);
                     this.terminal_command_sender.update(cx, |sender, cx| {
-                        sender.adjust_repeat_count(sender_id, -1, cx);
+                        sender.adjust_repeat_count(sender_id, -step, cx);
                     });
                 },
-                move |this, cx| {
+                move |this, event, cx| {
+                    let step = Self::sender_step_from_modifiers(&event.modifiers);
                     this.terminal_command_sender.update(cx, |sender, cx| {
-                        sender.adjust_repeat_count(sender_id, 1, cx);
+                        sender.adjust_repeat_count(sender_id, step, cx);
                     });
                 },
+                Some(Box::new(move |this, cx| {
+                    this.terminal_command_sender.update(cx, |sender, cx| {
+                        sender.cycle_repeat_preset(sender_id, cx);
+                    });
+                })),
                 cx,
             ));
 
@@ -748,7 +760,11 @@ impl WorkspaceApp {
                             format!(
                                 "{}/{} · {} {} · {} {}",
                                 snapshot.completed_units,
-                                snapshot.total_units,
+                                if snapshot.total_units == 0 {
+                                    "♾️".to_string()
+                                } else {
+                                    snapshot.total_units.to_string()
+                                },
                                 self.i18n.t("terminal.sender.accepted"),
                                 snapshot.accepted_writes,
                                 self.i18n.t("terminal.sender.skipped"),
@@ -1138,14 +1154,51 @@ impl WorkspaceApp {
             .into_any_element()
     }
 
+    fn sender_step_from_modifiers(modifiers: &gpui::Modifiers) -> i32 {
+        if modifiers.alt {
+            1000
+        } else if modifiers.control || modifiers.platform {
+            100
+        } else if modifiers.shift {
+            10
+        } else {
+            1
+        }
+    }
+
     fn render_terminal_sender_stepper(
         &self,
         label: String,
         value: String,
-        decrement: impl Fn(&mut Self, &mut Context<Self>) + 'static,
-        increment: impl Fn(&mut Self, &mut Context<Self>) + 'static,
+        decrement: impl Fn(&mut Self, &MouseDownEvent, &mut Context<Self>) + 'static,
+        increment: impl Fn(&mut Self, &MouseDownEvent, &mut Context<Self>) + 'static,
+        value_click: Option<Box<dyn Fn(&mut Self, &mut Context<Self>) + 'static>>,
         cx: &mut Context<Self>,
     ) -> AnyElement {
+        let mut value_container = div()
+            .h_full()
+            .min_w(px(56.0))
+            .px(px(4.0))
+            .flex()
+            .items_center()
+            .justify_center()
+            .text_size(px(11.0))
+            .font_family(settings_mono_font_family(self.settings_store.settings()))
+            .child(value);
+
+        if let Some(on_click) = value_click {
+            value_container = value_container
+                .cursor_pointer()
+                .hover(|button| button.bg(rgb(self.tokens.ui.bg_hover)))
+                .on_mouse_down(
+                    MouseButton::Left,
+                    cx.listener(move |this, _event: &MouseDownEvent, _window, cx| {
+                        on_click(this, cx);
+                        cx.stop_propagation();
+                    }),
+                );
+        }
+
         div()
             .h(px(TERMINAL_SENDER_CONTROL_HEIGHT))
             .flex()
@@ -1173,24 +1226,13 @@ impl WorkspaceApp {
                     .child("−")
                     .on_mouse_down(
                         MouseButton::Left,
-                        cx.listener(move |this, _event, _window, cx| {
-                            decrement(this, cx);
+                        cx.listener(move |this, event: &MouseDownEvent, _window, cx| {
+                            decrement(this, event, cx);
                             cx.stop_propagation();
                         }),
                     ),
             )
-            .child(
-                div()
-                    .h_full()
-                    .min_w(px(56.0))
-                    .px(px(4.0))
-                    .flex()
-                    .items_center()
-                    .justify_center()
-                    .text_size(px(11.0))
-                    .font_family(settings_mono_font_family(self.settings_store.settings()))
-                    .child(value),
-            )
+            .child(value_container)
             .child(
                 div()
                     .h_full()
@@ -1203,8 +1245,8 @@ impl WorkspaceApp {
                     .child("+")
                     .on_mouse_down(
                         MouseButton::Left,
-                        cx.listener(move |this, _event, _window, cx| {
-                            increment(this, cx);
+                        cx.listener(move |this, event: &MouseDownEvent, _window, cx| {
+                            increment(this, event, cx);
                             cx.stop_propagation();
                         }),
                     ),

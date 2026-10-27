@@ -140,6 +140,18 @@ impl WorkspaceApp {
     ) -> AnyElement {
         let theme = self.tokens.ui;
         let has_settings_background = self.settings_background_active();
+        let active_tab = self.settings_workspace.read(cx).route_snapshot().active_tab;
+        let search_active = self.settings_workspace.read(cx).settings_search_open();
+        let content = if search_active {
+            self.render_settings_section_list_scroll(cx)
+        } else {
+            match active_tab {
+                SettingsTab::Extensions => self.render_plugin_manager_surface(cx),
+                SettingsTab::CloudSync => self.render_cloud_sync_surface(cx),
+                _ => self.render_settings_section_list_scroll(cx),
+            }
+        };
+
         div()
             .size_full()
             .relative()
@@ -158,7 +170,7 @@ impl WorkspaceApp {
                     .min_w(px(0.0))
                     .min_h(px(0.0))
                     .relative()
-                    .child(self.render_settings_section_list_scroll(cx)),
+                    .child(content),
             )
             .into_any_element()
     }
@@ -582,6 +594,7 @@ impl WorkspaceApp {
             SettingsTab::Help => {
                 settings.general.update_channel.hash(&mut hasher);
             }
+            SettingsTab::Extensions | SettingsTab::CloudSync => {}
             SettingsTab::Connections => {
                 self.connection_store.connections().len().hash(&mut hasher);
                 self.connection_store
@@ -862,6 +875,7 @@ impl WorkspaceApp {
             SettingsTab::Knowledge => self.settings_knowledge_section(section_index, cx),
             SettingsTab::Keybindings => self.settings_keybindings_section(section_index, cx),
             SettingsTab::Help => self.settings_help_section(section_index, cx),
+            SettingsTab::Extensions | SettingsTab::CloudSync => div().into_any_element(),
         }
     }
 
@@ -1124,6 +1138,9 @@ impl WorkspaceApp {
                     }
                     if tab == SettingsTab::Portable {
                         this.refresh_portable_settings_snapshot(true, cx);
+                    }
+                    if tab == SettingsTab::Extensions {
+                        this.bootstrap_native_plugin_runtime(cx);
                     }
                     cx.stop_propagation();
                     cx.notify();

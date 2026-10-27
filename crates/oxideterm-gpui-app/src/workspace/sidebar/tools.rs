@@ -89,18 +89,45 @@ impl WorkspaceApp {
             .bg(self.workspace_divider_color(self.tokens.ui.divider, 0xff))
     }
 
-    fn context_tool_count(&self, window: &Window) -> usize {
+    /// Plugin panels and action items always render at the end of the rail, so
+    /// host tools must give up exactly the space those rows occupy.
+    fn plugin_rail_contributions(
+        &self,
+        cx: &App,
+    ) -> (
+        Vec<plugin_host::NativePluginRuntimeSidebarPanelContribution>,
+        Vec<plugin_host::NativePluginRuntimeActivityBarItemContribution>,
+    ) {
+        let plugins = self.plugin_entity.read(cx);
+        let contributions = plugins.registry().contributions();
+        (
+            contributions.runtime_sidebar_panels(),
+            contributions.runtime_activity_bar_items(),
+        )
+    }
+
+    fn context_tool_count(&self, window: &Window, cx: &App) -> usize {
         let metrics = self.tokens.metrics;
         let lock_height = if self.settings_store.settings().sidebar_ui.show_app_lock_icon {
             metrics.activity_icon_size + metrics.activity_icon_gap + self.tokens.spacing.two * 2.0
         } else {
             0.0
         };
+        let (panels, items) = self.plugin_rail_contributions(cx);
+        let plugin_rows = panels.len() + items.len();
+        let plugin_height = if plugin_rows == 0 {
+            0.0
+        } else {
+            plugin_rows as f32 * (metrics.activity_icon_size + metrics.activity_icon_gap)
+                + metrics.divider_height
+                + metrics.activity_icon_gap
+        };
         let available = f32::from(window.viewport_size().height)
             - self.window_titlebar_height(window)
             - metrics.tabbar_height
             - PRIMARY_SIDEBAR_CONTENT_TOP_INSET
-            - lock_height;
+            - lock_height
+            - plugin_height;
         visible_tool_count(
             available,
             metrics.activity_icon_size + metrics.activity_icon_gap,
@@ -149,7 +176,7 @@ impl WorkspaceApp {
         window: &Window,
         cx: &mut Context<Self>,
     ) -> AnyElement {
-        let count = self.context_tool_count(window);
+        let count = self.context_tool_count(window, cx);
         let mut buttons = div()
             .flex_1()
             .min_h_0()
@@ -190,15 +217,12 @@ impl WorkspaceApp {
             );
         }
         let overflow = overflow_tools(count);
-        if overflow.is_empty() {
-            return buttons.into_any_element();
-        }
-        let active = self.context_tools_menu.is_some()
-            || overflow
-                .iter()
-                .any(|tool| self.context_tool_active(*tool, cx));
-        buttons
-            .child(
+        if !overflow.is_empty() {
+            let active = self.context_tools_menu.is_some()
+                || overflow
+                    .iter()
+                    .any(|tool| self.context_tool_active(*tool, cx));
+            buttons = buttons.child(
                 div()
                     .flex_none()
                     .mb(px(self.tokens.metrics.activity_icon_gap))
@@ -218,7 +242,7 @@ impl WorkspaceApp {
                             let open = this.context_tools_menu.is_none();
                             this.prepare_modal_interaction_boundary(cx);
                             if open {
-                                let overflow = overflow_tools(this.context_tool_count(window));
+                                let overflow = overflow_tools(this.context_tool_count(window, cx));
                                 if overflow.is_empty() {
                                     return;
                                 }
@@ -236,8 +260,27 @@ impl WorkspaceApp {
                         }),
                         cx.entity(),
                     )),
-            )
-            .into_any_element()
+            );
+        }
+        // Plugin entries follow the host-tool block so their rows never shift
+        // the More trigger that the overflow menu anchors to.
+        buttons = buttons.children(self.render_plugin_rail_buttons(cx));
+        buttons.into_any_element()
+    }
+
+    fn render_plugin_rail_buttons(&self, cx: &mut Context<Self>) -> Vec<AnyElement> {
+        let (panels, items) = self.plugin_rail_contributions(cx);
+        if panels.is_empty() && items.is_empty() {
+            return Vec::new();
+        }
+        let mut rows = vec![self.context_tool_separator().into_any_element()];
+        for panel in panels {
+            rows.push(self.render_plugin_sidebar_activity_icon(panel, cx));
+        }
+        for item in items {
+            rows.push(self.render_plugin_activity_action_icon(item, cx));
+        }
+        rows
     }
 
     pub(in crate::workspace) fn render_context_tools_menu(
@@ -250,7 +293,7 @@ impl WorkspaceApp {
             self.context_tools_menu = None;
             return None;
         }
-        let count = self.context_tool_count(window);
+        let count = self.context_tool_count(window, cx);
         let overflow = overflow_tools(count);
         if overflow.is_empty() {
             self.context_tools_menu = None;
@@ -343,7 +386,7 @@ impl WorkspaceApp {
         let Some(highlighted) = self.context_tools_menu else {
             return false;
         };
-        let overflow = overflow_tools(self.context_tool_count(window));
+        let overflow = overflow_tools(self.context_tool_count(window, cx));
         if overflow.is_empty() {
             self.context_tools_menu = None;
             return false;

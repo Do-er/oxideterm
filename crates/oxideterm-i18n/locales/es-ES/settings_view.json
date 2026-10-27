@@ -116,7 +116,9 @@
       "help": "Ayuda e Info",
       "keybindings": "Atajos de teclado",
       "graphics": "Gráficos",
-      "network": "Red y acceso externo"
+      "network": "Red y acceso externo",
+      "extensions": "Complementos",
+      "cloud_sync": "Sincronización en la nube"
     },
     "general": {
       "portable_status_unlocked": "Desbloqueado",
@@ -2220,6 +2222,14 @@
       "testing": "Probando...",
       "test_success": "Conectado en {{elapsed}} ms",
       "test_error": "La prueba falló: {{error}}"
+    },
+    "extensions": {
+      "title": "Complementos",
+      "description": "Administrar complementos instalados y explorar el marketplace."
+    },
+    "cloud_sync": {
+      "title": "Sincronización en la nube",
+      "description": "Sincronizar ajustes, conexiones y sesiones con el almacenamiento en la nube."
     }
   },
   "terminal": {

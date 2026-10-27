@@ -279,7 +279,6 @@ impl WorkspaceApp {
             }
             Some(TabKind::SessionManager) => {
                 self.active_surface = ActiveSurface::Terminal;
-                self.active_sidebar_section = SidebarSection::Connections;
             }
             Some(TabKind::Runtime) => {
                 self.active_surface = ActiveSurface::Terminal;

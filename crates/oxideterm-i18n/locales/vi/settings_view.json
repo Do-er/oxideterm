@@ -116,7 +116,9 @@
       "help": "Trợ giúp & Giới thiệu",
       "keybindings": "Phím tắt",
       "graphics": "Đồ họa",
-      "network": "Mạng và truy cập bên ngoài"
+      "network": "Mạng và truy cập bên ngoài",
+      "extensions": "Plugin",
+      "cloud_sync": "Đồng bộ đám mây"
     },
     "general": {
       "portable_status_unlocked": "Đã mở khóa",
@@ -2220,6 +2222,14 @@
       "testing": "Đang kiểm tra...",
       "test_success": "Đã kết nối trong {{elapsed}} ms",
       "test_error": "Kiểm tra thất bại: {{error}}"
+    },
+    "extensions": {
+      "title": "Plugin",
+      "description": "Quản lý các plugin đã cài đặt và duyệt qua chợ tiện ích."
+    },
+    "cloud_sync": {
+      "title": "Đồng bộ đám mây",
+      "description": "Đồng bộ hóa cài đặt, kết nối và phiên làm việc với lưu trữ đám mây từ xa."
     }
   },
   "terminal": {

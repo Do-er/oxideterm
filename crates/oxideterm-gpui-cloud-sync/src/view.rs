@@ -152,43 +152,6 @@ pub fn cloud_sync_header(
         .into_any_element()
 }
 
-pub fn cloud_sync_sidebar_empty(
-    tokens: &ThemeTokens,
-    icon: AnyElement,
-    title: AnyElement,
-    subtitle: AnyElement,
-) -> AnyElement {
-    let theme = tokens.ui;
-    div()
-        .flex_1()
-        .w_full()
-        .flex()
-        .flex_col()
-        .items_center()
-        .justify_center()
-        .px(px(tokens.metrics.empty_sidebar_padding_x))
-        .text_color(rgb(theme.text_muted))
-        .child(div().mb_3().child(icon))
-        .child(
-            div()
-                .w_full()
-                .text_center()
-                .text_size(px(tokens.metrics.empty_sidebar_title_font_size))
-                .text_color(rgb(theme.text_muted))
-                .child(title),
-        )
-        .child(
-            div()
-                .mt_1()
-                .w_full()
-                .text_center()
-                .text_size(px(tokens.metrics.empty_sidebar_subtitle_font_size))
-                .text_color(rgb(theme.text_muted))
-                .child(subtitle),
-        )
-        .into_any_element()
-}
-
 pub struct CloudSyncGuideExampleElements {
     pub label: AnyElement,
     pub value: AnyElement,

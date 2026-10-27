@@ -116,7 +116,9 @@
       "help": "도움말 및 정보",
       "keybindings": "키 바인딩",
       "graphics": "그래픽",
-      "network": "네트워크 및 외부 접근"
+      "network": "네트워크 및 외부 접근",
+      "extensions": "플러그인",
+      "cloud_sync": "클라우드 동기화"
     },
     "general": {
       "portable_status_unlocked": "잠금 해제됨",
@@ -2220,6 +2222,14 @@
       "testing": "테스트 중...",
       "test_success": "{{elapsed}} ms 만에 연결됨",
       "test_error": "테스트 실패: {{error}}"
+    },
+    "extensions": {
+      "title": "플러그인",
+      "description": "설치된 플러그인을 관리하고 마켓플레이스를 탐색합니다."
+    },
+    "cloud_sync": {
+      "title": "클라우드 동기화",
+      "description": "설정, 연결 및 세션을 원격 클라우드 저장소와 동기화합니다."
     }
   },
   "terminal": {

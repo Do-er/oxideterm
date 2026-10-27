@@ -1934,15 +1934,9 @@ impl WorkspaceApp {
                 )
             }),
             "sidebarPanel" => {
-                self.effective_sidebar_panel_section() == SidebarSection::Extensions
-                    && self
-                        .plugin_manager_state(cx)
-                        .active_sidebar_panel
-                        .as_ref()
-                        .is_some_and(|selection| {
-                            selection.plugin_id == context.plugin_id
-                                && selection.panel_id == context.surface_id
-                        })
+                // A plugin panel now lives in the context drawer, so its controls
+                // are live only while that drawer actually renders this panel.
+                self.plugin_sidebar_panel_visible(&context.plugin_id, &context.surface_id, cx)
             }
             _ => false,
         }

@@ -116,7 +116,9 @@
       "help": "說明與關於",
       "keybindings": "快捷鍵",
       "graphics": "圖形",
-      "network": "網路與外部存取"
+      "network": "網路與外部存取",
+      "extensions": "外掛",
+      "cloud_sync": "雲端同步"
     },
     "general": {
       "portable_status_unlocked": "已解鎖",
@@ -2220,6 +2222,14 @@
       "testing": "測試中...",
       "test_success": "已連線，用時 {{elapsed}} ms",
       "test_error": "測試失敗：{{error}}"
+    },
+    "extensions": {
+      "title": "外掛",
+      "description": "管理已安裝的外掛與外掛市集擴充。"
+    },
+    "cloud_sync": {
+      "title": "雲端同步",
+      "description": "同步設定、連線與工作階段設定至遠端雲端儲存。"
     }
   },
   "terminal": {

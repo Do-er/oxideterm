@@ -40,6 +40,8 @@ pub enum SettingsTab {
     Ai,
     Knowledge,
     Keybindings,
+    Extensions,
+    CloudSync,
     Help,
 }
 
@@ -461,6 +463,8 @@ impl SettingsTab {
             Self::Ide,
             Self::Ai,
             Self::Knowledge,
+            Self::Extensions,
+            Self::CloudSync,
             Self::Help,
         ]
     }
@@ -479,6 +483,8 @@ impl SettingsTab {
             Self::Ai => "ai",
             Self::Knowledge => "knowledge",
             Self::Keybindings => "keybindings",
+            Self::Extensions => "extensions",
+            Self::CloudSync => "cloud_sync",
             Self::Help => "help",
         }
     }
@@ -489,7 +495,7 @@ impl SettingsTab {
 
     pub fn groups() -> &'static [&'static [Self]] {
         // Keep navigation groups aligned with user tasks: application preferences,
-        // runtime behavior, remote access, productivity, then support.
+        // runtime behavior, remote access, productivity, then extensions and support.
         &[
             &[Self::General, Self::Appearance, Self::Keybindings],
             &[Self::Terminal, Self::Portable],
@@ -500,7 +506,7 @@ impl SettingsTab {
                 Self::Privilege,
             ],
             &[Self::Ide, Self::Ai, Self::Knowledge],
-            &[Self::Help],
+            &[Self::Extensions, Self::CloudSync, Self::Help],
         ]
     }
 
@@ -518,6 +524,8 @@ impl SettingsTab {
             Self::Ai => "settings_view.tabs.ai",
             Self::Knowledge => "settings_view.tabs.knowledge",
             Self::Keybindings => "settings_view.tabs.keybindings",
+            Self::Extensions => "settings_view.tabs.extensions",
+            Self::CloudSync => "settings_view.tabs.cloud_sync",
             Self::Help => "settings_view.tabs.help",
         }
     }
@@ -536,6 +544,8 @@ impl SettingsTab {
             Self::Ai => "settings_view.ai.title",
             Self::Knowledge => "settings_view.knowledge.title",
             Self::Keybindings => "settings_view.keybindings.title",
+            Self::Extensions => "settings_view.extensions.title",
+            Self::CloudSync => "settings_view.cloud_sync.title",
             Self::Help => "settings_view.help.title",
         }
     }
@@ -554,6 +564,8 @@ impl SettingsTab {
             Self::Ai => "settings_view.ai.description",
             Self::Knowledge => "settings_view.knowledge.description",
             Self::Keybindings => "settings_view.keybindings.description",
+            Self::Extensions => "settings_view.extensions.description",
+            Self::CloudSync => "settings_view.cloud_sync.description",
             Self::Help => "settings_view.help.description",
         }
     }
@@ -570,6 +582,8 @@ impl SettingsTab {
             Self::Ai => SettingsTabIcon::Sparkles,
             Self::Knowledge => SettingsTabIcon::BookOpen,
             Self::Keybindings => SettingsTabIcon::Keyboard,
+            Self::Extensions => SettingsTabIcon::Puzzle,
+            Self::CloudSync => SettingsTabIcon::Cloud,
             Self::Help => SettingsTabIcon::HelpCircle,
         }
     }
@@ -834,6 +848,7 @@ impl SettingsInput {
 #[derive(Clone, Copy, Debug, Eq, PartialEq)]
 pub enum SettingsTabIcon {
     BookOpen,
+    Cloud,
     Code2,
     HardDrive,
     HelpCircle,
@@ -841,6 +856,7 @@ pub enum SettingsTabIcon {
     Keyboard,
     Monitor,
     Network,
+    Puzzle,
     Shield,
     Sparkles,
     Square,

@@ -116,7 +116,9 @@
       "help": "帮助与关于",
       "keybindings": "快捷键",
       "graphics": "图形",
-      "network": "网络与外部访问"
+      "network": "网络与外部访问",
+      "extensions": "插件",
+      "cloud_sync": "云同步"
     },
     "general": {
       "portable_status_unlocked": "已解锁",
@@ -2220,6 +2222,14 @@
       "testing": "测试中...",
       "test_success": "已连接，用时 {{elapsed}} ms",
       "test_error": "测试失败：{{error}}"
+    },
+    "extensions": {
+      "title": "插件",
+      "description": "管理已安装的插件与插件市场扩展。"
+    },
+    "cloud_sync": {
+      "title": "云同步",
+      "description": "同步设置、连接和会话配置到远程云端存储。"
     }
   },
   "terminal": {

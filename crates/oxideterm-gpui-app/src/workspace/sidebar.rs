@@ -43,27 +43,20 @@ const EMBEDDED_SFTP_MAX_SESSION_FRACTION: f32 = 0.75;
 #[derive(Clone, Copy, Debug, Eq, PartialEq)]
 pub(super) enum SidebarSection {
     Sessions,
-    Connections,
     Forwards,
-    Runtime,
     Terminal,
     Network,
-    Extensions,
-    CloudSync,
-    Knowledge,
     Assistant,
     HostTools,
     Automation,
     Workspace,
-    Files,
-    Notifications,
-    Settings,
 }
 
 #[derive(Clone, Copy, Debug, Eq, PartialEq)]
 pub(super) enum ContextSidebarPanel {
     Assistant,
     HostTools,
+    PluginPanel,
 }
 
 #[derive(Clone, Copy, Debug, Eq, PartialEq)]
@@ -104,32 +97,21 @@ pub(super) enum ActiveSessionSidebarViewMode {
 impl SidebarSection {
     pub(super) fn from_settings_key(key: &str) -> Self {
         match key {
-            // The retired saved-connections sidebar now restores the active
-            // session navigator while the full manager remains a workspace tab.
-            "connections" | "saved" => Self::Sessions,
-            // Embedded SFTP now shares the active-sessions panel. Preserve the
-            // old persisted key as a migration path instead of reopening a
-            // retired standalone sidebar.
-            "sftp" => Self::Sessions,
+            // These sections moved to their own title-bar entries or settings
+            // pages, so a persisted selection restores the active-sessions
+            // panel instead of a sidebar section that no longer exists.
+            "connections" | "saved" | "sftp" | "extensions" | "cloud_sync" | "runtime"
+            | "knowledge" | "files" | "notifications" | "settings" => Self::Sessions,
             "forwards" => Self::Forwards,
-            "runtime" => Self::Runtime,
             "connection_pool" | "terminal" => Self::Terminal,
-            // Retired health-page keys now restore the Host Tools replacement.
-            "connection_monitor" | "activity" => Self::HostTools,
+            // Retired health-page keys now restore the Host Tools replacement,
+            // which is also where the standalone monitor entry ended up.
+            "connection_monitor" | "activity" | "monitor" => Self::HostTools,
             "network" | "topology" => Self::Network,
-            "extensions" => Self::Extensions,
-            "cloud_sync" => Self::CloudSync,
-            "knowledge" => Self::Knowledge,
             "ai" | "assistant" => Self::Assistant,
             "host_tools" => Self::HostTools,
             "automation" => Self::Automation,
             "workspace" => Self::Workspace,
-            "files" => Self::Files,
-            // The standalone monitor activity button was retired after Host Tools
-            // became the cross-platform owner of connection monitoring.
-            "monitor" => Self::HostTools,
-            "notifications" => Self::Notifications,
-            "settings" => Self::Settings,
             _ => Self::Sessions,
         }
     }
@@ -137,23 +119,13 @@ impl SidebarSection {
     pub(super) fn as_settings_key(self) -> &'static str {
         match self {
             Self::Sessions => "sessions",
-            // Keep the activity identity stable; persistence stores the
-            // effective Sessions panel instead of this tab-only entry.
-            Self::Connections => "saved",
             Self::Forwards => "forwards",
-            Self::Runtime => "runtime",
             Self::Terminal => "connection_pool",
             Self::Network => "topology",
-            Self::Extensions => "extensions",
-            Self::CloudSync => "cloud_sync",
-            Self::Knowledge => "knowledge",
             Self::Assistant => "ai",
             Self::HostTools => "host_tools",
             Self::Automation => "automation",
             Self::Workspace => "workspace",
-            Self::Files => "files",
-            Self::Notifications => "notifications",
-            Self::Settings => "settings",
         }
     }
 }
@@ -161,24 +133,15 @@ impl SidebarSection {
 impl WorkspaceApp {
     pub(in crate::workspace) fn effective_sidebar_panel_section(&self) -> SidebarSection {
         match self.active_sidebar_section {
-            SidebarSection::Sessions
-            | SidebarSection::Forwards
-            | SidebarSection::Extensions
-            | SidebarSection::CloudSync => self.active_sidebar_section,
-            // Tauri separates activity-bar tab buttons from sidebar sections.
-            // Keep tab-only entries from replacing the Sessions sidebar body.
-            SidebarSection::Connections
-            | SidebarSection::Terminal
-            | SidebarSection::Runtime
+            SidebarSection::Sessions | SidebarSection::Forwards => self.active_sidebar_section,
+            // Tauri separates activity-bar actions from sidebar sections. Keep
+            // action-only entries from replacing the Sessions sidebar body.
+            SidebarSection::Terminal
             | SidebarSection::Network
-            | SidebarSection::Knowledge
             | SidebarSection::Assistant
             | SidebarSection::HostTools
             | SidebarSection::Automation
-            | SidebarSection::Workspace
-            | SidebarSection::Files
-            | SidebarSection::Notifications
-            | SidebarSection::Settings => SidebarSection::Sessions,
+            | SidebarSection::Workspace => SidebarSection::Sessions,
         }
     }
 }
@@ -217,19 +180,12 @@ mod sidebar_persistence_tests {
         let sections = [
             SidebarSection::Sessions,
             SidebarSection::Forwards,
-            SidebarSection::Runtime,
             SidebarSection::Terminal,
             SidebarSection::Network,
-            SidebarSection::Extensions,
-            SidebarSection::CloudSync,
-            SidebarSection::Knowledge,
             SidebarSection::Assistant,
             SidebarSection::HostTools,
             SidebarSection::Automation,
             SidebarSection::Workspace,
-            SidebarSection::Files,
-            SidebarSection::Notifications,
-            SidebarSection::Settings,
         ];
 
         for section in sections {
@@ -242,7 +198,18 @@ mod sidebar_persistence_tests {
 
     #[test]
     fn retired_sidebar_keys_restore_active_sessions() {
-        for key in ["connections", "saved", "sftp"] {
+        for key in [
+            "connections",
+            "saved",
+            "sftp",
+            "extensions",
+            "cloud_sync",
+            "runtime",
+            "knowledge",
+            "files",
+            "notifications",
+            "settings",
+        ] {
             assert_eq!(
                 SidebarSection::from_settings_key(key),
                 SidebarSection::Sessions

@@ -116,7 +116,9 @@
       "help": "Hilfe & Info",
       "keybindings": "Tastenkürzel",
       "graphics": "Grafik",
-      "network": "Netzwerk & externer Zugriff"
+      "network": "Netzwerk & externer Zugriff",
+      "extensions": "Plugins",
+      "cloud_sync": "Cloud-Synchronisierung"
     },
     "general": {
       "portable_status_unlocked": "Entsperrt",
@@ -2220,6 +2222,14 @@
       "testing": "Test läuft...",
       "test_success": "Verbunden in {{elapsed}} ms",
       "test_error": "Test fehlgeschlagen: {{error}}"
+    },
+    "extensions": {
+      "title": "Plugins",
+      "description": "Installierte Plugins verwalten und den Marketplace durchsuchen."
+    },
+    "cloud_sync": {
+      "title": "Cloud-Synchronisierung",
+      "description": "Einstellungen, Verbindungen und Sitzungen mit Remotespeicher synchronisieren."
     }
   },
   "terminal": {

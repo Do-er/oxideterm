@@ -657,12 +657,48 @@ impl TerminalCommandSenderEntity {
             return;
         }
         if let Some(document) = self.document_mut(sender_id) {
+            let current = document.repeat_count;
             let next = if delta.is_negative() {
-                document.repeat_count.saturating_sub(delta.unsigned_abs())
+                let abs_delta = delta.unsigned_abs();
+                if current <= abs_delta {
+                    0
+                } else {
+                    current.saturating_sub(abs_delta)
+                }
             } else {
-                document.repeat_count.saturating_add(delta as u32)
+                let add_delta = delta as u32;
+                if current == 0 {
+                    add_delta.clamp(1, TERMINAL_SENDER_MAX_REPEAT_COUNT)
+                } else {
+                    current.saturating_add(add_delta).min(TERMINAL_SENDER_MAX_REPEAT_COUNT)
+                }
+            };
+            if next != document.repeat_count {
+                document.repeat_count = next;
+                cx.notify();
             }
-            .clamp(1, TERMINAL_SENDER_MAX_REPEAT_COUNT);
+        }
+    }
+
+    pub(super) fn cycle_repeat_preset(
+        &mut self,
+        sender_id: TerminalCommandSenderId,
+        cx: &mut Context<Self>,
+    ) {
+        if self
+            .document(sender_id)
+            .is_some_and(|document| document.status == TerminalCommandSenderStatus::Running)
+        {
+            return;
+        }
+        if let Some(document) = self.document_mut(sender_id) {
+            let next = match document.repeat_count {
+                0 => 1,
+                1..=9 => 10,
+                10..=99 => 100,
+                100..=999 => 1000,
+                _ => 0,
+            };
             if next != document.repeat_count {
                 document.repeat_count = next;
                 cx.notify();
@@ -830,9 +866,16 @@ impl TerminalCommandSenderEntity {
 
         let task = cx.spawn(async move |sender, cx| {
             let mut stopped_for_missing_targets = false;
-            'repeats: for repeat_index in 0..plan.repeat_count() {
+            let mut repeat_index: u64 = 0;
+            let is_infinite = plan.is_infinite();
+            let limit = plan.repeat_count() as u64;
+            'repeats: loop {
+                if !is_infinite && repeat_index >= limit {
+                    break 'repeats;
+                }
                 for (frame_index, frame) in plan.frames().iter().enumerate() {
-                    let is_final_unit = repeat_index + 1 == plan.repeat_count()
+                    let is_final_unit = !is_infinite
+                        && repeat_index + 1 == limit
                         && frame_index + 1 == plan.frames().len();
                     let should_continue = sender
                         .update(cx, |sender, cx| {
@@ -847,6 +890,7 @@ impl TerminalCommandSenderEntity {
                         Timer::after(interval).await;
                     }
                 }
+                repeat_index = repeat_index.saturating_add(1);
             }
             let _ = sender.update(cx, |sender, cx| {
                 sender.finish_run(
@@ -951,7 +995,8 @@ impl TerminalCommandSenderEntity {
         document.accepted_writes = document.accepted_writes.saturating_add(accepted);
         document.skipped_writes = document.skipped_writes.saturating_add(skipped);
         let now = Instant::now();
-        let progress_complete = document.completed_units >= document.total_units;
+        let progress_complete =
+            document.total_units > 0 && document.completed_units >= document.total_units;
         let repaint_due = document.last_progress_notify.is_none_or(|last| {
             now.duration_since(last) >= TERMINAL_SENDER_PROGRESS_NOTIFY_INTERVAL
         });
@@ -1335,6 +1380,55 @@ mod tests {
                 sender.move_compact_suggestion_selection(3, false, cx),
                 Some(2)
             );
+        });
+    }
+
+    #[gpui::test]
+    fn adjust_repeat_count_supports_infinite_and_presets(cx: &mut TestAppContext) {
+        let sender = cx.new(|cx| {
+            TerminalCommandSenderEntity::new(
+                default_tokens(),
+                "Command".to_string(),
+                "Commands".to_string(),
+                test_context_menu_labels(),
+                cx,
+            )
+        });
+
+        sender.update(cx, |sender, cx| {
+            let sender_id = sender.active_document_id();
+
+            // Default is 1
+            assert_eq!(sender.document(sender_id).unwrap().repeat_count, 1);
+
+            // 1 clicked minus -> 0 (infinite)
+            sender.adjust_repeat_count(sender_id, -1, cx);
+            assert_eq!(sender.document(sender_id).unwrap().repeat_count, 0);
+
+            // From 0, clicking minus stays 0
+            sender.adjust_repeat_count(sender_id, -1, cx);
+            assert_eq!(sender.document(sender_id).unwrap().repeat_count, 0);
+
+            // From 0, clicking plus (delta 1) returns to 1
+            sender.adjust_repeat_count(sender_id, 1, cx);
+            assert_eq!(sender.document(sender_id).unwrap().repeat_count, 1);
+
+            // Step by 1000
+            sender.adjust_repeat_count(sender_id, 1000, cx);
+            assert_eq!(sender.document(sender_id).unwrap().repeat_count, 1001);
+
+            // Cycle presets
+            sender.document_mut(sender_id).unwrap().repeat_count = 1;
+            sender.cycle_repeat_preset(sender_id, cx);
+            assert_eq!(sender.document(sender_id).unwrap().repeat_count, 10);
+            sender.cycle_repeat_preset(sender_id, cx);
+            assert_eq!(sender.document(sender_id).unwrap().repeat_count, 100);
+            sender.cycle_repeat_preset(sender_id, cx);
+            assert_eq!(sender.document(sender_id).unwrap().repeat_count, 1000);
+            sender.cycle_repeat_preset(sender_id, cx);
+            assert_eq!(sender.document(sender_id).unwrap().repeat_count, 0);
+            sender.cycle_repeat_preset(sender_id, cx);
+            assert_eq!(sender.document(sender_id).unwrap().repeat_count, 1);
         });
     }
 }

@@ -73,6 +73,10 @@ impl TerminalSenderPlan {
     pub fn total_units(&self) -> u64 {
         self.total_units
     }
+
+    pub fn is_infinite(&self) -> bool {
+        self.repeat_count == 0
+    }
 }
 
 impl fmt::Debug for TerminalSenderPlan {
@@ -117,9 +121,6 @@ pub fn build_terminal_sender_plan(
     pacing: TerminalSenderPacing,
     repeat_count: u32,
 ) -> Result<TerminalSenderPlan, TerminalSenderPlanError> {
-    if repeat_count == 0 {
-        return Err(TerminalSenderPlanError::ZeroRepeatCount);
-    }
     if input.is_empty() {
         return Err(TerminalSenderPlanError::EmptyInput);
     }
@@ -137,7 +138,11 @@ pub fn build_terminal_sender_plan(
     }
     let frame_count =
         u64::try_from(frames.len()).map_err(|_| TerminalSenderPlanError::UnitCountOverflow)?;
-    let total_units = checked_total_units(frame_count, repeat_count)?;
+    let total_units = if repeat_count == 0 {
+        0
+    } else {
+        checked_total_units(frame_count, repeat_count)?
+    };
 
     Ok(TerminalSenderPlan {
         frames,
@@ -373,17 +378,18 @@ mod tests {
     }
 
     #[test]
-    fn plan_rejects_zero_repeats_and_unit_count_overflow() {
-        assert_eq!(
-            plan(
-                "echo one",
-                TerminalSenderInputMode::Text,
-                TerminalSenderPacing::Line,
-                0,
-            )
-            .unwrap_err(),
-            TerminalSenderPlanError::ZeroRepeatCount
-        );
+    fn plan_supports_infinite_repeats_when_count_is_zero() {
+        let plan = plan(
+            "echo one",
+            TerminalSenderInputMode::Text,
+            TerminalSenderPacing::Line,
+            0,
+        )
+        .unwrap();
+        assert!(plan.is_infinite());
+        assert_eq!(plan.repeat_count(), 0);
+        assert_eq!(plan.total_units(), 0);
+        assert_eq!(plan.frames().len(), 1);
         assert_eq!(
             checked_total_units(u64::MAX, 2).unwrap_err(),
             TerminalSenderPlanError::UnitCountOverflow
