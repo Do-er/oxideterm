@@ -36,29 +36,6 @@ pub(in crate::workspace) fn sidebar_resize_hotzone_origin(seam: f32) -> f32 {
 }
 
 impl WorkspaceApp {
-    pub(in crate::workspace) fn render_animated_sidebar_region(
-        &mut self,
-        cx: &mut Context<Self>,
-    ) -> AnyElement {
-        let expanded_width = self.sidebar_panel_width();
-        self.sidebar_motion.retarget(if self.sidebar_collapsed {
-            0.0
-        } else {
-            expanded_width
-        });
-        let content = div()
-            .flex_none()
-            .w(px(expanded_width))
-            .h_full()
-            .child(self.render_sidebar_region(cx));
-        self.sidebar_motion.animate(
-            &self.tokens,
-            "workspace-left-sidebar-motion",
-            div().h_full().flex_none().overflow_hidden().child(content),
-            |viewport, width| viewport.w(px(width)),
-        )
-    }
-
     pub(in crate::workspace) fn render_animated_context_sidebar_frame(
         &mut self,
         window: &mut Window,
@@ -82,18 +59,6 @@ impl WorkspaceApp {
             div().h_full().flex_none().overflow_hidden().child(content),
             |viewport, width| viewport.w(px(width)),
         )
-    }
-
-    pub(in crate::workspace) fn render_sidebar_region(
-        &mut self,
-        cx: &mut Context<Self>,
-    ) -> AnyElement {
-        div()
-            .relative()
-            .w(px(self.sidebar_panel_width()))
-            .h_full()
-            .child(self.render_sidebar(cx))
-            .into_any_element()
     }
 
     pub(in crate::workspace) fn render_context_right_sidebar_frame(
@@ -273,46 +238,6 @@ impl WorkspaceApp {
                     ),
             )
             .into_any_element()
-    }
-
-    pub(in crate::workspace) fn render_left_sidebar_resize_hotzone(
-        &mut self,
-        top_offset: f32,
-        cx: &mut Context<Self>,
-    ) -> AnyElement {
-        let theme = self.tokens.ui;
-        let activity_width = self.tokens.metrics.activity_bar_width;
-        let hotzone = sidebar_resize_hotzone_chrome(
-            "workspace-left-sidebar-resize-hotzone",
-            if self.sidebar_resizing {
-                rgb(theme.accent)
-            } else {
-                self.workspace_divider_color(theme.border, 0x40)
-            },
-            true,
-        )
-        .top(px(top_offset))
-        .bottom_0()
-        .on_mouse_down(
-            MouseButton::Left,
-            cx.listener(|this, event: &gpui::MouseDownEvent, window, cx| {
-                this.start_sidebar_resize(event, window, cx);
-                window.prevent_default();
-                cx.stop_propagation();
-            }),
-        )
-        .on_hover(cx.listener(|this, hovered, _window, cx| {
-            if this.sidebar_resize_hotzone_hovered != *hovered {
-                this.sidebar_resize_hotzone_hovered = *hovered;
-                cx.notify();
-            }
-        }));
-        self.sidebar_motion.animate(
-            &self.tokens,
-            "left-sidebar-edge-motion",
-            hotzone,
-            move |edge, width| edge.left(px(sidebar_resize_hotzone_origin(activity_width + width))),
-        )
     }
 
     pub(in crate::workspace) fn render_context_right_sidebar_resize_hotzone(
@@ -545,75 +470,6 @@ impl WorkspaceApp {
             .into_any_element()
     }
 
-    pub(in crate::workspace) fn render_sidebar(&mut self, cx: &mut Context<Self>) -> AnyElement {
-        let theme = self.tokens.ui;
-        div()
-            .w_full()
-            .h_full()
-            .flex()
-            .flex_col()
-            // The overlaid resize hotzone owns the seam without reserving an
-            // untinted layout border between the sidebar and main content.
-            .child(self.render_sidebar_header(cx))
-            .child(
-                div()
-                    .flex_1()
-                    .min_h_0()
-                    .w_full()
-                    .flex()
-                    .flex_col()
-                    // Match the activity bar and context sidebar base surface
-                    // so the full-height navigation body does not read as a card.
-                    .bg(self.workspace_sidebar_background(theme.bg))
-                    .child(self.render_sidebar_content()),
-            )
-            .into_any_element()
-    }
-
-    pub(in crate::workspace) fn render_sidebar_header(&self, cx: &mut Context<Self>) -> AnyElement {
-        let theme = self.tokens.ui;
-        let title_key = "forwards.table.title";
-        let title = self.i18n.t(title_key).to_uppercase();
-        let header = div()
-            // Align sidebar titles with the neighboring workspace tab bar.
-            .h(px(self.tokens.metrics.tabbar_height))
-            .flex_none()
-            .flex()
-            .flex_row()
-            .items_center()
-            // Use the same image-background opacity as the adjacent tab bar
-            // without stacking it over the sidebar body's translucent tint.
-            .bg(self.workspace_chrome_background(theme.bg))
-            .border_b_1()
-            .border_color(self.workspace_chrome_divider())
-            .px_2()
-            .child(
-                self.render_window_drag_content_region(
-                    "sidebar-header-title-drag-region",
-                    div()
-                        .flex()
-                        .items_center()
-                        .truncate()
-                        .text_size(px(self.tokens.metrics.sidebar_title_font_size))
-                        .font_weight(gpui::FontWeight::SEMIBOLD)
-                        .text_color(rgb(theme.text_muted))
-                        // A title inside the native drag region must never start
-                        // read-only text selection or retain pointer ownership.
-                        .child(self.render_display_text_with_role(
-                            SelectableTextRole::NonSelectable,
-                            "sidebar-header-title",
-                            title_key,
-                            title,
-                            theme.text_muted,
-                            cx,
-                        ))
-                        .into_any_element(),
-                    cx,
-                ),
-            );
-        header.into_any_element()
-    }
-
     pub(in crate::workspace) fn render_sidebar_action(
         &self,
         icon: LucideIcon,
@@ -667,15 +523,6 @@ impl WorkspaceApp {
                 cx.entity(),
             ))
             .into_any_element()
-    }
-
-    pub(in crate::workspace) fn render_sidebar_content(&mut self) -> AnyElement {
-        // The former panel body stays blank until its remaining shell is removed.
-        self.render_blank_sidebar_content()
-    }
-
-    pub(in crate::workspace) fn render_blank_sidebar_content(&self) -> AnyElement {
-        div().flex_1().w_full().into_any_element()
     }
 
     pub(in crate::workspace) fn render_notifications_center_content(

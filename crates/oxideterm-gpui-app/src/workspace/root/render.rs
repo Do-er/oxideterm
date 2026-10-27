@@ -1133,12 +1133,6 @@ impl WorkspaceApp {
                     .flex()
                     .flex_row()
                     .overflow_hidden()
-                    .when(!zen_mode, |layout| {
-                        layout.child(self.render_activity_bar(cx))
-                    })
-                    .when(!zen_mode && self.sidebar_rendered, |layout| {
-                        layout.child(self.render_animated_sidebar_region(cx))
-                    })
                     .child(
                         div()
                             .flex_1()
@@ -1171,9 +1165,6 @@ impl WorkspaceApp {
                         layout.child(self.render_context_activity_bar(window, cx))
                     }),
             )
-            .when(!zen_mode && !self.sidebar_collapsed, |root| {
-                root.child(self.render_left_sidebar_resize_hotzone(effective_titlebar_height, cx))
-            })
             .when(!zen_mode && self.context_sidebar_visible(), |root| {
                 root.child(
                     self.render_context_right_sidebar_resize_hotzone(effective_titlebar_height, cx),

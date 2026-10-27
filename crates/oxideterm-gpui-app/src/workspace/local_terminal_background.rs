@@ -1,3 +1,5 @@
+#![allow(dead_code)]
+
 use super::*;
 use oxideterm_gpui_ui::modal::rounded_shell_child_radius;
 

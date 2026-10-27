@@ -793,6 +793,7 @@ pub(crate) struct WorkspaceApp {
     // Active nodes retain history handles without owning or prolonging the transport.
     ssh_terminal_command_histories: HashMap<NodeId, SharedTerminalCommandHistory>,
     detached_local_terminals: HashMap<TerminalSessionId, DetachedLocalTerminalSession>,
+    #[allow(dead_code)]
     detached_local_terminal_order: Vec<TerminalSessionId>,
     serial_terminal_configs: HashMap<TerminalSessionId, SerialSessionConfig>,
     // A Telnet pane keeps only the stable profile owner needed for toolbar persistence.
@@ -812,7 +813,9 @@ pub(crate) struct WorkspaceApp {
     // Prompt and memory documents are edited outside the virtual settings list.
     ai_text_editor_dialog: Option<settings::AiTextEditorDialog>,
     ai_text_editor: Option<Entity<oxideterm_gpui_editor::TextEditorView>>,
+    #[allow(dead_code)]
     detached_local_terminal_list_state: ListState,
+    #[allow(dead_code)]
     detached_local_terminal_list_cache: RefCell<VirtualListSignatureCache>,
     plugin_entity: Entity<plugin_entity::PluginWorkspaceEntity>,
     _plugin_entity_subscription: Subscription,
@@ -1213,6 +1216,7 @@ impl std::fmt::Debug for AiCliAgentSession {
 }
 
 #[derive(Clone)]
+#[allow(dead_code)]
 struct DetachedLocalTerminalSession {
     session_id: TerminalSessionId,
     title: String,

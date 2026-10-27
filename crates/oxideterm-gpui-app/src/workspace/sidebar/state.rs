@@ -273,6 +273,7 @@ impl WorkspaceApp {
         true
     }
 
+    #[allow(dead_code)]
     pub(in crate::workspace) fn start_sidebar_resize(
         &mut self,
         event: &MouseDownEvent,
