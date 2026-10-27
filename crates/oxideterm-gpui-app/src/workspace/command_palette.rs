@@ -80,7 +80,8 @@ enum PaletteAction {
     OpenSerialTerminal,
     OpenRemoteDesktopPreview(RemoteDesktopProtocol),
     OpenRemoteDesktopConnection(RemoteDesktopConnectionProfile),
-    Sidebar(SidebarSection),
+    OpenSessions,
+    OpenForwardsSidebar,
     OpenSftp,
     OpenSavedConnections,
     OpenSessionManager,
@@ -613,7 +614,12 @@ impl WorkspaceApp {
             PaletteAction::OpenRemoteDesktopConnection(profile) => {
                 self.open_remote_desktop_connection_tab(profile, None, window, cx);
             }
-            PaletteAction::Sidebar(section) => self.set_sidebar_section(section, cx),
+            PaletteAction::OpenSessions => {
+                self.open_context_sidebar_panel(ContextSidebarPanel::Sessions, cx);
+            }
+            PaletteAction::OpenForwardsSidebar => {
+                self.set_sidebar_section(SidebarSection::Forwards, cx);
+            }
             PaletteAction::OpenSftp => {
                 // SFTP follows the configured presentation preference; it is
                 // no longer represented by an independent sidebar section.
@@ -624,7 +630,7 @@ impl WorkspaceApp {
                 {
                     self.open_sftp_tab(node_id, window, cx);
                 } else {
-                    self.set_sidebar_section(SidebarSection::Sessions, cx);
+                    self.open_context_sidebar_panel(ContextSidebarPanel::Sessions, cx);
                 }
             }
             PaletteAction::OpenSavedConnections => self.open_session_manager_tab(window, cx),
@@ -2887,9 +2893,9 @@ fn command_palette_specs() -> Vec<CommandSpec> {
         CommandSpec {
             id: "cmd:sidebar_sessions",
             label_key: "command_palette.cmd_sidebar_sessions".into(),
-            icon: LucideIcon::ListTree,
+            icon: LucideIcon::Link2,
             shortcut_action: None,
-            action: PaletteAction::Sidebar(SidebarSection::Sessions),
+            action: PaletteAction::OpenSessions,
         },
         CommandSpec {
             id: "cmd:sidebar_saved",
@@ -2910,7 +2916,7 @@ fn command_palette_specs() -> Vec<CommandSpec> {
             label_key: "command_palette.cmd_sidebar_forwards".into(),
             icon: LucideIcon::ArrowLeftRight,
             shortcut_action: None,
-            action: PaletteAction::Sidebar(SidebarSection::Forwards),
+            action: PaletteAction::OpenForwardsSidebar,
         },
         CommandSpec {
             id: "cmd:sidebar_ai",

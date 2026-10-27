@@ -987,7 +987,9 @@ impl WorkspaceApp {
             "app.closeOtherTabs" => self.request_close_other_tabs_or_active_pane(window, cx),
             "app.newConnection" => self.open_new_connection_form(window, cx),
             "app.settings" => self.open_settings(window, cx),
-            "app.toggleSidebar" => self.toggle_sidebar(cx),
+            "app.toggleSidebar" => {
+                let _ = self.toggle_context_sidebar_panel(ContextSidebarPanel::Sessions, cx);
+            }
             "app.commandPalette" => self.open_command_palette(window, cx),
             "app.zenMode" => self.toggle_zen_mode(cx),
             "app.nextTab" => self.next_tab(true, window, cx),
@@ -1491,8 +1493,7 @@ impl WorkspaceApp {
         if self.sftp_view().read(cx).focused_input().is_some()
             || (self.sftp_focused_surface == sftp::SftpSurfaceId::Sidebar
                 && self.focus_handle.is_focused(window)
-                && !self.sidebar_collapsed
-                && self.effective_sidebar_panel_section() == SidebarSection::Sessions
+                && self.active_sessions_sidebar_visible()
                 && self.embedded_sftp_target(cx).is_some())
             || self
                 .active_content_tab(cx)

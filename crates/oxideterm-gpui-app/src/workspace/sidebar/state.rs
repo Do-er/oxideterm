@@ -44,6 +44,11 @@ fn should_collapse_context_sidebar_panel(
     sidebar_visible && active_panel == requested_panel
 }
 
+fn embedded_sftp_session_fraction(cursor_y: f32, split_top: f32, split_height: f32) -> f32 {
+    ((cursor_y - split_top) / split_height.max(1.0))
+        .clamp(EMBEDDED_SFTP_MIN_SESSION_FRACTION, EMBEDDED_SFTP_MAX_SESSION_FRACTION)
+}
+
 fn should_collapse_primary_sidebar_section(
     sidebar_collapsed: bool,
     visible_section: SidebarSection,
@@ -62,11 +67,13 @@ pub(in crate::workspace) fn context_sidebar_panel_visible(
         return false;
     }
 
-    // Host Tools and plugin panels share the companion sidebar shell, but their
-    // visibility must remain independent from the optional AI feature.
+    // Non-AI panels share the companion sidebar shell, but their visibility must
+    // remain independent from the optional AI feature.
     match active_panel {
         ContextSidebarPanel::Assistant => ai_enabled,
-        ContextSidebarPanel::HostTools | ContextSidebarPanel::PluginPanel => true,
+        ContextSidebarPanel::Sessions
+        | ContextSidebarPanel::HostTools
+        | ContextSidebarPanel::PluginPanel => true,
     }
 }
 
@@ -182,6 +189,11 @@ impl WorkspaceApp {
         )
     }
 
+    pub(in crate::workspace) fn active_sessions_sidebar_visible(&self) -> bool {
+        self.context_sidebar_visible()
+            && self.active_context_sidebar_panel == ContextSidebarPanel::Sessions
+    }
+
     pub(in crate::workspace) fn context_sidebar_occupied_width(&self, cx: &App) -> f32 {
         if self.settings_store.settings().sidebar_ui.zen_mode {
             return 0.0;
@@ -203,9 +215,6 @@ impl WorkspaceApp {
         self.active_sidebar_section = section;
         if self.sidebar_collapsed {
             self.set_sidebar_collapsed_with_motion(false, cx);
-        }
-        if section == SidebarSection::Sessions {
-            self.activate_embedded_sftp_sidebar_if_visible(cx);
         }
         self.persist_sidebar_settings(cx);
         cx.notify();
@@ -317,20 +326,32 @@ impl WorkspaceApp {
         }
     }
 
+    pub(in crate::workspace) fn record_embedded_sftp_sidebar_split_bounds(
+        &mut self,
+        bounds: Bounds<Pixels>,
+        cx: &mut Context<Self>,
+    ) {
+        if self.embedded_sftp_sidebar_split_bounds == Some(bounds) {
+            return;
+        }
+        // Prepaint may run repeatedly for the same layout. Only a real geometry
+        // change should invalidate the drawer and its pointer coordinate space.
+        self.embedded_sftp_sidebar_split_bounds = Some(bounds);
+        cx.notify();
+    }
+
     pub(in crate::workspace) fn start_embedded_sftp_sidebar_resize(
         &mut self,
         event: &MouseDownEvent,
-        window: &Window,
         cx: &mut Context<Self>,
     ) {
         self.embedded_sftp_sidebar_resizing = true;
-        self.set_embedded_sftp_sidebar_fraction(event.position.y, window, cx);
+        self.set_embedded_sftp_sidebar_fraction(event.position.y, cx);
     }
 
     pub(in crate::workspace) fn update_embedded_sftp_sidebar_resize(
         &mut self,
         event: &MouseMoveEvent,
-        window: &Window,
         cx: &mut Context<Self>,
     ) {
         if !self.embedded_sftp_sidebar_resizing {
@@ -342,7 +363,7 @@ impl WorkspaceApp {
             self.finish_embedded_sftp_sidebar_resize(cx);
             return;
         }
-        self.set_embedded_sftp_sidebar_fraction(event.position.y, window, cx);
+        self.set_embedded_sftp_sidebar_fraction(event.position.y, cx);
     }
 
     pub(in crate::workspace) fn finish_embedded_sftp_sidebar_resize(
@@ -357,19 +378,16 @@ impl WorkspaceApp {
         cx.notify();
     }
 
-    fn set_embedded_sftp_sidebar_fraction(
-        &mut self,
-        cursor_y: Pixels,
-        window: &Window,
-        cx: &mut Context<Self>,
-    ) {
-        // The split lives below the native/custom titlebar and the fixed
-        // primary-sidebar header, so convert the window cursor into that body.
-        let body_top = self.window_titlebar_height(window) + self.tokens.metrics.tabbar_height;
-        let body_height = (f32::from(window.viewport_size().height) - body_top).max(1.0);
-        let fraction = ((f32::from(cursor_y) - body_top) / body_height).clamp(
-            EMBEDDED_SFTP_MIN_SESSION_FRACTION,
-            EMBEDDED_SFTP_MAX_SESSION_FRACTION,
+    fn set_embedded_sftp_sidebar_fraction(&mut self, cursor_y: Pixels, cx: &mut Context<Self>) {
+        let Some(bounds) = self.embedded_sftp_sidebar_split_bounds else {
+            return;
+        };
+        // Mouse positions and prepaint bounds share window coordinates. Measure
+        // against the actual split instead of assuming which drawer rows exist.
+        let fraction = embedded_sftp_session_fraction(
+            f32::from(cursor_y),
+            f32::from(bounds.origin.y),
+            f32::from(bounds.size.height),
         );
         let current = self.settings_store.settings().sftp.sidebar_session_fraction;
         if (current - fraction).abs() < f32::EPSILON {
@@ -433,6 +451,11 @@ impl WorkspaceApp {
         }
 
         self.active_context_sidebar_panel = panel;
+        if panel != ContextSidebarPanel::Sessions {
+            // Leaving the owning surface ends only its pointer gesture; the
+            // embedded SFTP consumer and node-owned connection stay alive.
+            self.finish_embedded_sftp_sidebar_resize(cx);
+        }
         self.settings_store
             .settings_mut()
             .sidebar_ui
@@ -452,6 +475,9 @@ impl WorkspaceApp {
             self.bootstrap_native_plugin_runtime(cx);
         }
         self.sync_host_tools_lifecycle(panel == ContextSidebarPanel::HostTools, cx);
+        if panel == ContextSidebarPanel::Sessions {
+            self.activate_embedded_sftp_sidebar_if_visible(cx);
+        }
         self.clear_ai_sidebar_keyboard_focus(cx);
         self.persist_sidebar_settings_store(cx);
         cx.notify();
@@ -459,6 +485,7 @@ impl WorkspaceApp {
     }
 
     pub(in crate::workspace) fn collapse_context_sidebar(&mut self, cx: &mut Context<Self>) {
+        self.finish_embedded_sftp_sidebar_resize(cx);
         self.settings_store
             .settings_mut()
             .sidebar_ui
@@ -646,7 +673,157 @@ pub(in crate::workspace) fn ai_sidebar_width_from_cursor_value(
 
 #[cfg(test)]
 mod tests {
-    use super::ai_sidebar_width_from_cursor_value;
+    use super::*;
+    use gpui::TestAppContext;
+
+    struct ContextSidebarView(Entity<WorkspaceApp>);
+
+    impl Render for ContextSidebarView {
+        fn render(&mut self, window: &mut Window, cx: &mut Context<Self>) -> impl IntoElement {
+            self.0.update(cx, |workspace, cx| {
+                workspace.render_context_right_sidebar_region(window, cx)
+            })
+        }
+    }
+
+    #[gpui::test]
+    fn sessions_drawer_toggles_without_ai_and_preserves_shared_consumers(
+        cx: &mut TestAppContext,
+    ) {
+        let executable = std::env::current_exe().unwrap();
+        let fixture_key = "OXIDETERM_SESSIONS_DRAWER_TEST_DIR";
+        let Some(fixture_dir) = std::env::var_os(fixture_key) else {
+            // Workspace storage is process-wide; a portable child keeps user data untouched.
+            let directory = tempfile::tempdir_in(executable.parent().unwrap()).unwrap();
+            let child = directory.path().join(executable.file_name().unwrap());
+            fs::hard_link(&executable, &child).unwrap();
+            fs::write(directory.path().join("portable"), []).unwrap();
+            let output = std::process::Command::new(child)
+                .arg(cx.test_function_name().unwrap())
+                .arg("--nocapture")
+                .env(fixture_key, directory.path())
+                .env_remove("APPIMAGE")
+                .current_dir(directory.path())
+                .output()
+                .unwrap();
+            assert!(
+                output.status.success(),
+                "{}\n{}",
+                String::from_utf8_lossy(&output.stdout),
+                String::from_utf8_lossy(&output.stderr)
+            );
+            return;
+        };
+        let settings_path = default_settings_path();
+        assert!(settings_path.starts_with(PathBuf::from(fixture_dir)));
+        let mut settings = SettingsStore::load_from_path(settings_path).unwrap();
+        settings.settings_mut().ssh_config.auto_load_hosts = false;
+        settings.settings_mut().onboarding_completed = true;
+        settings.settings_mut().ai.enabled = false;
+        settings.save().unwrap();
+
+        let (_view, cx) = cx.add_window_view(|window, cx| {
+            ContextSidebarView(cx.new(|cx| WorkspaceApp::new(window, cx, None, None).unwrap()))
+        });
+        cx.update(|window, cx| window.draw(cx).clear(cx));
+        let workspace = _view.read_with(cx, |view, _| view.0.clone());
+        let (registry, router, node_id) = workspace.read_with(cx, |workspace, _| {
+            let node_id = NodeId::new("drawer-lifecycle-fixture");
+            workspace.node_router.upsert_node(
+                node_id.clone(),
+                SshConfig {
+                    host: "drawer.example.test".into(),
+                    username: "test-user".into(),
+                    ..SshConfig::default()
+                },
+            );
+            (
+                workspace.ssh_registry.clone(),
+                workspace.node_router.clone(),
+                node_id,
+            )
+        });
+        let terminal = ConnectionConsumer::Terminal("drawer-fixture-terminal".into());
+        let sftp = ConnectionConsumer::Sftp("drawer-fixture-sftp".into());
+        let handle = registry.acquire(
+            SshConfig {
+                host: "drawer.example.test".into(),
+                username: "test-user".into(),
+                ..SshConfig::default()
+            },
+            terminal.clone(),
+        );
+        registry.acquire_consumer_for_connection(handle.connection_id(), sftp.clone())
+            .expect("existing shared connection");
+        registry.mark_state_without_event(handle.connection_id(), ConnectionState::Active);
+        router
+            .bind_connection(&node_id, handle.connection_id().to_string())
+            .unwrap();
+        let expected_consumers = vec![terminal, sftp];
+        assert_eq!(handle.info().ref_count, 2);
+        assert_eq!(handle.info().consumers, expected_consumers);
+
+        workspace.update(cx, |workspace, cx| {
+            assert!(!workspace.settings_store.settings().ai.enabled);
+            assert!(workspace.toggle_context_sidebar_panel(ContextSidebarPanel::Sessions, cx));
+            assert!(workspace.active_sessions_sidebar_visible());
+            assert!(!workspace.toggle_ai_sidebar(cx));
+            assert!(workspace.active_sessions_sidebar_visible());
+
+            workspace.embedded_sftp_sidebar_resizing = true;
+            assert!(workspace.toggle_context_sidebar_panel(ContextSidebarPanel::HostTools, cx));
+            assert!(!workspace.active_sessions_sidebar_visible());
+            assert!(!workspace.embedded_sftp_sidebar_resizing);
+
+            assert!(workspace.toggle_context_sidebar_panel(ContextSidebarPanel::Sessions, cx));
+            assert!(workspace.active_sessions_sidebar_visible());
+            workspace.embedded_sftp_sidebar_resizing = true;
+            assert!(workspace.toggle_context_sidebar_panel(ContextSidebarPanel::Sessions, cx));
+            assert!(!workspace.active_sessions_sidebar_visible());
+            assert!(!workspace.embedded_sftp_sidebar_resizing);
+        });
+
+        // Drawer visibility owns no physical connection or logical consumer.
+        assert_eq!(handle.state(), ConnectionState::Active);
+        assert_eq!(handle.info().ref_count, 2);
+        assert_eq!(handle.info().consumers, expected_consumers);
+        assert_eq!(
+            router.node_state(&node_id).unwrap().state.readiness,
+            NodeReadiness::Ready
+        );
+    }
+
+    #[test]
+    fn repeated_clicks_collapse_only_the_visible_context_panel() {
+        assert!(should_collapse_context_sidebar_panel(
+            true,
+            ContextSidebarPanel::Sessions,
+            ContextSidebarPanel::Sessions,
+        ));
+        assert!(!should_collapse_context_sidebar_panel(
+            true,
+            ContextSidebarPanel::Sessions,
+            ContextSidebarPanel::HostTools,
+        ));
+        assert!(!should_collapse_context_sidebar_panel(
+            false,
+            ContextSidebarPanel::Sessions,
+            ContextSidebarPanel::Sessions,
+        ));
+    }
+
+    #[test]
+    fn embedded_sftp_resize_measures_from_the_actual_split_bounds() {
+        assert_eq!(embedded_sftp_session_fraction(340.0, 140.0, 400.0), 0.5);
+        assert_eq!(
+            embedded_sftp_session_fraction(100.0, 140.0, 400.0),
+            EMBEDDED_SFTP_MIN_SESSION_FRACTION
+        );
+        assert_eq!(
+            embedded_sftp_session_fraction(600.0, 140.0, 400.0),
+            EMBEDDED_SFTP_MAX_SESSION_FRACTION
+        );
+    }
 
     #[test]
     fn context_sidebar_resize_excludes_the_fixed_right_rail() {

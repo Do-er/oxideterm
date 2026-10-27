@@ -11,7 +11,6 @@ impl WorkspaceApp {
         cx: &mut Context<Self>,
     ) -> AnyElement {
         let theme = self.tokens.ui;
-        let top_items = [(SidebarSection::Sessions, LucideIcon::Link2)];
         let bottom_items = [(SidebarSection::Workspace, LucideIcon::Square)];
         let mut bar = div()
             .w(px(self.tokens.metrics.activity_bar_width))
@@ -89,7 +88,7 @@ impl WorkspaceApp {
                 ),
         );
 
-        let mut primary_items = div()
+        let primary_items = div()
             .id("activity-primary-items")
             .min_h_0()
             .flex_1()
@@ -99,10 +98,6 @@ impl WorkspaceApp {
             .flex()
             .flex_col()
             .items_center();
-        for (section, icon) in top_items {
-            primary_items = primary_items.child(self.render_activity_icon(section, icon, cx));
-        }
-
         let mut bottom = div().relative().flex().flex_col().items_center().child(
             div()
                 .w(px(self.tokens.metrics.divider_width))
@@ -406,7 +401,6 @@ impl WorkspaceApp {
 
     pub(in crate::workspace) fn activity_icon_tooltip(&self, section: SidebarSection) -> String {
         match section {
-            SidebarSection::Sessions => self.i18n.t("sidebar.panels.sessions"),
             SidebarSection::Forwards => self.i18n.t("forwards.table.title"),
             SidebarSection::Terminal => self.i18n.t("sidebar.panels.runtime_overview"),
             SidebarSection::Network => self.i18n.t("sidebar.panels.connection_matrix"),

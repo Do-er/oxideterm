@@ -265,6 +265,7 @@ impl WorkspaceApp {
         let close_node_id = node_id.clone();
 
         let mut root = div()
+            .debug_selector(|| "embedded-sftp-sidebar-surface".to_string())
             .flex_1()
             .min_h(px(0.0))
             .w_full()

@@ -72,7 +72,7 @@ fn tool_stack_height(count: usize, row_height: f32, separator_height: f32) -> f3
     } else {
         1.0
     };
-    (count + 1) as f32 * row_height + separators * separator_height
+    (count + 2) as f32 * row_height + separators * separator_height
 }
 
 fn overflow_tools(visible: usize) -> Vec<ContextSidebarTool> {
@@ -171,6 +171,32 @@ impl WorkspaceApp {
         }
     }
 
+    fn render_sessions_context_tool(&self, cx: &mut Context<Self>) -> AnyElement {
+        let active = self.active_sessions_sidebar_visible();
+        div()
+            .flex_none()
+            .mb(px(self.tokens.metrics.activity_icon_gap))
+            .child(self.workspace_tooltip_icon_button(
+                LucideIcon::Link2,
+                self.tokens.metrics.activity_icon_glyph_size,
+                rgb(if active {
+                    self.tokens.ui.accent
+                } else {
+                    self.tokens.ui.text
+                }),
+                self.context_tool_button_options(active),
+                self.i18n.t("sidebar.panels.sessions"),
+                "context-sessions",
+                true,
+                cx.listener(|this, _, _, cx| {
+                    let _ = this.toggle_context_sidebar_panel(ContextSidebarPanel::Sessions, cx);
+                    cx.stop_propagation();
+                }),
+                cx.entity(),
+            ))
+            .into_any_element()
+    }
+
     pub(in crate::workspace) fn render_context_tool_buttons(
         &self,
         window: &Window,
@@ -185,6 +211,7 @@ impl WorkspaceApp {
             .flex_col()
             .items_center()
             .pt(px(PRIMARY_SIDEBAR_CONTENT_TOP_INSET))
+            .child(self.render_sessions_context_tool(cx))
             .child(self.render_activity_icon(SidebarSection::Assistant, LucideIcon::Sparkles, cx))
             .child(self.context_tool_separator());
         for (index, tool) in TOOLS.iter().take(count).copied().enumerate() {
@@ -433,33 +460,30 @@ mod tests {
     #[test]
     fn shrinking_the_rail_moves_only_trailing_tools_into_more() {
         // All tools fit exactly without reserving an unnecessary More button.
-        let all_visible = visible_tool_count(498.0, 40.0, 9.0);
+        let all_visible = visible_tool_count(538.0, 40.0, 9.0);
         assert_eq!(all_visible, 11);
         assert_eq!(overflow_tools(all_visible), vec![]);
         assert_eq!(visible_tool_count(700.0, 40.0, 9.0), 11);
         // Once the last row no longer fits, More needs a row of its own.
-        let almost_all = visible_tool_count(497.0, 40.0, 9.0);
+        let almost_all = visible_tool_count(537.0, 40.0, 9.0);
         assert_eq!(almost_all, 9);
         assert_eq!(
             overflow_tools(almost_all),
             vec![ContextSidebarTool::Schedules, ContextSidebarTool::Packages]
         );
-        assert_eq!(visible_tool_count(300.0, 40.0, 9.0), 5);
-        // A visible management row needs the group divider as well as its own row.
-        assert_eq!(visible_tool_count(298.0, 40.0, 9.0), 5);
-        assert_eq!(visible_tool_count(297.0, 40.0, 9.0), 4);
+        assert_eq!(visible_tool_count(300.0, 40.0, 9.0), 4);
+        assert_eq!(visible_tool_count(289.0, 40.0, 9.0), 4);
+        // Four monitoring rows and More fit exactly; one fewer pixel overflows a row.
+        assert_eq!(visible_tool_count(288.0, 40.0, 9.0), 3);
         let visible = visible_tool_count(210.0, 40.0, 9.0);
         assert_eq!(
             &TOOLS[..visible],
-            &[
-                ContextSidebarTool::Monitor,
-                ContextSidebarTool::Processes,
-                ContextSidebarTool::Gpu
-            ]
+            &[ContextSidebarTool::Monitor, ContextSidebarTool::Processes]
         );
         assert_eq!(
             overflow_tools(visible),
             vec![
+                ContextSidebarTool::Gpu,
                 ContextSidebarTool::Docker,
                 ContextSidebarTool::Services,
                 ContextSidebarTool::Logs,

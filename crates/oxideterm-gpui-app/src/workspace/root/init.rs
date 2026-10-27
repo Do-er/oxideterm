@@ -664,6 +664,7 @@ impl WorkspaceApp {
             disclosure_motions: disclosure_motion::DisclosureMotions::default(),
             sidebar_resizing: false,
             embedded_sftp_sidebar_resizing: false,
+            embedded_sftp_sidebar_split_bounds: None,
             sidebar_resize_hotzone_hovered: false,
             sidebar_collapsed: settings.sidebar_ui.collapsed,
             sidebar_rendered: !settings.sidebar_ui.collapsed,
@@ -701,7 +702,7 @@ impl WorkspaceApp {
             ai_runtime_context,
             _ai_entity_subscription: ai_entity_subscription,
             _acp_entity_subscription: acp_entity_subscription,
-            active_context_sidebar_panel: ContextSidebarPanel::Assistant,
+            active_context_sidebar_panel: ContextSidebarPanel::Sessions,
             needs_active_pane_focus: false,
             active_sidebar_section: SidebarSection::from_settings_key(
                 &settings.sidebar_ui.active_section,

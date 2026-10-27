@@ -38,7 +38,6 @@ pub(in crate::workspace) fn sidebar_resize_hotzone_origin(seam: f32) -> f32 {
 impl WorkspaceApp {
     pub(in crate::workspace) fn render_animated_sidebar_region(
         &mut self,
-        window: &mut Window,
         cx: &mut Context<Self>,
     ) -> AnyElement {
         let expanded_width = self.sidebar_panel_width();
@@ -51,7 +50,7 @@ impl WorkspaceApp {
             .flex_none()
             .w(px(expanded_width))
             .h_full()
-            .child(self.render_sidebar_region(window, cx));
+            .child(self.render_sidebar_region(cx));
         self.sidebar_motion.animate(
             &self.tokens,
             "workspace-left-sidebar-motion",
@@ -62,6 +61,7 @@ impl WorkspaceApp {
 
     pub(in crate::workspace) fn render_animated_context_sidebar_frame(
         &mut self,
+        window: &mut Window,
         cx: &mut Context<Self>,
     ) -> AnyElement {
         let expanded_width = self.ai_entity.read(cx).chat_ui().sidebar_width;
@@ -75,7 +75,7 @@ impl WorkspaceApp {
             .flex_none()
             .w(px(expanded_width))
             .h_full()
-            .child(self.render_context_right_sidebar_frame(cx));
+            .child(self.render_context_right_sidebar_frame(window, cx));
         self.context_sidebar_motion.animate(
             &self.tokens,
             "workspace-right-sidebar-motion",
@@ -86,23 +86,23 @@ impl WorkspaceApp {
 
     pub(in crate::workspace) fn render_sidebar_region(
         &mut self,
-        window: &mut Window,
         cx: &mut Context<Self>,
     ) -> AnyElement {
         div()
             .relative()
             .w(px(self.sidebar_panel_width()))
             .h_full()
-            .child(self.render_sidebar(window, cx))
+            .child(self.render_sidebar(cx))
             .into_any_element()
     }
 
     pub(in crate::workspace) fn render_context_right_sidebar_frame(
         &mut self,
+        window: &mut Window,
         cx: &mut Context<Self>,
     ) -> AnyElement {
         context_sidebar_frame_chrome(self.ai_entity.read(cx).chat_ui().sidebar_width)
-            .child(self.render_context_right_sidebar_region(cx))
+            .child(self.render_context_right_sidebar_region(window, cx))
             .child(oxideterm_gpui_ui::surface::panel_edge_highlight(
                 &self.tokens,
                 self.workspace_sidebar_background(self.tokens.ui.bg).a,
@@ -132,10 +132,16 @@ impl WorkspaceApp {
 
     pub(in crate::workspace) fn render_context_right_sidebar_region(
         &mut self,
+        window: &mut Window,
         cx: &mut Context<Self>,
     ) -> AnyElement {
         let theme = self.tokens.ui;
         let (title, panel_key, icon) = match self.active_context_sidebar_panel {
+            ContextSidebarPanel::Sessions => (
+                self.i18n.t("sidebar.panels.sessions"),
+                "sessions".to_string(),
+                LucideIcon::Link2,
+            ),
             ContextSidebarPanel::Assistant => (
                 self.i18n.t("sidebar.panels.ai"),
                 "assistant".to_string(),
@@ -200,6 +206,31 @@ impl WorkspaceApp {
                             .when(
                                 self.active_context_sidebar_panel == ContextSidebarPanel::HostTools,
                                 |header| header.child(self.render_host_tool_monitoring_toggle(cx)),
+                            )
+                            .when(
+                                self.active_context_sidebar_panel == ContextSidebarPanel::Sessions,
+                                |header| {
+                                    let (view_icon, view_action) =
+                                        match self.active_session_sidebar_view_mode {
+                                            ActiveSessionSidebarViewMode::Tree => (
+                                                LucideIcon::Folder,
+                                                SidebarActionKind::ToggleSessionView,
+                                            ),
+                                            ActiveSessionSidebarViewMode::Focus => (
+                                                LucideIcon::ListChecks,
+                                                SidebarActionKind::ToggleSessionView,
+                                            ),
+                                        };
+                                    header
+                                        .child(self.render_session_search_button(cx))
+                                        .child(self.render_session_sort_button(cx))
+                                        .child(self.render_sidebar_action(view_icon, view_action, cx))
+                                        .child(self.render_sidebar_action(
+                                            LucideIcon::Plus,
+                                            SidebarActionKind::NewConnection,
+                                            cx,
+                                        ))
+                                },
                             ),
                     )
                     .child(
@@ -216,6 +247,9 @@ impl WorkspaceApp {
                             .bg(self.workspace_sidebar_background(theme.bg))
                             .child({
                                 let content = match self.active_context_sidebar_panel {
+                                    ContextSidebarPanel::Sessions => {
+                                        self.render_sessions_context_panel(window, cx)
+                                    }
                                     ContextSidebarPanel::Assistant => {
                                         self.render_ai_sidebar_content(cx)
                                     }
@@ -231,7 +265,7 @@ impl WorkspaceApp {
                                     gpui::ElementId::Name(
                                         format!("context-panel-{panel_key}").into(),
                                     ),
-                                    div().size_full().child(content),
+                                    div().size_full().flex().flex_col().child(content),
                                     6.0,
                                     oxideterm_gpui_ui::motion::MotionDuration::Micro,
                                 )
@@ -363,11 +397,155 @@ impl WorkspaceApp {
         )
     }
 
-    pub(in crate::workspace) fn render_sidebar(
+    fn render_sessions_context_panel(
         &mut self,
         window: &mut Window,
         cx: &mut Context<Self>,
     ) -> AnyElement {
+        div()
+            .size_full()
+            .flex()
+            .flex_col()
+            .when(
+                self.disclosure_motions
+                    .retained("session-search", self.session_search_open),
+                |panel| {
+                    panel.child(self.disclosure_motions.render(
+                        "session-search",
+                        &self.tokens,
+                        div()
+                            .flex_none()
+                            .overflow_hidden()
+                            .child(self.render_session_search_input(cx)),
+                        Some(36.0),
+                    ))
+                },
+            )
+            .child(
+                div()
+                    .flex_1()
+                    .min_h_0()
+                    .w_full()
+                    .flex()
+                    .flex_col()
+                    .overflow_hidden()
+                    .child(self.render_sessions_context_content(window, cx)),
+            )
+            .child(self.render_active_sessions_footer(cx))
+            .into_any_element()
+    }
+
+    fn render_sessions_context_content(
+        &mut self,
+        window: &mut Window,
+        cx: &mut Context<Self>,
+    ) -> AnyElement {
+        let sessions = self.render_active_sessions_sidebar_content(cx);
+        if self.embedded_sftp_node_id.is_none() {
+            return div()
+                .size_full()
+                .flex()
+                .flex_col()
+                .min_h(px(0.0))
+                .child(sessions)
+                .into_any_element();
+        }
+        let sftp = self.render_sftp_sidebar_surface(window, cx);
+        let session_fraction = self
+            .settings_store
+            .settings()
+            .sftp
+            .sidebar_session_fraction
+            .clamp(
+                EMBEDDED_SFTP_MIN_SESSION_FRACTION,
+                EMBEDDED_SFTP_MAX_SESSION_FRACTION,
+            );
+        let file_fraction = 1.0 - session_fraction;
+        let split_line_top =
+            (EMBEDDED_SFTP_SPLIT_HANDLE_SIZE - EMBEDDED_SFTP_SPLIT_LINE_SIZE) / 2.0;
+        let split_line_color = if self.embedded_sftp_sidebar_resizing {
+            rgb(self.tokens.ui.accent)
+        } else {
+            rgb(self.tokens.ui.border)
+        };
+        let split_hover_bg =
+            rgba((self.tokens.ui.accent << 8) | EMBEDDED_SFTP_SPLIT_HOVER_ALPHA);
+        let workspace = cx.entity();
+        // Embedded SFTP is a subordinate surface of Active Sessions. The upper
+        // navigator and lower file browser scroll independently, while the
+        // measured split owns pointer coordinates across optional drawer rows.
+        div()
+            .debug_selector(|| "embedded-sftp-sidebar-split".to_string())
+            .flex_1()
+            .min_h(px(0.0))
+            .w_full()
+            .flex()
+            .flex_col()
+            .overflow_hidden()
+            .child(
+                div()
+                    .flex_grow_0()
+                    .flex_shrink_1()
+                    .flex_basis(relative(session_fraction))
+                    .min_h(px(0.0))
+                    .flex()
+                    .flex_col()
+                    .overflow_hidden()
+                    .child(sessions),
+            )
+            .child(
+                div()
+                    .id("embedded-sftp-sidebar-splitter")
+                    .flex_none()
+                    .relative()
+                    .h(px(EMBEDDED_SFTP_SPLIT_HANDLE_SIZE))
+                    .w_full()
+                    .cursor(CursorStyle::ResizeRow)
+                    .hover(move |handle| handle.bg(split_hover_bg))
+                    .child(
+                        div()
+                            .absolute()
+                            .left_0()
+                            .right_0()
+                            .top(px(split_line_top))
+                            .h(px(EMBEDDED_SFTP_SPLIT_LINE_SIZE))
+                            .bg(split_line_color),
+                    )
+                    .on_mouse_down(
+                        MouseButton::Left,
+                        cx.listener(|this, event: &MouseDownEvent, window, cx| {
+                            this.start_embedded_sftp_sidebar_resize(event, cx);
+                            window.prevent_default();
+                            cx.stop_propagation();
+                        }),
+                    ),
+            )
+            .child(
+                div()
+                    .flex_grow_0()
+                    .flex_shrink_1()
+                    .flex_basis(relative(file_fraction))
+                    .min_h(px(0.0))
+                    .flex()
+                    .flex_col()
+                    .overflow_hidden()
+                    .child(sftp),
+            )
+            .on_children_prepainted(move |bounds, _, cx| {
+                let (Some(first), Some(last)) = (bounds.first(), bounds.last()) else {
+                    return;
+                };
+                workspace.update(cx, |this, cx| {
+                    this.record_embedded_sftp_sidebar_split_bounds(
+                        Bounds::from_corners(first.origin, last.bottom_right()),
+                        cx,
+                    );
+                });
+            })
+            .into_any_element()
+    }
+
+    pub(in crate::workspace) fn render_sidebar(&mut self, cx: &mut Context<Self>) -> AnyElement {
         let theme = self.tokens.ui;
         div()
             .w_full()
@@ -377,25 +555,6 @@ impl WorkspaceApp {
             // The overlaid resize hotzone owns the seam without reserving an
             // untinted layout border between the sidebar and main content.
             .child(self.render_sidebar_header(cx))
-            .when(
-                self.effective_sidebar_panel_section() == SidebarSection::Sessions
-                    && self
-                        .disclosure_motions
-                        .retained("session-search", self.session_search_open),
-                |panel| {
-                    panel.child(
-                        self.disclosure_motions.render(
-                            "session-search",
-                            &self.tokens,
-                            div()
-                                .flex_none()
-                                .overflow_hidden()
-                                .child(self.render_session_search_input(cx)),
-                            Some(36.0),
-                        ),
-                    )
-                },
-            )
             .child(
                 div()
                     .flex_1()
@@ -406,24 +565,16 @@ impl WorkspaceApp {
                     // Match the activity bar and context sidebar base surface
                     // so the full-height navigation body does not read as a card.
                     .bg(self.workspace_sidebar_background(theme.bg))
-                    .child(self.render_sidebar_content(window, cx)),
-            )
-            .when(
-                self.effective_sidebar_panel_section() == SidebarSection::Sessions,
-                |sidebar| sidebar.child(self.render_active_sessions_footer(cx)),
+                    .child(self.render_sidebar_content()),
             )
             .into_any_element()
     }
 
     pub(in crate::workspace) fn render_sidebar_header(&self, cx: &mut Context<Self>) -> AnyElement {
         let theme = self.tokens.ui;
-        let panel_section = self.effective_sidebar_panel_section();
-        let title_key = match panel_section {
-            SidebarSection::Forwards => "forwards.table.title",
-            _ => "sidebar.panels.sessions",
-        };
+        let title_key = "forwards.table.title";
         let title = self.i18n.t(title_key).to_uppercase();
-        let mut header = div()
+        let header = div()
             // Align sidebar titles with the neighboring workspace tab bar.
             .h(px(self.tokens.metrics.tabbar_height))
             .flex_none()
@@ -460,25 +611,6 @@ impl WorkspaceApp {
                     cx,
                 ),
             );
-        if panel_section == SidebarSection::Sessions {
-            let (view_icon, view_action) = match self.active_session_sidebar_view_mode {
-                ActiveSessionSidebarViewMode::Tree => {
-                    (LucideIcon::Folder, SidebarActionKind::ToggleSessionView)
-                }
-                ActiveSessionSidebarViewMode::Focus => {
-                    (LucideIcon::ListChecks, SidebarActionKind::ToggleSessionView)
-                }
-            };
-            header = header
-                .child(self.render_session_search_button(cx))
-                .child(self.render_session_sort_button(cx))
-                .child(self.render_sidebar_action(view_icon, view_action, cx))
-                .child(self.render_sidebar_action(
-                    LucideIcon::Plus,
-                    SidebarActionKind::NewConnection,
-                    cx,
-                ));
-        }
         header.into_any_element()
     }
 
@@ -537,104 +669,9 @@ impl WorkspaceApp {
             .into_any_element()
     }
 
-    pub(in crate::workspace) fn render_sidebar_content(
-        &mut self,
-        window: &mut Window,
-        cx: &mut Context<Self>,
-    ) -> AnyElement {
-        let panel_section = self.effective_sidebar_panel_section();
-        if panel_section == SidebarSection::Sessions {
-            let sessions = self.render_active_sessions_sidebar_content(cx);
-            if self.embedded_sftp_node_id.is_none() {
-                return sessions;
-            }
-            let sftp = self.render_sftp_sidebar_surface(window, cx);
-            let session_fraction = self
-                .settings_store
-                .settings()
-                .sftp
-                .sidebar_session_fraction
-                .clamp(
-                    EMBEDDED_SFTP_MIN_SESSION_FRACTION,
-                    EMBEDDED_SFTP_MAX_SESSION_FRACTION,
-                );
-            let file_fraction = 1.0 - session_fraction;
-            let split_line_top =
-                (EMBEDDED_SFTP_SPLIT_HANDLE_SIZE - EMBEDDED_SFTP_SPLIT_LINE_SIZE) / 2.0;
-            let split_line_color = if self.embedded_sftp_sidebar_resizing {
-                rgb(self.tokens.ui.accent)
-            } else {
-                rgb(self.tokens.ui.border)
-            };
-            let split_hover_bg =
-                rgba((self.tokens.ui.accent << 8) | EMBEDDED_SFTP_SPLIT_HOVER_ALPHA);
-            // Embedded SFTP is a subordinate surface of Active Sessions. The
-            // upper navigator and lower file browser scroll independently,
-            // while the divider keeps them visually in one sidebar shell.
-            return div()
-                .flex_1()
-                .min_h(px(0.0))
-                .w_full()
-                .flex()
-                .flex_col()
-                .overflow_hidden()
-                .child(
-                    div()
-                        .flex_grow_0()
-                        .flex_shrink_1()
-                        .flex_basis(relative(session_fraction))
-                        .min_h(px(0.0))
-                        .flex()
-                        .flex_col()
-                        .overflow_hidden()
-                        .child(sessions),
-                )
-                .child(
-                    div()
-                        .id("embedded-sftp-sidebar-splitter")
-                        .flex_none()
-                        .relative()
-                        .h(px(EMBEDDED_SFTP_SPLIT_HANDLE_SIZE))
-                        .w_full()
-                        .cursor(CursorStyle::ResizeRow)
-                        .hover(move |handle| handle.bg(split_hover_bg))
-                        .child(
-                            div()
-                                .absolute()
-                                .left_0()
-                                .right_0()
-                                .top(px(split_line_top))
-                                .h(px(EMBEDDED_SFTP_SPLIT_LINE_SIZE))
-                                .bg(split_line_color),
-                        )
-                        .on_mouse_down(
-                            MouseButton::Left,
-                            cx.listener(|this, event: &MouseDownEvent, window, cx| {
-                                this.start_embedded_sftp_sidebar_resize(event, window, cx);
-                                window.prevent_default();
-                                cx.stop_propagation();
-                            }),
-                        ),
-                )
-                .child(
-                    div()
-                        .flex_grow_0()
-                        .flex_shrink_1()
-                        .flex_basis(relative(file_fraction))
-                        .min_h(px(0.0))
-                        .flex()
-                        .flex_col()
-                        .overflow_hidden()
-                        .child(sftp),
-                )
-                .into_any_element();
-        }
-        if panel_section == SidebarSection::Forwards {
-            // Tauri only persists these command-palette section keys here; it
-            // does not reuse the Sessions empty state for their sidebar body.
-            return self.render_blank_sidebar_content();
-        }
-        self.render_empty_sessions_sidebar_content(cx)
+    pub(in crate::workspace) fn render_sidebar_content(&mut self) -> AnyElement {
+        // The former panel body stays blank until its remaining shell is removed.
+        self.render_blank_sidebar_content()
     }
 
     pub(in crate::workspace) fn render_blank_sidebar_content(&self) -> AnyElement {
@@ -1183,13 +1220,13 @@ mod sidebar_resize_region_tests {
     struct SidebarSurfaceView(Entity<WorkspaceApp>);
 
     impl Render for SidebarSurfaceView {
-        fn render(&mut self, window: &mut Window, cx: &mut Context<Self>) -> impl IntoElement {
+        fn render(&mut self, _: &mut Window, cx: &mut Context<Self>) -> impl IntoElement {
             self.0.update(cx, |workspace, cx| {
                 div()
                     .size_full()
                     .flex()
                     .child(workspace.render_activity_bar(cx))
-                    .child(workspace.render_sidebar_region(window, cx))
+                    .child(workspace.render_sidebar_region(cx))
             })
         }
     }

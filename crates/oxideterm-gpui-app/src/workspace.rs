@@ -820,6 +820,7 @@ pub(crate) struct WorkspaceApp {
     disclosure_motions: disclosure_motion::DisclosureMotions,
     sidebar_resizing: bool,
     embedded_sftp_sidebar_resizing: bool,
+    embedded_sftp_sidebar_split_bounds: Option<Bounds<Pixels>>,
     sidebar_resize_hotzone_hovered: bool,
     sidebar_collapsed: bool,
     sidebar_rendered: bool,

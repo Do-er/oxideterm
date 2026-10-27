@@ -42,7 +42,6 @@ const EMBEDDED_SFTP_MAX_SESSION_FRACTION: f32 = 0.75;
 
 #[derive(Clone, Copy, Debug, Eq, PartialEq)]
 pub(super) enum SidebarSection {
-    Sessions,
     Forwards,
     Terminal,
     Network,
@@ -54,6 +53,7 @@ pub(super) enum SidebarSection {
 
 #[derive(Clone, Copy, Debug, Eq, PartialEq)]
 pub(super) enum ContextSidebarPanel {
+    Sessions,
     Assistant,
     HostTools,
     PluginPanel,
@@ -97,11 +97,10 @@ pub(super) enum ActiveSessionSidebarViewMode {
 impl SidebarSection {
     pub(super) fn from_settings_key(key: &str) -> Self {
         match key {
-            // These sections moved to their own title-bar entries or settings
-            // pages, so a persisted selection restores the active-sessions
-            // panel instead of a sidebar section that no longer exists.
+            // Retired primary-sidebar panels restore the remaining blank body;
+            // their features now live outside this sidebar.
             "connections" | "saved" | "sftp" | "extensions" | "cloud_sync" | "runtime"
-            | "knowledge" | "files" | "notifications" | "settings" => Self::Sessions,
+            | "knowledge" | "files" | "notifications" | "settings" | "sessions" => Self::Forwards,
             "forwards" => Self::Forwards,
             "connection_pool" | "terminal" => Self::Terminal,
             // Retired health-page keys now restore the Host Tools replacement,
@@ -112,13 +111,12 @@ impl SidebarSection {
             "host_tools" => Self::HostTools,
             "automation" => Self::Automation,
             "workspace" => Self::Workspace,
-            _ => Self::Sessions,
+            _ => Self::Forwards,
         }
     }
 
     pub(super) fn as_settings_key(self) -> &'static str {
         match self {
-            Self::Sessions => "sessions",
             Self::Forwards => "forwards",
             Self::Terminal => "connection_pool",
             Self::Network => "topology",
@@ -133,15 +131,15 @@ impl SidebarSection {
 impl WorkspaceApp {
     pub(in crate::workspace) fn effective_sidebar_panel_section(&self) -> SidebarSection {
         match self.active_sidebar_section {
-            SidebarSection::Sessions | SidebarSection::Forwards => self.active_sidebar_section,
+            SidebarSection::Forwards => self.active_sidebar_section,
             // Tauri separates activity-bar actions from sidebar sections. Keep
-            // action-only entries from replacing the Sessions sidebar body.
+            // action-only entries from replacing the remaining sidebar body.
             SidebarSection::Terminal
             | SidebarSection::Network
             | SidebarSection::Assistant
             | SidebarSection::HostTools
             | SidebarSection::Automation
-            | SidebarSection::Workspace => SidebarSection::Sessions,
+            | SidebarSection::Workspace => SidebarSection::Forwards,
         }
     }
 }
@@ -178,7 +176,6 @@ mod sidebar_persistence_tests {
     #[test]
     fn sidebar_sections_roundtrip_persisted_settings_keys() {
         let sections = [
-            SidebarSection::Sessions,
             SidebarSection::Forwards,
             SidebarSection::Terminal,
             SidebarSection::Network,
@@ -197,8 +194,9 @@ mod sidebar_persistence_tests {
     }
 
     #[test]
-    fn retired_sidebar_keys_restore_active_sessions() {
+    fn retired_sidebar_keys_restore_blank_panel() {
         for key in [
+            "sessions",
             "connections",
             "saved",
             "sftp",
@@ -212,7 +210,7 @@ mod sidebar_persistence_tests {
         ] {
             assert_eq!(
                 SidebarSection::from_settings_key(key),
-                SidebarSection::Sessions
+                SidebarSection::Forwards
             );
         }
     }

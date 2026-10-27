@@ -741,8 +741,7 @@ impl WorkspaceApp {
         if self
             .active_content_tab(cx)
             .is_none_or(|tab| tab.kind != TabKind::Sftp)
-            && !self.sidebar_collapsed
-            && self.effective_sidebar_panel_section() == SidebarSection::Sessions
+            && self.active_sessions_sidebar_visible()
             && self.embedded_sftp_node_id.is_some()
             && self.sftp_view.read(cx).current_surface_id == Some(sftp::SftpSurfaceId::Sidebar)
             && self.sftp_view.read(cx).dialog_is_open()

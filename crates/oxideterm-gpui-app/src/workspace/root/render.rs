@@ -157,8 +157,7 @@ impl WorkspaceApp {
             .handle_for_role(window_registry::WindowRole::Main)
             .is_some_and(|handle| handle.window_id() == window_id)
             && *tab_kind != TabKind::Sftp
-            && !self.sidebar_collapsed
-            && self.effective_sidebar_panel_section() == SidebarSection::Sessions
+            && self.active_sessions_sidebar_visible()
             && self.embedded_sftp_node_id.is_some()
             && self.sftp_view().read(cx).current_surface_id == Some(sftp::SftpSurfaceId::Sidebar)
             && let Some(dialog) = self.sftp_view().read(cx).dialog()
@@ -769,7 +768,7 @@ impl WorkspaceApp {
                 this.update_sidebar_resize(event, window, cx);
                 this.update_file_manager_bookmarks_resize(event, window, cx);
                 this.update_knowledge_resize(event, window, cx);
-                this.update_embedded_sftp_sidebar_resize(event, window, cx);
+                this.update_embedded_sftp_sidebar_resize(event, cx);
                 this.update_ai_sidebar_resize(event, window, cx);
                 this.update_sftp_pane_resize(event, window, cx);
                 this.update_sftp_queue_resize(event, window, cx);
@@ -891,7 +890,7 @@ impl WorkspaceApp {
                 this.open_new_connection_form(window, cx);
             }))
             .on_action(cx.listener(|this, _: &ToggleSidebar, _window, cx| {
-                this.toggle_sidebar(cx);
+                let _ = this.toggle_context_sidebar_panel(ContextSidebarPanel::Sessions, cx);
             }))
             .on_action(cx.listener(|this, _: &CommandPalette, window, cx| {
                 this.open_command_palette(window, cx);
@@ -1138,7 +1137,7 @@ impl WorkspaceApp {
                         layout.child(self.render_activity_bar(cx))
                     })
                     .when(!zen_mode && self.sidebar_rendered, |layout| {
-                        layout.child(self.render_animated_sidebar_region(window, cx))
+                        layout.child(self.render_animated_sidebar_region(cx))
                     })
                     .child(
                         div()
@@ -1166,7 +1165,7 @@ impl WorkspaceApp {
                         // Keep the right sidebar as one root child. Splitting
                         // the gutter and content here makes resize hit-testing
                         // easy to regress on scroll-heavy Host Tools pages.
-                        layout.child(self.render_animated_context_sidebar_frame(cx))
+                        layout.child(self.render_animated_context_sidebar_frame(window, cx))
                     })
                     .when(!zen_mode, |layout| {
                         layout.child(self.render_context_activity_bar(window, cx))
@@ -1549,7 +1548,7 @@ impl WorkspaceApp {
                 this.update_tab_drag(event, window, cx);
                 this.update_sidebar_resize(event, window, cx);
                 this.update_file_manager_bookmarks_resize(event, window, cx);
-                this.update_embedded_sftp_sidebar_resize(event, window, cx);
+                this.update_embedded_sftp_sidebar_resize(event, cx);
                 this.update_knowledge_resize(event, window, cx);
                 this.update_ai_sidebar_resize(event, window, cx);
                 this.update_sftp_pane_resize(event, window, cx);

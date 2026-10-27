@@ -115,7 +115,7 @@ impl WorkspaceApp {
                     self.active_ssh_node_id = Some(node_id.clone());
                     self.expanded_ssh_nodes.insert(node_id.clone());
                     self.active_session_sidebar_focused_node_id = Some(node_id);
-                    self.set_sidebar_section(SidebarSection::Sessions, cx);
+                    self.open_context_sidebar_panel(ContextSidebarPanel::Sessions, cx);
                     cx.notify();
                 }
             }

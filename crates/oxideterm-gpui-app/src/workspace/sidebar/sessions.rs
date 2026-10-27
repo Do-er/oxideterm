@@ -415,10 +415,7 @@ impl WorkspaceApp {
         &self,
         cx: &mut Context<Self>,
     ) -> Option<AnyElement> {
-        if !self.session_sort_menu_open
-            || self.sidebar_collapsed
-            || self.effective_sidebar_panel_section() != SidebarSection::Sessions
-        {
+        if !self.session_sort_menu_open || !self.active_sessions_sidebar_visible() {
             return None;
         }
         let anchor = self
