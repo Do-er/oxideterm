@@ -721,6 +721,8 @@ mod tests {
         settings.settings_mut().ssh_config.auto_load_hosts = false;
         settings.settings_mut().onboarding_completed = true;
         settings.settings_mut().ai.enabled = false;
+        // Simulate a previous session that quit with the context drawer expanded.
+        settings.settings_mut().sidebar_ui.ai_sidebar_collapsed = false;
         settings.save().unwrap();
 
         let (_view, cx) = cx.add_window_view(|window, cx| {
@@ -766,6 +768,14 @@ mod tests {
 
         workspace.update(cx, |workspace, cx| {
             assert!(!workspace.settings_store.settings().ai.enabled);
+            // The drawer stays collapsed on launch even though the saved settings
+            // left it expanded, and the rail toggle is pointed at 活动会话.
+            assert!(!workspace.context_sidebar_visible());
+            assert!(!workspace.active_sessions_sidebar_visible());
+            assert_eq!(
+                workspace.active_context_sidebar_panel,
+                ContextSidebarPanel::Sessions
+            );
             assert!(workspace.toggle_context_sidebar_panel(ContextSidebarPanel::Sessions, cx));
             assert!(workspace.active_sessions_sidebar_visible());
             assert!(!workspace.toggle_ai_sidebar(cx));

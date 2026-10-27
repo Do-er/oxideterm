@@ -112,11 +112,33 @@
       "unsupported": "このオペレーティングシステムでは GPU / NPU の監視をサポートしていません。",
       "no_devices": "対応する GPU / NPU デバイスが見つかりません。",
       "error": "GPU / NPU の照会に失敗しました：{{error}}",
-      "actions": { "refresh": "GPU / NPU データを更新" },
-      "summary": { "utilization": "平均使用率", "memory": "デバイスメモリ", "temperature": "最高温度", "power": "合計消費電力" },
-      "columns": { "device": "デバイス", "utilization": "使用率", "memory": "メモリ" },
-      "details": { "uuid": "UUID", "driver": "ドライバー", "performance_state": "性能状態", "health": "健康状態", "temperature": "温度", "power": "消費電力", "fan": "ファン" },
-      "processes": { "title": "計算プロセス", "empty": "このデバイスを使用している計算プロセスはありません。" }
+      "actions": {
+        "refresh": "GPU / NPU データを更新"
+      },
+      "summary": {
+        "utilization": "平均使用率",
+        "memory": "デバイスメモリ",
+        "temperature": "最高温度",
+        "power": "合計消費電力"
+      },
+      "columns": {
+        "device": "デバイス",
+        "utilization": "使用率",
+        "memory": "メモリ"
+      },
+      "details": {
+        "uuid": "UUID",
+        "driver": "ドライバー",
+        "performance_state": "性能状態",
+        "health": "健康状態",
+        "temperature": "温度",
+        "power": "消費電力",
+        "fan": "ファン"
+      },
+      "processes": {
+        "title": "計算プロセス",
+        "empty": "このデバイスを使用している計算プロセスはありません。"
+      }
     },
     "host_processes": {
       "search_placeholder": "プロセスを検索...",
@@ -762,7 +784,8 @@
         "drill_in": "ドリルイン（次のホップ）",
         "saved_next_hop": "保存済み接続を次のホップとして使用...",
         "connect": "接続",
-        "save_as_connection": "接続として保存..."
+        "save_as_connection": "接続として保存...",
+        "quick_terminal": "クイックターミナル"
       }
     },
     "focused_list": {
@@ -785,7 +808,8 @@
       "reconnect": "再接続",
       "drill_in": "ドリルイン（次のホップ）",
       "saved_next_hop": "保存済み接続を次のホップとして使用...",
-      "save_as_connection": "接続として保存..."
+      "save_as_connection": "接続として保存...",
+      "quick_terminal": "クイックターミナル"
     },
     "saved_next_hop": {
       "title": "保存済み接続を次のホップとして使用",

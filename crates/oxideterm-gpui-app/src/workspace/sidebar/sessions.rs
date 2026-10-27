@@ -797,35 +797,34 @@ impl WorkspaceApp {
                 active_local_session_count: state.active_count,
             });
         }
-        if let Some(state) = local_rows.remove(&None) {
-            let title = self
-                .i18n
-                .t("modals.new_connection.transport_local_terminal");
-            let node_id = "local-terminal-group".to_string();
-            rows.push(ActiveSessionSidebarRow {
-                node_id: NodeId::new(node_id.clone()),
-                parent_id: None,
-                saved_connection_id: None,
-                title: title.clone(),
-                host: state.search,
-                username: String::new(),
+        let state = local_rows.remove(&None).unwrap_or_default();
+        let title = self
+            .i18n
+            .t("modals.new_connection.transport_local_terminal");
+        let node_id = "local-terminal-group".to_string();
+        rows.push(ActiveSessionSidebarRow {
+            node_id: NodeId::new(node_id.clone()),
+            parent_id: None,
+            saved_connection_id: None,
+            title: title.clone(),
+            host: state.search,
+            username: String::new(),
+            port: 0,
+            node_view: ActiveSessionNode {
+                id: node_id,
+                title,
                 port: 0,
-                node_view: ActiveSessionNode {
-                    id: node_id,
-                    title,
-                    port: 0,
-                    terminal_ids: state.terminal_ids,
-                    readiness: state.readiness,
-                },
-                depth: 0,
-                is_last: true,
-                has_children: false,
-                standalone_session: None,
-                local_group: true,
-                local_profile_id: None,
-                active_local_session_count: state.active_count,
-            });
-        }
+                terminal_ids: state.terminal_ids,
+                readiness: state.readiness,
+            },
+            depth: 0,
+            is_last: true,
+            has_children: false,
+            standalone_session: None,
+            local_group: true,
+            local_profile_id: None,
+            active_local_session_count: state.active_count,
+        });
         rows
     }
 
@@ -1528,6 +1527,8 @@ impl WorkspaceApp {
                             && let Some(profile_id) = local_profile_id.as_deref()
                         {
                             this.open_saved_local_terminal_profile(profile_id, window, cx);
+                        } else if local_terminal.is_none() && local_profile_id.is_none() {
+                            let _ = this.create_local_terminal_tab(window, cx);
                         }
                     } else {
                         this.active_ssh_node_id = Some(node_id.clone());
@@ -1558,12 +1559,6 @@ impl WorkspaceApp {
                             SESSION_TREE_ICON_SIZE,
                             rgb(status.text_color),
                             cx,
-                        )
-                    } else if local_group {
-                        Self::render_lucide_icon(
-                            LucideIcon::Terminal,
-                            SESSION_TREE_ICON_SIZE,
-                            rgb(status.text_color),
                         )
                     } else {
                         self.node_session_icon(&row.node_id)
@@ -1746,22 +1741,47 @@ impl WorkspaceApp {
                     }),
             );
             let profile_id = row.local_profile_id.clone();
-            children.push(self.render_session_action_item(
-                1,
-                row.local_profile_id.is_none(),
-                LucideIcon::Plus,
-                self.i18n.t("sessions.tree.actions.new_terminal"),
-                SessionActionVariant::Primary,
-                cx.listener(move |this, _, window, cx| {
-                    if let Some(profile_id) = profile_id.as_deref() {
-                        this.open_saved_local_terminal_profile(profile_id, window, cx);
-                    } else {
+            if row.local_profile_id.is_none() {
+                children.push(self.render_session_action_item(
+                    1,
+                    false,
+                    LucideIcon::Plus,
+                    self.i18n.t("sessions.tree.actions.quick_terminal"),
+                    SessionActionVariant::Primary,
+                    cx.listener(move |this, _, window, cx| {
+                        let _ = this.create_local_terminal_tab(window, cx);
+                        cx.stop_propagation();
+                    }),
+                    cx,
+                ));
+                children.push(self.render_session_action_item(
+                    1,
+                    true,
+                    LucideIcon::Terminal,
+                    self.i18n.t("sessions.tree.actions.new_terminal"),
+                    SessionActionVariant::Primary,
+                    cx.listener(move |this, _, _, cx| {
                         this.open_local_shell_launcher(cx);
-                    }
-                    cx.stop_propagation();
-                }),
-                cx,
-            ));
+                        cx.stop_propagation();
+                    }),
+                    cx,
+                ));
+            } else {
+                children.push(self.render_session_action_item(
+                    1,
+                    false,
+                    LucideIcon::Plus,
+                    self.i18n.t("sessions.tree.actions.new_terminal"),
+                    SessionActionVariant::Primary,
+                    cx.listener(move |this, _, window, cx| {
+                        if let Some(profile_id) = profile_id.as_deref() {
+                            this.open_saved_local_terminal_profile(profile_id, window, cx);
+                        }
+                        cx.stop_propagation();
+                    }),
+                    cx,
+                ));
+            }
             if let Some(profile_id) = row.local_profile_id.clone() {
                 children.push(self.render_session_action_item(
                     1,
@@ -1885,6 +1905,30 @@ impl WorkspaceApp {
     ) -> Vec<AnyElement> {
         if row.local_group {
             let profile_id = row.local_profile_id.clone();
+            if row.local_profile_id.is_none() {
+                return vec![
+                    self.render_active_session_focus_action_chip(
+                        LucideIcon::Plus,
+                        self.i18n.t("sessions.tree.actions.quick_terminal"),
+                        SessionActionVariant::Primary,
+                        cx.listener(move |this, _, window, cx| {
+                            let _ = this.create_local_terminal_tab(window, cx);
+                            cx.stop_propagation();
+                        }),
+                        cx,
+                    ),
+                    self.render_active_session_focus_action_chip(
+                        LucideIcon::Terminal,
+                        self.i18n.t("sessions.tree.actions.new_terminal"),
+                        SessionActionVariant::Primary,
+                        cx.listener(move |this, _, _, cx| {
+                            this.open_local_shell_launcher(cx);
+                            cx.stop_propagation();
+                        }),
+                        cx,
+                    ),
+                ];
+            }
             let mut actions = vec![self.render_active_session_focus_action_chip(
                 LucideIcon::Plus,
                 self.i18n.t("sessions.tree.actions.new_terminal"),
@@ -1892,8 +1936,6 @@ impl WorkspaceApp {
                 cx.listener(move |this, _, window, cx| {
                     if let Some(profile_id) = profile_id.as_deref() {
                         this.open_saved_local_terminal_profile(profile_id, window, cx);
-                    } else {
-                        this.open_local_shell_launcher(cx);
                     }
                     cx.stop_propagation();
                 }),
@@ -2622,27 +2664,22 @@ impl WorkspaceApp {
                     cx.notify();
                 })),
         )
-        .when(
-            !local_group || matches!(status.icon, LucideIcon::LoaderCircle),
-            |row| {
-                row.child(div().ml(px(6.0)).mr(px(6.0)).child(
-                    if matches!(status.icon, LucideIcon::LoaderCircle) {
-                        self.render_connecting_session_icon(
-                            (
-                                gpui::SharedString::from(format!("session-connecting-{node_id:?}")),
-                                0usize,
-                            ),
-                            SESSION_TREE_ICON_SIZE,
-                            row_text,
-                            cx,
-                        )
-                    } else {
-                        self.node_session_icon(&node_id)
-                            .render(SESSION_TREE_ICON_SIZE, muted_text)
-                    },
-                ))
+        .child(div().ml(px(6.0)).mr(px(6.0)).child(
+            if matches!(status.icon, LucideIcon::LoaderCircle) {
+                self.render_connecting_session_icon(
+                    (
+                        gpui::SharedString::from(format!("session-connecting-{node_id:?}")),
+                        0usize,
+                    ),
+                    SESSION_TREE_ICON_SIZE,
+                    row_text,
+                    cx,
+                )
+            } else {
+                self.node_session_icon(&node_id)
+                    .render(SESSION_TREE_ICON_SIZE, muted_text)
             },
-        )
+        ))
         .child(
             div()
                 .min_w(px(0.0))

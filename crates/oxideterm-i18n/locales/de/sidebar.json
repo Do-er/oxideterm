@@ -112,11 +112,33 @@
       "unsupported": "Die GPU-/NPU-Überwachung wird auf diesem Betriebssystem nicht unterstützt.",
       "no_devices": "Keine unterstützten GPU-/NPU-Geräte gefunden.",
       "error": "GPU-/NPU-Abfrage fehlgeschlagen: {{error}}",
-      "actions": { "refresh": "GPU-/NPU-Daten aktualisieren" },
-      "summary": { "utilization": "Durchschnittliche Auslastung", "memory": "Gerätespeicher", "temperature": "Höchsttemperatur", "power": "Gesamtleistung" },
-      "columns": { "device": "Gerät", "utilization": "Auslastung", "memory": "Speicher" },
-      "details": { "uuid": "UUID", "driver": "Treiber", "performance_state": "Leistungszustand", "health": "Zustand", "temperature": "Temperatur", "power": "Leistung", "fan": "Lüfter" },
-      "processes": { "title": "Rechenprozesse", "empty": "Keine Rechenprozesse verwenden dieses Gerät." }
+      "actions": {
+        "refresh": "GPU-/NPU-Daten aktualisieren"
+      },
+      "summary": {
+        "utilization": "Durchschnittliche Auslastung",
+        "memory": "Gerätespeicher",
+        "temperature": "Höchsttemperatur",
+        "power": "Gesamtleistung"
+      },
+      "columns": {
+        "device": "Gerät",
+        "utilization": "Auslastung",
+        "memory": "Speicher"
+      },
+      "details": {
+        "uuid": "UUID",
+        "driver": "Treiber",
+        "performance_state": "Leistungszustand",
+        "health": "Zustand",
+        "temperature": "Temperatur",
+        "power": "Leistung",
+        "fan": "Lüfter"
+      },
+      "processes": {
+        "title": "Rechenprozesse",
+        "empty": "Keine Rechenprozesse verwenden dieses Gerät."
+      }
     },
     "host_processes": {
       "search_placeholder": "Prozesse suchen...",
@@ -762,7 +784,8 @@
         "drill_in": "Hineinnavigieren (Nächster Hop)",
         "saved_next_hop": "Gespeicherte Verbindung als nächsten Hop verwenden...",
         "connect": "Verbinden",
-        "save_as_connection": "Als Verbindung speichern..."
+        "save_as_connection": "Als Verbindung speichern...",
+        "quick_terminal": "Schnelles Terminal"
       }
     },
     "focused_list": {
@@ -785,7 +808,8 @@
       "reconnect": "Erneut verbinden",
       "drill_in": "Hineinnavigieren (Nächster Hop)",
       "saved_next_hop": "Gespeicherte Verbindung als nächsten Hop verwenden...",
-      "save_as_connection": "Als Verbindung speichern..."
+      "save_as_connection": "Als Verbindung speichern...",
+      "quick_terminal": "Schnelles Terminal"
     },
     "saved_next_hop": {
       "title": "Gespeicherte Verbindung als nächsten Hop verwenden",

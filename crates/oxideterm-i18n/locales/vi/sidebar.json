@@ -112,11 +112,33 @@
       "unsupported": "Hệ điều hành này chưa hỗ trợ giám sát GPU / NPU.",
       "no_devices": "Không tìm thấy thiết bị GPU / NPU được hỗ trợ.",
       "error": "Truy vấn GPU / NPU thất bại: {{error}}",
-      "actions": { "refresh": "Làm mới dữ liệu GPU / NPU" },
-      "summary": { "utilization": "Mức sử dụng trung bình", "memory": "Bộ nhớ thiết bị", "temperature": "Nhiệt độ cao nhất", "power": "Tổng công suất" },
-      "columns": { "device": "Thiết bị", "utilization": "Mức dùng", "memory": "Bộ nhớ" },
-      "details": { "uuid": "UUID", "driver": "Trình điều khiển", "performance_state": "Hiệu năng", "health": "Tình trạng", "temperature": "Nhiệt độ", "power": "Công suất", "fan": "Quạt" },
-      "processes": { "title": "Tiến trình tính toán", "empty": "Không có tiến trình tính toán nào đang dùng thiết bị này." }
+      "actions": {
+        "refresh": "Làm mới dữ liệu GPU / NPU"
+      },
+      "summary": {
+        "utilization": "Mức sử dụng trung bình",
+        "memory": "Bộ nhớ thiết bị",
+        "temperature": "Nhiệt độ cao nhất",
+        "power": "Tổng công suất"
+      },
+      "columns": {
+        "device": "Thiết bị",
+        "utilization": "Mức dùng",
+        "memory": "Bộ nhớ"
+      },
+      "details": {
+        "uuid": "UUID",
+        "driver": "Trình điều khiển",
+        "performance_state": "Hiệu năng",
+        "health": "Tình trạng",
+        "temperature": "Nhiệt độ",
+        "power": "Công suất",
+        "fan": "Quạt"
+      },
+      "processes": {
+        "title": "Tiến trình tính toán",
+        "empty": "Không có tiến trình tính toán nào đang dùng thiết bị này."
+      }
     },
     "host_processes": {
       "search_placeholder": "Tìm tiến trình...",
@@ -762,7 +784,8 @@
         "drill_in": "Drill In (Bước tiếp)",
         "saved_next_hop": "Dùng kết nối đã lưu làm bước tiếp...",
         "connect": "Kết nối",
-        "save_as_connection": "Lưu thành kết nối..."
+        "save_as_connection": "Lưu thành kết nối...",
+        "quick_terminal": "Terminal nhanh"
       }
     },
     "focused_list": {
@@ -785,7 +808,8 @@
       "reconnect": "Kết nối lại",
       "drill_in": "Drill In (Bước tiếp)",
       "saved_next_hop": "Dùng kết nối đã lưu làm bước tiếp...",
-      "save_as_connection": "Lưu thành kết nối..."
+      "save_as_connection": "Lưu thành kết nối...",
+      "quick_terminal": "Terminal nhanh"
     },
     "saved_next_hop": {
       "title": "Dùng kết nối đã lưu làm bước tiếp",

@@ -356,6 +356,9 @@ impl WorkspaceApp {
                 TerminalPaneInteraction::ContextAction,
                 cx,
             ),
+            TerminalPaneEvent::FontSizeStep(steps) => {
+                self.adjust_terminal_font_size(i64::from(steps), cx);
+            }
         }
     }
 

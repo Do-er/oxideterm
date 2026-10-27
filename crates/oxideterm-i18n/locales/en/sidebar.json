@@ -112,11 +112,33 @@
       "unsupported": "GPU / NPU monitoring is not supported on this operating system.",
       "no_devices": "No supported GPU / NPU devices were found.",
       "error": "GPU / NPU query failed: {{error}}",
-      "actions": { "refresh": "Refresh GPU / NPU data" },
-      "summary": { "utilization": "Average utilization", "memory": "Device memory", "temperature": "Maximum temperature", "power": "Total power" },
-      "columns": { "device": "Device", "utilization": "Usage", "memory": "Memory" },
-      "details": { "uuid": "UUID", "driver": "Driver", "performance_state": "Performance", "health": "Health", "temperature": "Temperature", "power": "Power", "fan": "Fan" },
-      "processes": { "title": "Compute processes", "empty": "No compute processes are using this device." }
+      "actions": {
+        "refresh": "Refresh GPU / NPU data"
+      },
+      "summary": {
+        "utilization": "Average utilization",
+        "memory": "Device memory",
+        "temperature": "Maximum temperature",
+        "power": "Total power"
+      },
+      "columns": {
+        "device": "Device",
+        "utilization": "Usage",
+        "memory": "Memory"
+      },
+      "details": {
+        "uuid": "UUID",
+        "driver": "Driver",
+        "performance_state": "Performance",
+        "health": "Health",
+        "temperature": "Temperature",
+        "power": "Power",
+        "fan": "Fan"
+      },
+      "processes": {
+        "title": "Compute processes",
+        "empty": "No compute processes are using this device."
+      }
     },
     "host_processes": {
       "search_placeholder": "Search processes...",
@@ -762,7 +784,8 @@
         "drill_in": "Drill In (Next Hop)",
         "saved_next_hop": "Use Saved Next Hop...",
         "connect": "Connect",
-        "save_as_connection": "Save as Connection..."
+        "save_as_connection": "Save as Connection...",
+        "quick_terminal": "Quick Terminal"
       }
     },
     "focused_list": {
@@ -785,7 +808,8 @@
       "reconnect": "Reconnect",
       "drill_in": "Drill In (Next Hop)",
       "saved_next_hop": "Use Saved Next Hop...",
-      "save_as_connection": "Save as Connection..."
+      "save_as_connection": "Save as Connection...",
+      "quick_terminal": "Quick Terminal"
     },
     "saved_next_hop": {
       "title": "Use Saved Connection as Next Hop",

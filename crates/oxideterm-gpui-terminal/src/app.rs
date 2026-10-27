@@ -178,6 +178,8 @@ pub enum TerminalPaneEvent {
     PrivilegePromptSubmitRequested,
     // The requested action remains pane-owned until the active Workspace consumes it.
     ContextActionRequested,
+    // Wheel zoom carries the requested step count only; Workspace owns the persisted font size.
+    FontSizeStep(i32),
     // Match payloads remain pane-owned; Workspace drains them using the source pane identity.
     TriggerMatchesAvailable,
     TriggerInteractionRequested,
@@ -583,6 +585,9 @@ pub struct TerminalPane {
     terminal_exited: bool,
     ssh_reconnect_state: SshReconnectState,
     scroll_input_remainder_px: Pixels,
+    // Wheel zoom accumulates sub-step precision-scroll deltas instead of
+    // emitting one font size change per trackpad event.
+    font_zoom_scroll_remainder_px: Pixels,
     smooth_scroll_offset_px: Pixels,
     smooth_scroll_animation: Option<SmoothScrollAnimation>,
     smooth_scroll_snapshot_cache: Option<SmoothScrollSnapshotCache>,
@@ -1347,6 +1352,7 @@ impl TerminalPane {
             terminal_exited: false,
             ssh_reconnect_state: SshReconnectState::Idle,
             scroll_input_remainder_px: px(0.0),
+            font_zoom_scroll_remainder_px: px(0.0),
             smooth_scroll_offset_px: px(0.0),
             smooth_scroll_animation: None,
             smooth_scroll_snapshot_cache: None,

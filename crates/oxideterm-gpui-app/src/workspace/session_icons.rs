@@ -64,6 +64,20 @@ impl WorkspaceApp {
         &self,
         node_id: &oxideterm_ssh::NodeId,
     ) -> SessionIcon {
+        if node_id.0 == "local-terminal-group" {
+            return LucideIcon::Terminal.into();
+        }
+        if let Some(profile_id) = node_id.0.strip_prefix("local-profile-") {
+            let manual = self
+                .connection_store
+                .local_terminal_profiles()
+                .iter()
+                .find(|profile| profile.id == profile_id)
+                .and_then(|profile| profile.icon.as_deref());
+            return manual
+                .and_then(|icon| session_icon_from_id(Some(icon)))
+                .unwrap_or(LucideIcon::Terminal.into());
+        }
         let manual = self
             .ssh_nodes
             .get(node_id)

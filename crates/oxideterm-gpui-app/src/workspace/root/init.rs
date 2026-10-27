@@ -35,6 +35,9 @@ impl WorkspaceApp {
             ),
         )?;
         settings_store.settings_mut().sidebar_ui.zen_mode = false;
+        // The context drawer's open state belongs to the window session that set it;
+        // launching must not reopen a drawer the previous session left expanded.
+        settings_store.settings_mut().sidebar_ui.ai_sidebar_collapsed = true;
         if let Err(error) = ensure_bundled_workspace_backgrounds(settings_store.path()) {
             // A background-gallery failure must not prevent the workspace from opening.
             eprintln!("failed to install built-in workspace backgrounds: {error}");

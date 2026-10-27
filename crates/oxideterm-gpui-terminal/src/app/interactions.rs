@@ -6,7 +6,7 @@ use std::{
 
 use gpui::{
     ClipboardItem, Context, KeyDownEvent, KeyUpEvent, Modifiers, MouseButton, MouseDownEvent,
-    MouseMoveEvent, MouseUpEvent, Pixels, ScrollWheelEvent, TouchPhase, px,
+    MouseMoveEvent, MouseUpEvent, Pixels, ScrollDelta, ScrollWheelEvent, TouchPhase, px,
 };
 use oxideterm_terminal::{
     TermMode, TerminalEditorApplication, TerminalEditorClipboardOperation, TerminalRow,
@@ -31,6 +31,9 @@ const TERMINAL_SELECTION_AUTOSCROLL_INTERVAL_MS: u64 = 16;
 const TERMINAL_SELECTION_AUTOSCROLL_MAX_ROWS: i32 = 4;
 const TERMINAL_FREE_TYPE_MAX_CURSOR_STEPS: usize = 4096;
 const TERMINAL_FREE_TYPE_DRAG_THRESHOLD_PX: f32 = 5.0;
+// Precision-scroll panes accumulate toward a whole row pair before stepping the font size,
+// so a two-finger gesture cannot flood the settings store with single-point changes.
+const TERMINAL_FONT_ZOOM_ROWS_PER_STEP: f32 = 2.0;
 const PRIVILEGE_PROMPT_DEBUG_ENV: &str = "OXIDETERM_PRIVILEGE_DEBUG";
 const FREE_TYPE_DEBUG_ENV: &str = "OXIDETERM_FREE_TYPE_DEBUG";
 
@@ -517,6 +520,10 @@ impl TerminalPane {
     }
 
     pub(crate) fn handle_scroll(&mut self, event: &ScrollWheelEvent, cx: &mut Context<Self>) {
+        // Ctrl + wheel is a font zoom gesture, not terminal scrolling.
+        if self.handle_font_zoom_scroll(event, cx) {
+            return;
+        }
         self.clear_terminal_hover(cx);
         // Terminal menu payloads include row-local command marks and target
         // points; any scroll makes that semantic snapshot stale.
@@ -635,6 +642,44 @@ impl TerminalPane {
         if scroll_delta.repaint || clamped_remainder || applied_rows.abs() > f32::EPSILON {
             cx.notify();
         }
+    }
+
+    /// Intercepts Ctrl + wheel before every scroll branch so the gesture cannot move the
+    /// viewport, drive alt-screen scrolling, or reach the remote mouse reporting mode.
+    ///
+    /// The pane reports the step count only: Workspace owns the persisted font size, so
+    /// wheel zoom and the font size shortcuts share one settings path.
+    fn handle_font_zoom_scroll(
+        &mut self,
+        event: &ScrollWheelEvent,
+        cx: &mut Context<Self>,
+    ) -> bool {
+        if !event.modifiers.control {
+            self.font_zoom_scroll_remainder_px = px(0.0);
+            return false;
+        }
+        let steps = match event.delta {
+            // Platforms scale the reported line count by their own lines-per-notch
+            // setting, so one notch steps once and only the direction matters here.
+            ScrollDelta::Lines(delta) => delta.y.signum() as i32,
+            ScrollDelta::Pixels(delta) if delta.x.abs() > delta.y.abs() => 0,
+            ScrollDelta::Pixels(delta) => {
+                let step_px =
+                    (self.metrics.line_height_f32() * TERMINAL_FONT_ZOOM_ROWS_PER_STEP).max(1.0);
+                self.font_zoom_scroll_remainder_px += delta.y;
+                let steps = (f32::from(self.font_zoom_scroll_remainder_px) / step_px) as i32;
+                self.font_zoom_scroll_remainder_px -= px(steps as f32 * step_px);
+                steps
+            }
+        };
+        if event.touch_phase == TouchPhase::Ended {
+            self.font_zoom_scroll_remainder_px = px(0.0);
+        }
+        if steps != 0 {
+            cx.emit(TerminalPaneEvent::FontSizeStep(steps));
+        }
+        cx.stop_propagation();
+        true
     }
 
     fn handle_horizontal_scroll(
@@ -3770,6 +3815,140 @@ mod tests {
                 vec![(0, 0, 6)]
             );
         });
+    }
+
+    #[gpui::test]
+    fn ctrl_wheel_steps_font_size_without_scrolling(cx: &mut TestAppContext) {
+        let (_, cx) = cx.add_window_view(|_, _| TerminalScrollTestRoot);
+        let pane = cx.update(|window, cx| {
+            cx.new(|cx| {
+                TerminalPane::new_recording_playback(
+                    20,
+                    4,
+                    TerminalUiPreferences::default(),
+                    window,
+                    cx,
+                )
+                .unwrap()
+            })
+        });
+        let events = Rc::new(std::cell::RefCell::new(Vec::new()));
+        let received = events.clone();
+        let _subscription = cx.update(|_, cx| {
+            cx.subscribe(&pane, move |_, event, _| {
+                received.borrow_mut().push(*event);
+            })
+        });
+        let steps = || {
+            events
+                .borrow()
+                .iter()
+                .filter_map(|event| match event {
+                    TerminalPaneEvent::FontSizeStep(step) => Some(*step),
+                    _ => None,
+                })
+                .collect::<Vec<_>>()
+        };
+        let wheel = |delta: ScrollDelta, control: bool, touch_phase: TouchPhase| ScrollWheelEvent {
+            delta,
+            modifiers: Modifiers {
+                control,
+                ..Default::default()
+            },
+            touch_phase,
+            ..Default::default()
+        };
+        pane.update(cx, |pane, cx| {
+            let output = (0..40)
+                .map(|row| format!("row {row}"))
+                .collect::<Vec<_>>()
+                .join("\r\n");
+            pane.terminal
+                .lock()
+                .feed_recording_output(output.as_bytes());
+            let snapshot = pane.terminal.lock().snapshot();
+            pane.snapshot = pane.stamp_snapshot(snapshot);
+            pane.tick(cx);
+            assert_eq!(pane.visible_scroll_offset(), 0);
+        });
+
+        pane.update(cx, |pane, cx| {
+            pane.handle_scroll(
+                &wheel(ScrollDelta::Lines(point(0.0, 1.0)), true, TouchPhase::Moved),
+                cx,
+            );
+            assert_eq!(pane.visible_scroll_offset(), 0);
+        });
+        cx.run_until_parked();
+        assert_eq!(steps(), vec![1]);
+
+        pane.update(cx, |pane, cx| {
+            pane.handle_scroll(
+                &wheel(
+                    ScrollDelta::Lines(point(0.0, -1.0)),
+                    true,
+                    TouchPhase::Moved,
+                ),
+                cx,
+            );
+            assert_eq!(pane.visible_scroll_offset(), 0);
+        });
+        cx.run_until_parked();
+        assert_eq!(steps(), vec![1, -1]);
+
+        pane.update(cx, |pane, cx| {
+            pane.handle_scroll(
+                &wheel(
+                    ScrollDelta::Lines(point(0.0, 2.0)),
+                    false,
+                    TouchPhase::Moved,
+                ),
+                cx,
+            );
+            assert!(pane.visible_scroll_offset() > 0);
+        });
+        cx.run_until_parked();
+        assert_eq!(steps(), vec![1, -1]);
+
+        // A remote application in mouse reporting mode still must not receive the wheel.
+        pane.update(cx, |pane, cx| {
+            pane.terminal.lock().feed_recording_output(b"\x1b[?1000h");
+            pane.apply_scroll_action(TerminalScrollAction::Bottom, cx);
+            pane.handle_scroll(
+                &wheel(ScrollDelta::Lines(point(0.0, 1.0)), true, TouchPhase::Moved),
+                cx,
+            );
+            assert_eq!(pane.visible_scroll_offset(), 0);
+        });
+        cx.run_until_parked();
+        assert_eq!(steps(), vec![1, -1, 1]);
+
+        // Precision scroll deltas accumulate, so one trackpad event is not one font step.
+        let line_height = pane.read_with(cx, |pane, _| pane.metrics.line_height_f32());
+        pane.update(cx, |pane, cx| {
+            pane.handle_scroll(
+                &wheel(
+                    ScrollDelta::Pixels(point(px(0.0), px(line_height))),
+                    true,
+                    TouchPhase::Moved,
+                ),
+                cx,
+            );
+        });
+        cx.run_until_parked();
+        assert_eq!(steps(), vec![1, -1, 1], "a half step must not zoom");
+        pane.update(cx, |pane, cx| {
+            pane.handle_scroll(
+                &wheel(
+                    ScrollDelta::Pixels(point(px(0.0), px(line_height * 1.5))),
+                    true,
+                    TouchPhase::Ended,
+                ),
+                cx,
+            );
+        });
+        cx.run_until_parked();
+        assert_eq!(steps(), vec![1, -1, 1, 1]);
     }
 
     #[gpui::test]

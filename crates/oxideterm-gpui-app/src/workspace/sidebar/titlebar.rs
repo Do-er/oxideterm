@@ -166,19 +166,17 @@ enum TitlebarEntry {
     Knowledge,
     Notifications,
     Settings,
-    NewTerminal,
 }
 
 impl TitlebarEntry {
     // Left-to-right order of the title-bar feature entries.
-    const ALL: [Self; 7] = [
+    const ALL: [Self; 6] = [
         Self::Files,
         Self::Connections,
         Self::Runtime,
         Self::Knowledge,
         Self::Notifications,
         Self::Settings,
-        Self::NewTerminal,
     ];
 
     fn element_id(self) -> &'static str {
@@ -189,7 +187,6 @@ impl TitlebarEntry {
             Self::Knowledge => "titlebar-feature-knowledge",
             Self::Notifications => "titlebar-feature-notifications",
             Self::Settings => "titlebar-feature-settings",
-            Self::NewTerminal => "titlebar-feature-new-terminal",
         }
     }
 
@@ -201,7 +198,6 @@ impl TitlebarEntry {
             Self::Knowledge => "titlebar-feature-knowledge-button",
             Self::Notifications => "titlebar-feature-notifications-button",
             Self::Settings => "titlebar-feature-settings-button",
-            Self::NewTerminal => "titlebar-feature-new-terminal-button",
         }
     }
 
@@ -213,7 +209,6 @@ impl TitlebarEntry {
             Self::Knowledge => LucideIcon::BookOpen,
             Self::Notifications => LucideIcon::Bell,
             Self::Settings => LucideIcon::Settings,
-            Self::NewTerminal => LucideIcon::Plus,
         }
     }
 
@@ -225,7 +220,6 @@ impl TitlebarEntry {
             Self::Knowledge => "sidebar.panels.knowledge",
             Self::Notifications => "sidebar.panels.notifications",
             Self::Settings => "sidebar.tooltips.settings",
-            Self::NewTerminal => "sidebar.actions.new_local_terminal",
         }
     }
 
@@ -263,9 +257,6 @@ impl TitlebarEntry {
             Self::Knowledge => workspace.open_knowledge_workspace_tab(window, cx),
             Self::Notifications => workspace.open_notification_center_tab(window, cx),
             Self::Settings => workspace.open_settings(window, cx),
-            Self::NewTerminal => {
-                let _ = workspace.create_local_terminal_tab(window, cx);
-            }
         }
     }
 }

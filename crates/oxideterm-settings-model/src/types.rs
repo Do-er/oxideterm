@@ -572,7 +572,11 @@ impl SettingsTab {
 
     pub fn icon(self) -> SettingsTabIcon {
         match self {
-            Self::General | Self::Appearance => SettingsTabIcon::Monitor,
+            // General holds app-level preferences, while Appearance owns display
+            // and theme settings; they need distinct icons so the sidebar does
+            // not present two visually identical entries.
+            Self::General => SettingsTabIcon::Settings,
+            Self::Appearance => SettingsTabIcon::Monitor,
             Self::Portable | Self::Sftp => SettingsTabIcon::HardDrive,
             Self::Terminal => SettingsTabIcon::Terminal,
             Self::Connections => SettingsTabIcon::Shield,
@@ -857,6 +861,7 @@ pub enum SettingsTabIcon {
     Monitor,
     Network,
     Puzzle,
+    Settings,
     Shield,
     Sparkles,
     Square,

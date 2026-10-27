@@ -1407,8 +1407,19 @@ impl WorkspaceApp {
         self.context_sidebar_motion_generation =
             self.context_sidebar_motion_generation.wrapping_add(1);
         self.sidebar_rendered = !settings.sidebar_ui.collapsed;
+        if !settings.ai.enabled
+            && self.active_context_sidebar_panel == ContextSidebarPanel::Assistant
+        {
+            self.active_context_sidebar_panel = ContextSidebarPanel::Sessions;
+            self.settings_store
+                .settings_mut()
+                .sidebar_ui
+                .ai_sidebar_collapsed = true;
+            self.clear_ai_sidebar_keyboard_focus(cx);
+            self.close_ai_sidebar_popovers(cx);
+        }
         self.context_sidebar_rendered = crate::workspace::sidebar::context_sidebar_panel_visible(
-            settings.sidebar_ui.ai_sidebar_collapsed,
+            self.settings_store.settings().sidebar_ui.ai_sidebar_collapsed,
             settings.sidebar_ui.zen_mode,
             settings.ai.enabled,
             self.active_context_sidebar_panel,

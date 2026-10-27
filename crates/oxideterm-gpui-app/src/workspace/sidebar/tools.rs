@@ -55,24 +55,36 @@ impl ContextSidebarTool {
     }
 }
 
-fn visible_tool_count(available_height: f32, row_height: f32, separator_height: f32) -> usize {
+fn visible_tool_count(
+    available_height: f32,
+    row_height: f32,
+    separator_height: f32,
+    ai_enabled: bool,
+) -> usize {
     // Reserve More only for overflow, and the second divider only when both groups show.
     (0..=TOOLS.len())
         .rev()
         .find(|&count| {
             let more_height = if count < TOOLS.len() { row_height } else { 0.0 };
-            tool_stack_height(count, row_height, separator_height) + more_height <= available_height
+            tool_stack_height(count, row_height, separator_height, ai_enabled) + more_height
+                <= available_height
         })
         .unwrap_or(0)
 }
 
-fn tool_stack_height(count: usize, row_height: f32, separator_height: f32) -> f32 {
+fn tool_stack_height(
+    count: usize,
+    row_height: f32,
+    separator_height: f32,
+    ai_enabled: bool,
+) -> f32 {
     let separators = if count > MONITORING_TOOL_COUNT {
         2.0
     } else {
         1.0
     };
-    (count + 2) as f32 * row_height + separators * separator_height
+    let leading_tools = if ai_enabled { 2.0 } else { 1.0 };
+    (count as f32 + leading_tools) * row_height + separators * separator_height
 }
 
 fn overflow_tools(visible: usize) -> Vec<ContextSidebarTool> {
@@ -132,6 +144,7 @@ impl WorkspaceApp {
             available,
             metrics.activity_icon_size + metrics.activity_icon_gap,
             metrics.divider_height + metrics.activity_icon_gap,
+            self.settings_store.settings().ai.enabled,
         )
     }
 
@@ -203,6 +216,7 @@ impl WorkspaceApp {
         cx: &mut Context<Self>,
     ) -> AnyElement {
         let count = self.context_tool_count(window, cx);
+        let ai_enabled = self.settings_store.settings().ai.enabled;
         let mut buttons = div()
             .flex_1()
             .min_h_0()
@@ -211,9 +225,15 @@ impl WorkspaceApp {
             .flex_col()
             .items_center()
             .pt(px(PRIMARY_SIDEBAR_CONTENT_TOP_INSET))
-            .child(self.render_sessions_context_tool(cx))
-            .child(self.render_activity_icon(SidebarSection::Assistant, LucideIcon::Sparkles, cx))
-            .child(self.context_tool_separator());
+            .child(self.render_sessions_context_tool(cx));
+        if ai_enabled {
+            buttons = buttons.child(self.render_activity_icon(
+                SidebarSection::Assistant,
+                LucideIcon::Sparkles,
+                cx,
+            ));
+        }
+        let mut buttons = buttons.child(self.context_tool_separator());
         for (index, tool) in TOOLS.iter().take(count).copied().enumerate() {
             if index == MONITORING_TOOL_COUNT {
                 buttons = buttons.child(self.context_tool_separator());
@@ -370,6 +390,7 @@ impl WorkspaceApp {
                 count,
                 metrics.activity_icon_size + metrics.activity_icon_gap,
                 metrics.divider_height + metrics.activity_icon_gap,
+                self.settings_store.settings().ai.enabled,
             );
         Some(
             popover_backdrop()
@@ -460,22 +481,22 @@ mod tests {
     #[test]
     fn shrinking_the_rail_moves_only_trailing_tools_into_more() {
         // All tools fit exactly without reserving an unnecessary More button.
-        let all_visible = visible_tool_count(538.0, 40.0, 9.0);
+        let all_visible = visible_tool_count(538.0, 40.0, 9.0, true);
         assert_eq!(all_visible, 11);
         assert_eq!(overflow_tools(all_visible), vec![]);
-        assert_eq!(visible_tool_count(700.0, 40.0, 9.0), 11);
+        assert_eq!(visible_tool_count(700.0, 40.0, 9.0, true), 11);
         // Once the last row no longer fits, More needs a row of its own.
-        let almost_all = visible_tool_count(537.0, 40.0, 9.0);
+        let almost_all = visible_tool_count(537.0, 40.0, 9.0, true);
         assert_eq!(almost_all, 9);
         assert_eq!(
             overflow_tools(almost_all),
             vec![ContextSidebarTool::Schedules, ContextSidebarTool::Packages]
         );
-        assert_eq!(visible_tool_count(300.0, 40.0, 9.0), 4);
-        assert_eq!(visible_tool_count(289.0, 40.0, 9.0), 4);
+        assert_eq!(visible_tool_count(300.0, 40.0, 9.0, true), 4);
+        assert_eq!(visible_tool_count(289.0, 40.0, 9.0, true), 4);
         // Four monitoring rows and More fit exactly; one fewer pixel overflows a row.
-        assert_eq!(visible_tool_count(288.0, 40.0, 9.0), 3);
-        let visible = visible_tool_count(210.0, 40.0, 9.0);
+        assert_eq!(visible_tool_count(288.0, 40.0, 9.0, true), 3);
+        let visible = visible_tool_count(210.0, 40.0, 9.0, true);
         assert_eq!(
             &TOOLS[..visible],
             &[ContextSidebarTool::Monitor, ContextSidebarTool::Processes]
@@ -494,6 +515,10 @@ mod tests {
                 ContextSidebarTool::Packages
             ]
         );
-        assert_eq!(visible_tool_count(80.0, 40.0, 9.0), 0);
+        assert_eq!(visible_tool_count(80.0, 40.0, 9.0, true), 0);
+
+        // When AI is disabled, one fewer leading tool is rendered (only Sessions, saving 40px).
+        assert_eq!(visible_tool_count(498.0, 40.0, 9.0, false), 11);
+        assert_eq!(visible_tool_count(497.0, 40.0, 9.0, false), 9);
     }
 }

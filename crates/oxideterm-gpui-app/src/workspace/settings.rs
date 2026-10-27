@@ -272,6 +272,7 @@ fn settings_tab_lucide(icon: SettingsTabIcon) -> LucideIcon {
         SettingsTabIcon::Monitor => LucideIcon::Monitor,
         SettingsTabIcon::Network => LucideIcon::Network,
         SettingsTabIcon::Puzzle => LucideIcon::Puzzle,
+        SettingsTabIcon::Settings => LucideIcon::Settings,
         SettingsTabIcon::Shield => LucideIcon::Shield,
         SettingsTabIcon::Sparkles => LucideIcon::Sparkles,
         SettingsTabIcon::Square => LucideIcon::Square,
