@@ -1469,6 +1469,7 @@ impl WorkspaceApp {
         window: &mut Window,
         cx: &mut Context<Self>,
     ) -> AnyElement {
+        self.sync_terminal_render_caches(cx);
         let active_ime_target =
             self.active_ime_target_for_window(window.window_handle().window_id(), cx);
         self.workspace_input.update(cx, |input, cx| {

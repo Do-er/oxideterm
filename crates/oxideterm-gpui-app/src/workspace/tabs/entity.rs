@@ -901,6 +901,26 @@ impl WorkspaceTabHostEntity {
         &self.panes
     }
 
+    pub(in crate::workspace) fn sync_terminal_render_caches(&self, unlocked: bool, cx: &mut App) {
+        let mut visible = Vec::new();
+        if unlocked {
+            for tab in &self.tabs {
+                if self.surface_is_visible(tab.id)
+                    && let Some(root) = &tab.root_pane
+                {
+                    root.collect_pane_ids(&mut visible);
+                }
+            }
+        }
+        // Detached windows and every split pane remain visible, even without keyboard focus.
+        for (id, pane) in &self.panes {
+            let active = visible.contains(id);
+            if pane.read(cx).render_cache_visible() != active {
+                pane.update(cx, |pane, cx| pane.set_render_cache_visible(active, cx));
+            }
+        }
+    }
+
     pub(in crate::workspace) fn unbind_terminal_location_for_pane(
         &mut self,
         pane_id: PaneId,
@@ -1515,6 +1535,12 @@ mod tests {
                     },
                 );
             }
+            host.sync_terminal_render_caches(true, cx);
+            assert!(
+                panes
+                    .iter()
+                    .all(|pane| pane.read(cx).render_cache_visible())
+            );
             for session in [sa, sb] {
                 let mut instance = crate::workspace::local_sessions::LocalTerminalInstance::new(
                     &LocalPtyConfig::default(),
@@ -1542,8 +1568,17 @@ mod tests {
             );
             // Selection changes cannot redirect an already-issued terminal handle.
             host.select_main_tab(Some(TabId(1)));
+            host.sync_terminal_render_caches(true, cx);
+            assert!(panes[0].read(cx).render_cache_visible());
+            assert!(!panes[1].read(cx).render_cache_visible());
             let mount = host.begin_detach(TabId(2)).unwrap();
             assert!(host.commit_detach(TabId(2), mount, detached.into()));
+            host.sync_terminal_render_caches(true, cx);
+            assert!(
+                panes
+                    .iter()
+                    .all(|pane| pane.read(cx).render_cache_visible())
+            );
             assert_eq!(host.pane_window_affinities[&b].current, detached.into());
             assert_eq!(host.terminal_pane_for_target(b, sb), Some(panes[1].clone()));
             assert!(host.terminal_pane_for_target(a, sb).is_none());
@@ -1566,6 +1601,14 @@ mod tests {
             }
             host.return_to_main(TabId(2), TabMountCloseReason::ReturnToMain)
                 .unwrap();
+            host.sync_terminal_render_caches(true, cx);
+            assert!(!panes[1].read(cx).render_cache_visible());
+            host.sync_terminal_render_caches(false, cx);
+            assert!(
+                panes
+                    .iter()
+                    .all(|pane| !pane.read(cx).render_cache_visible())
+            );
             assert_eq!(host.pane_window_affinities[&b].current, main.into());
             assert_eq!(host.terminal_pane_for_target(b, sb), Some(panes[1].clone()));
             assert_eq!(
