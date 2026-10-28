@@ -1950,6 +1950,7 @@ impl WorkspaceApp {
         let row = segmented_tabs(&self.tokens).child(inner);
 
         div()
+            .w_full()
             .flex()
             .flex_col()
             .gap(px(self.tokens.spacing.three))
@@ -3459,6 +3460,7 @@ impl WorkspaceApp {
         ];
 
         div()
+            .w_full()
             .flex()
             .flex_col()
             .gap(px(self.tokens.spacing.three))
@@ -3624,6 +3626,7 @@ impl WorkspaceApp {
                     .remote_desktop_plugin_enabled(protocol);
 
                 div()
+                    .w_full()
                     .flex()
                     .flex_col()
                     .gap(px(self.tokens.metrics.modal_section_gap))
@@ -3805,6 +3808,7 @@ impl WorkspaceApp {
 
     fn render_vnc_connection_preferences(&self, cx: &mut Context<Self>) -> AnyElement {
         div()
+            .w_full()
             .flex()
             .flex_col()
             .gap(px(self.tokens.spacing.three))
@@ -3899,6 +3903,7 @@ impl WorkspaceApp {
         cx: &mut Context<Self>,
     ) -> AnyElement {
         div()
+            .w_full()
             .flex()
             .flex_col()
             .gap(px(self.tokens.spacing.three))
@@ -4133,6 +4138,7 @@ impl WorkspaceApp {
         match active_tab {
             ConnectionFormTab::General => {
                 div()
+                    .w_full()
                     .flex()
                     .flex_col()
                     .gap(px(self.tokens.metrics.modal_section_gap))
@@ -4343,6 +4349,7 @@ impl WorkspaceApp {
                     );
 
                 div()
+                    .w_full()
                     .flex()
                     .flex_col()
                     .gap(px(self.tokens.metrics.modal_section_gap))
@@ -4773,6 +4780,7 @@ impl WorkspaceApp {
         };
 
         div()
+            .w_full()
             .flex()
             .flex_col()
             .gap(px(self.tokens.spacing.three))
@@ -5010,6 +5018,7 @@ impl WorkspaceApp {
         .collect::<Vec<_>>();
 
         div()
+            .w_full()
             .flex()
             .flex_col()
             .gap(px(self.tokens.spacing.three))

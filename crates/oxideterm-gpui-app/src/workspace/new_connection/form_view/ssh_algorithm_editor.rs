@@ -162,6 +162,7 @@ impl WorkspaceApp {
             .hover(|row| row.bg(rgb(self.tokens.ui.bg_hover)))
             .child(
                 div()
+                    .flex_1()
                     .min_w_0()
                     .flex()
                     .flex_col()
@@ -171,12 +172,14 @@ impl WorkspaceApp {
                             .text_size(px(self.tokens.metrics.ui_text_sm))
                             .font_weight(gpui::FontWeight::MEDIUM)
                             .text_color(rgb(self.tokens.ui.text))
+                            .truncate()
                             .child(self.i18n.t("ssh.form.ssh_algorithms")),
                     )
                     .child(
                         div()
                             .text_size(px(self.tokens.metrics.ui_text_xs))
                             .text_color(rgb(self.tokens.ui.text_muted))
+                            .truncate()
                             .child(self.i18n.t("ssh.form.ssh_algorithms_hint")),
                     ),
             )
@@ -252,6 +255,7 @@ impl WorkspaceApp {
             categories = categories.child(
                 div()
                     .id(("ssh-algorithm-category", category_index))
+                    .w_full()
                     .flex()
                     .items_center()
                     .justify_between()
@@ -273,6 +277,7 @@ impl WorkspaceApp {
                     .hover(|row| row.bg(rgb(self.tokens.ui.bg_hover)))
                     .child(
                         div()
+                            .flex_1()
                             .min_w_0()
                             .flex()
                             .flex_col()
@@ -281,12 +286,14 @@ impl WorkspaceApp {
                                 div()
                                     .text_size(px(self.tokens.metrics.ui_text_sm))
                                     .font_weight(gpui::FontWeight::MEDIUM)
+                                    .truncate()
                                     .child(self.i18n.t(category_i18n_key(category))),
                             )
                             .child(
                                 div()
                                     .text_size(px(self.tokens.metrics.ui_text_xs))
                                     .text_color(rgb(self.tokens.ui.text_muted))
+                                    .truncate()
                                     .child(format!("{status} · {count}")),
                             ),
                     )
@@ -448,6 +455,7 @@ impl WorkspaceApp {
                         .min_w_0()
                         .flex_1()
                         .text_size(px(12.0))
+                        .truncate()
                         .text_color(rgb(if checked {
                             self.tokens.ui.text
                         } else {

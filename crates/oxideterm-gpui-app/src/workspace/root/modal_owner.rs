@@ -16,6 +16,7 @@ pub(in crate::workspace) enum ActiveTabWindowModalKind {
     KeybindingReset,
     ManagedKey,
     PortablePassword,
+    PrivilegeCredential,
     SessionManagerGroupManager,
     SessionManagerDelete,
     ForwardEdit,
@@ -764,6 +765,23 @@ impl WorkspaceApp {
                 phase: visible,
             });
         }
+        // The session manager dialogs can own keyboard input while the session
+        // manager is docked in the right sidebar and another tab stays active.
+        {
+            let session_manager = self.session_manager.read(cx);
+            if session_manager.delete_confirm.is_some() {
+                return Some(ActiveTabWindowModalSnapshot {
+                    kind: ActiveTabWindowModalKind::SessionManagerDelete,
+                    phase: visible,
+                });
+            }
+            if session_manager.show_group_manager {
+                return Some(ActiveTabWindowModalSnapshot {
+                    kind: ActiveTabWindowModalKind::SessionManagerGroupManager,
+                    phase: visible,
+                });
+            }
+        }
         let active_tab = self.active_content_tab(cx)?;
         match active_tab.kind {
             TabKind::Knowledge => {
@@ -813,6 +831,11 @@ impl WorkspaceApp {
                     Some(ActiveTabWindowModalSnapshot {
                         kind: ActiveTabWindowModalKind::PortablePassword,
                         phase: settings.portable_password_dialog_phase(),
+                    })
+                } else if settings.privilege_editor_is_open() {
+                    Some(ActiveTabWindowModalSnapshot {
+                        kind: ActiveTabWindowModalKind::PrivilegeCredential,
+                        phase: visible,
                     })
                 } else if settings.managed_key_dialog_open() {
                     Some(ActiveTabWindowModalSnapshot {
@@ -1251,6 +1274,19 @@ impl WorkspaceApp {
             ActiveTabWindowModalKind::PortablePassword => {
                 if event.keystroke.key.as_str() == "escape" {
                     self.close_portable_password_change_dialog(cx);
+                }
+                true
+            }
+            ActiveTabWindowModalKind::PrivilegeCredential => {
+                if self.open_settings_select.is_some() {
+                    if event.keystroke.key.as_str() == "escape" {
+                        self.close_settings_select();
+                        cx.notify();
+                    }
+                    return true;
+                }
+                if event.keystroke.key.as_str() == "escape" {
+                    self.reset_settings_privilege_credential_draft(cx);
                 }
                 true
             }

@@ -134,6 +134,7 @@ impl WorkspaceApp {
                     ));
 
                 div()
+                    .w_full()
                     .flex()
                     .flex_col()
                     .gap(px(self.tokens.metrics.modal_section_gap))

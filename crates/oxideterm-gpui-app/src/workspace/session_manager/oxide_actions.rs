@@ -1270,7 +1270,8 @@ impl WorkspaceApp {
                             dialog.import_mosh_profiles = preview.mosh_profiles_count > 0;
                             dialog.import_plugin_settings = preview.plugin_settings_count > 0;
                             dialog.import_forwards = preview.total_forwards > 0;
-                            dialog.import_portable_secrets = false;
+                            dialog.import_portable_secrets = true;
+                            dialog.restore_managed_key_passphrases = true;
                             dialog.selected_plugin_ids =
                                 preview.plugin_settings_by_plugin.keys().cloned().collect();
                             dialog.expanded_app_settings_sections.clear();

@@ -76,67 +76,56 @@ impl WorkspaceApp {
             ))
             .child(self.help_portable_or_channel_row(is_portable, channel_label, cx));
 
-        // Tauri HelpAboutSection keeps the version rows and update controls inside one
-        // card, with only the update block separated by `border-t pt-4`.
-        let card = div()
-            .w_full()
-            .min_w(px(0.0))
-            .rounded(px(self.tokens.radii.lg))
-            .border_1()
-            .border_color(rgb(self.tokens.ui.border))
-            .p(px(self.tokens.metrics.settings_card_padding))
+        // Keep the update block separated from the version rows by its own
+        // hairline, so the shared card gap does not double the spacing.
+        let body = div()
             .flex()
             .flex_col()
-            .child(
-                div()
-                    .mb(px(16.0))
-                    .text_size(px(self.tokens.metrics.ui_text_sm))
-                    .font_weight(gpui::FontWeight::MEDIUM)
-                    .text_color(rgb(self.tokens.ui.text))
-                    .child(
-                        self.i18n
-                            .t("settings_view.help.version_info")
-                            .to_uppercase(),
-                    ),
-            )
             .child(version_rows)
-            .child(self.help_update_footer(is_portable, cx));
+            .child(self.help_update_footer(is_portable, cx))
+            .into_any_element();
 
-        self.settings_card_surface(card, self.tokens.ui.bg_card)
-            .into_any_element()
+        self.settings_card(
+            "settings_view.help.version_info",
+            "settings_view.help.version_info_desc",
+            vec![body],
+        )
     }
 
     pub(in crate::workspace) fn help_diagnostics_card(&self, cx: &mut Context<Self>) -> AnyElement {
         // MemoryDiagnosticsPanel and the keyboard-shortcut reference are Tauri-only Help blocks.
         // GPUI keeps diagnostics lightweight: file logging is always available, while verbose
         // debug output is opt-in so normal sessions do not generate oversized logs.
-        self.plain_settings_card(vec![
-            self.card_title("settings_view.help.diagnostics"),
-            self.bool_row(
-                "settings_view.help.debug_logs",
-                "settings_view.help.debug_logs_hint",
-                self.settings_store.settings().diagnostics.debug_logging,
-                set_diagnostics_debug_logging,
-                cx,
-            ),
-            self.card_separator(),
-            self.bool_row(
-                "settings_view.terminal.show_performance_overlay",
-                "settings_view.terminal.show_performance_overlay_hint",
-                self.settings_store.settings().terminal.show_fps_overlay,
-                set_show_terminal_performance_overlay,
-                cx,
-            ),
-            self.card_separator(),
-            self.help_action_row(
-                "settings_view.help.open_logs",
-                "settings_view.help.open_logs_hint",
-                self.i18n.t("settings_view.help.open"),
-                LucideIcon::FolderOpen,
-                |this, _event, _window, cx| this.open_help_log_directory(cx),
-                cx,
-            ),
-        ])
+        self.settings_card(
+            "settings_view.help.diagnostics",
+            "settings_view.help.diagnostics_desc",
+            vec![
+                self.bool_row(
+                    "settings_view.help.debug_logs",
+                    "settings_view.help.debug_logs_hint",
+                    self.settings_store.settings().diagnostics.debug_logging,
+                    set_diagnostics_debug_logging,
+                    cx,
+                ),
+                self.card_separator(),
+                self.bool_row(
+                    "settings_view.terminal.show_performance_overlay",
+                    "settings_view.terminal.show_performance_overlay_hint",
+                    self.settings_store.settings().terminal.show_fps_overlay,
+                    set_show_terminal_performance_overlay,
+                    cx,
+                ),
+                self.card_separator(),
+                self.help_action_row(
+                    "settings_view.help.open_logs",
+                    "settings_view.help.open_logs_hint",
+                    self.i18n.t("settings_view.help.open"),
+                    LucideIcon::FolderOpen,
+                    |this, _event, _window, cx| this.open_help_log_directory(cx),
+                    cx,
+                ),
+            ],
+        )
     }
 
     pub(in crate::workspace) fn help_tech_stack_card(&self) -> AnyElement {
@@ -155,46 +144,50 @@ impl WorkspaceApp {
             );
         }
 
-        self.plain_settings_card(vec![
-            self.card_title("settings_view.help.tech_stack"),
-            badges.into_any_element(),
-        ])
+        self.settings_card(
+            "settings_view.help.tech_stack",
+            "settings_view.help.tech_stack_desc",
+            vec![badges.into_any_element()],
+        )
     }
 
     pub(in crate::workspace) fn help_resources_card(&self, cx: &mut Context<Self>) -> AnyElement {
-        self.plain_settings_card(vec![
-            self.card_title("settings_view.help.resources"),
-            self.help_resource_link(
-                "settings_view.help.website",
-                HELP_WEBSITE_URL,
-                LucideIcon::ExternalLink,
-                cx,
-            ),
-            self.help_resource_link(
-                "settings_view.help.documentation",
-                HELP_DOCUMENTATION_URL,
-                LucideIcon::BookOpen,
-                cx,
-            ),
-            self.help_resource_link(
-                "settings_view.help.github",
-                HELP_GITHUB_URL,
-                LucideIcon::GitFork,
-                cx,
-            ),
-            self.help_resource_link(
-                "settings_view.help.issues",
-                HELP_ISSUES_URL,
-                LucideIcon::HelpCircle,
-                cx,
-            ),
-            self.help_resource_link(
-                "settings_view.help.disclaimer",
-                HELP_LEGAL_URL,
-                LucideIcon::Shield,
-                cx,
-            ),
-        ])
+        self.settings_card(
+            "settings_view.help.resources",
+            "settings_view.help.resources_desc",
+            vec![
+                self.help_resource_link(
+                    "settings_view.help.website",
+                    HELP_WEBSITE_URL,
+                    LucideIcon::ExternalLink,
+                    cx,
+                ),
+                self.help_resource_link(
+                    "settings_view.help.documentation",
+                    HELP_DOCUMENTATION_URL,
+                    LucideIcon::BookOpen,
+                    cx,
+                ),
+                self.help_resource_link(
+                    "settings_view.help.github",
+                    HELP_GITHUB_URL,
+                    LucideIcon::GitFork,
+                    cx,
+                ),
+                self.help_resource_link(
+                    "settings_view.help.issues",
+                    HELP_ISSUES_URL,
+                    LucideIcon::HelpCircle,
+                    cx,
+                ),
+                self.help_resource_link(
+                    "settings_view.help.disclaimer",
+                    HELP_LEGAL_URL,
+                    LucideIcon::Shield,
+                    cx,
+                ),
+            ],
+        )
     }
 
     pub(in crate::workspace) fn help_safety_card(&self) -> AnyElement {
@@ -212,10 +205,11 @@ impl WorkspaceApp {
             safety_rows = safety_rows.child(self.help_safety_row(key));
         }
 
-        self.plain_settings_card(vec![
-            self.card_title("settings_view.help.safety_title"),
-            safety_rows.into_any_element(),
-        ])
+        self.settings_card(
+            "settings_view.help.safety_title",
+            "settings_view.help.safety_desc",
+            vec![safety_rows.into_any_element()],
+        )
     }
 
     pub(in crate::workspace) fn help_safety_row(&self, key: &str) -> AnyElement {

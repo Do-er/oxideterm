@@ -580,6 +580,7 @@ impl WorkspaceApp {
                                                 ))
                                                 .child(
                                                     div()
+                                                        .w_full()
                                                         .flex()
                                                         .flex_col()
                                                         .min_w(px(0.0))
@@ -1153,6 +1154,7 @@ impl WorkspaceApp {
 
                                                                             content.child(
                                                                                 div()
+                                                                                    .w_full()
                                                                                     .flex()
                                                                                     .flex_col()
                                                                                     .gap(px(self.tokens.metrics.modal_section_gap))
@@ -1191,6 +1193,7 @@ impl WorkspaceApp {
                                                                         ConnectionFormTab::Network => {
                                                                             content.child(
                                                                                 div()
+                                                                                    .w_full()
                                                                                     .flex()
                                                                                     .flex_col()
                                                                                     .gap(px(self.tokens.metrics.modal_section_gap))
@@ -1231,6 +1234,7 @@ impl WorkspaceApp {
                                                                         ConnectionFormTab::Terminal => {
                                                                             content.child(
                                                                                 div()
+                                                                                    .w_full()
                                                                                     .flex()
                                                                                     .flex_col()
                                                                                     .gap(px(self.tokens.metrics.modal_section_gap))

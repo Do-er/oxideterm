@@ -1,6 +1,5 @@
 use super::*;
 
-pub(in crate::workspace) const SFTP_SETTINGS_CARD_PADDING: f32 = 20.0; // Tauri p-5
 // Leave room for large transfer rates and the localized unlimited placeholder.
 const SFTP_SPEED_LIMIT_INPUT_WIDTH: f32 = 180.0;
 
@@ -12,9 +11,10 @@ impl WorkspaceApp {
     ) -> AnyElement {
         let settings = self.settings_store.settings();
         if section_index == 0 {
-            return self.sftp_settings_card(
+            return self.settings_card(
+                "settings_view.sftp.opening",
+                "settings_view.sftp.opening_desc",
                 vec![
-                    self.card_title("settings_view.sftp.opening"),
                     self.setting_row(
                         "settings_view.sftp.presentation",
                         "settings_view.sftp.presentation_hint",
@@ -40,28 +40,18 @@ impl WorkspaceApp {
                         cx,
                     ),
                 ],
-                20.0,
             );
         }
 
         if section_index == 2 {
-            return self.sftp_settings_card(
-                vec![
-                    div()
-                        .mb(px(8.0))
-                        .child(self.setting_row(
-                            "settings_view.sftp.conflict",
-                            "settings_view.sftp.conflict_hint",
-                            self.sftp_select_control(
-                                SettingsSelect::SftpConflict,
-                                conflict_label(settings.sftp.conflict_action, &self.i18n),
-                                cx,
-                            ),
-                            cx,
-                        ))
-                        .into_any_element(),
-                ],
-                0.0,
+            return self.settings_card(
+                "settings_view.sftp.conflict",
+                "settings_view.sftp.conflict_hint",
+                vec![self.sftp_select_control(
+                    SettingsSelect::SftpConflict,
+                    conflict_label(settings.sftp.conflict_action, &self.i18n),
+                    cx,
+                )],
             );
         }
 
@@ -70,7 +60,6 @@ impl WorkspaceApp {
         }
 
         let mut performance_rows = vec![
-            self.card_title("settings_view.sftp.performance"),
             self.setting_row(
                 "settings_view.sftp.concurrent",
                 "settings_view.sftp.concurrent_hint",
@@ -138,27 +127,11 @@ impl WorkspaceApp {
             );
         }
 
-        self.sftp_settings_card(performance_rows, 16.0)
-    }
-
-    pub(in crate::workspace) fn sftp_settings_card(
-        &self,
-        rows: Vec<AnyElement>,
-        gap: f32,
-    ) -> AnyElement {
-        let card = div()
-            .w_full()
-            .min_w(px(0.0))
-            .rounded(px(self.tokens.radii.lg))
-            .border_1()
-            .border_color(rgb(self.tokens.ui.border))
-            .p(px(SFTP_SETTINGS_CARD_PADDING))
-            .flex()
-            .flex_col()
-            .gap(px(gap))
-            .children(rows);
-        self.settings_card_surface(card, self.tokens.ui.bg_card)
-            .into_any_element()
+        self.settings_card(
+            "settings_view.sftp.performance",
+            "settings_view.sftp.performance_desc",
+            performance_rows,
+        )
     }
 
     pub(in crate::workspace) fn sftp_select_control(

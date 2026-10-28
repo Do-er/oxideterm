@@ -83,6 +83,9 @@ impl WorkspaceApp {
                 if let Some(modal) = self.render_portable_password_change_dialog(cx) {
                     modals.push(modal);
                 }
+                if let Some(modal) = self.render_privilege_credential_dialog(cx) {
+                    modals.push(modal);
+                }
             }
             TabKind::Knowledge => {
                 if let Some(modal) = self.render_knowledge_create_collection_dialog(cx) {
@@ -97,21 +100,7 @@ impl WorkspaceApp {
                     modals.push(modal);
                 }
             }
-            TabKind::SessionManager => {
-                let (show_group_manager, show_delete_confirm) = {
-                    let session_manager = self.session_manager.read(cx);
-                    (
-                        session_manager.show_group_manager,
-                        session_manager.delete_confirm.is_some(),
-                    )
-                };
-                if show_group_manager {
-                    modals.push(self.render_group_manager_dialog(window, cx));
-                }
-                if show_delete_confirm {
-                    modals.push(self.render_session_manager_delete_confirm(cx));
-                }
-            }
+            TabKind::SessionManager => {}
             TabKind::Forwards => {
                 let _scope = self.enter_forwarding_page(tab_id, cx);
                 let Some(node_id) = self.forwarding.read(cx).node_for_tab(tab_id) else {
@@ -165,6 +154,21 @@ impl WorkspaceApp {
             // Sidebar-owned dialogs stay at the window root so previews and
             // confirmations are never clipped by the narrow sidebar region.
             modals.push(self.render_sftp_dialog(dialog, false, cx));
+        }
+        // The session manager can be docked in the right sidebar drawer while a
+        // different tab stays active, so its dialogs are collected window-wide.
+        let (show_group_manager, show_delete_confirm) = {
+            let session_manager = self.session_manager.read(cx);
+            (
+                session_manager.show_group_manager,
+                session_manager.delete_confirm.is_some(),
+            )
+        };
+        if show_group_manager {
+            modals.push(self.render_group_manager_dialog(window, cx));
+        }
+        if show_delete_confirm {
+            modals.push(self.render_session_manager_delete_confirm(cx));
         }
         modals
     }

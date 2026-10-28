@@ -78,7 +78,7 @@ impl WorkspaceApp {
         } else {
             "settings_view.general.portable_runtime_disabled_hint"
         };
-        let mut rows = vec![self.portable_runtime_summary_row(portable_status, hint_key, cx)];
+        let mut rows = vec![self.portable_runtime_status_badge(portable_status)];
 
         if let Some(status) = portable_status.filter(|status| status.is_portable) {
             rows.push(self.card_separator());
@@ -87,18 +87,12 @@ impl WorkspaceApp {
             rows.push(self.portable_security_group(status, cx));
         }
 
-        self.plain_settings_card(
-            std::iter::once(self.card_title("settings_view.general.portable_runtime"))
-                .chain(rows)
-                .collect(),
-        )
+        self.settings_card("settings_view.general.portable_runtime", hint_key, rows)
     }
 
-    pub(in crate::workspace) fn portable_runtime_summary_row(
+    pub(in crate::workspace) fn portable_runtime_status_badge(
         &self,
         portable_status: Option<&oxideterm_portable_runtime::PortableStatusSnapshot>,
-        hint_key: &str,
-        cx: &mut Context<Self>,
     ) -> AnyElement {
         let (badge_label, badge_color) = portable_status
             .map(|status| {
@@ -132,20 +126,7 @@ impl WorkspaceApp {
             .w_full()
             .flex()
             .flex_row()
-            .items_start()
-            .justify_between()
-            .gap(px(16.0))
-            .child(div().flex().flex_col().w_full().min_w(px(0.0)).child(
-                self.portable_settings_text(
-                    "portable-runtime-summary-hint",
-                    hint_key,
-                    self.i18n.t(hint_key),
-                    self.tokens.metrics.ui_text_xs,
-                    self.tokens.ui.text_muted,
-                    None,
-                    cx,
-                ),
-            ))
+            .items_center()
             .child(self.text_badge(badge_label, badge_color))
             .into_any_element()
     }
@@ -364,93 +345,79 @@ impl WorkspaceApp {
             .unwrap_or_else(|| current_data_dir.clone());
         let secret_count = portable_snapshot.exportable_secret_count.unwrap_or(0);
 
-        self.plain_settings_card(vec![
-            self.card_title("settings_view.general.portable_migration"),
-            div()
-                .flex()
-                .flex_col()
-                .child(self.portable_settings_text(
-                    "portable-migration-hint",
-                    if is_portable {
-                        "settings_view.general.portable_migration_portable_hint"
-                    } else {
-                        "settings_view.general.portable_migration_installed_hint"
-                    },
-                    if is_portable {
-                        self.i18n
-                            .t("settings_view.general.portable_migration_portable_hint")
-                    } else {
-                        self.i18n
-                            .t("settings_view.general.portable_migration_installed_hint")
-                    },
-                    self.tokens.metrics.ui_text_xs,
-                    self.tokens.ui.text_muted,
-                    None,
-                    cx,
-                ))
-                .into_any_element(),
-            div()
-                .flex()
-                .flex_col()
-                .gap(px(PORTABLE_SETTINGS_PATH_CARD_GAP))
-                .child(self.portable_value_box(
-                    "settings_view.general.portable_migration_current_dir",
-                    current_data_dir,
-                    true,
-                    cx,
-                ))
-                .child(self.portable_value_box(
-                    "settings_view.general.portable_migration_target_dir",
-                    portable_data_dir,
-                    true,
-                    cx,
-                ))
-                .child(self.portable_settings_text(
-                    "portable-migration-secret-summary",
-                    secret_count,
-                    self.i18n_with(
-                        "settings_view.general.portable_migration_secret_summary",
-                        &[("count", secret_count.to_string())],
-                    ),
-                    self.tokens.metrics.ui_text_xs,
-                    self.tokens.ui.text_muted,
-                    None,
-                    cx,
-                ))
-                .into_any_element(),
-            div()
-                .flex()
-                .flex_row()
-                .flex_wrap()
-                .gap(px(PORTABLE_SETTINGS_BUTTON_GAP))
-                .child(
-                    self.portable_action_button(
-                        self.i18n
-                            .t("settings_view.general.portable_migration_export"),
-                        LucideIcon::Upload,
+        let migration_hint_key = if is_portable {
+            "settings_view.general.portable_migration_portable_hint"
+        } else {
+            "settings_view.general.portable_migration_installed_hint"
+        };
+
+        self.settings_card(
+            "settings_view.general.portable_migration",
+            migration_hint_key,
+            vec![
+                div()
+                    .flex()
+                    .flex_col()
+                    .gap(px(PORTABLE_SETTINGS_PATH_CARD_GAP))
+                    .child(self.portable_value_box(
+                        "settings_view.general.portable_migration_current_dir",
+                        current_data_dir,
                         true,
-                        false,
-                        |this, _event, _window, cx| {
-                            this.open_oxide_export_portable_migration_dialog(cx);
-                        },
                         cx,
-                    ),
-                )
-                .child(
-                    self.portable_action_button(
-                        self.i18n
-                            .t("settings_view.general.portable_migration_import"),
-                        LucideIcon::Download,
+                    ))
+                    .child(self.portable_value_box(
+                        "settings_view.general.portable_migration_target_dir",
+                        portable_data_dir,
                         true,
-                        false,
-                        |this, _event, _window, cx| {
-                            this.open_oxide_import_portable_migration_dialog(cx);
-                        },
                         cx,
-                    ),
-                )
-                .into_any_element(),
-        ])
+                    ))
+                    .child(self.portable_settings_text(
+                        "portable-migration-secret-summary",
+                        secret_count,
+                        self.i18n_with(
+                            "settings_view.general.portable_migration_secret_summary",
+                            &[("count", secret_count.to_string())],
+                        ),
+                        self.tokens.metrics.ui_text_xs,
+                        self.tokens.ui.text_muted,
+                        None,
+                        cx,
+                    ))
+                    .into_any_element(),
+                div()
+                    .flex()
+                    .flex_row()
+                    .flex_wrap()
+                    .gap(px(PORTABLE_SETTINGS_BUTTON_GAP))
+                    .child(
+                        self.portable_action_button(
+                            self.i18n
+                                .t("settings_view.general.portable_migration_export"),
+                            LucideIcon::Upload,
+                            true,
+                            false,
+                            |this, _event, _window, cx| {
+                                this.open_oxide_export_portable_migration_dialog(cx);
+                            },
+                            cx,
+                        ),
+                    )
+                    .child(
+                        self.portable_action_button(
+                            self.i18n
+                                .t("settings_view.general.portable_migration_import"),
+                            LucideIcon::Download,
+                            true,
+                            false,
+                            |this, _event, _window, cx| {
+                                this.open_oxide_import_portable_migration_dialog(cx);
+                            },
+                            cx,
+                        ),
+                    )
+                    .into_any_element(),
+            ],
+        )
     }
 
     pub(in crate::workspace) fn portable_action_button(
