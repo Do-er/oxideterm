@@ -488,7 +488,17 @@
       "serial_profile_name_placeholder": "Console laboratorio",
       "serial_save_failed": "Impossibile salvare il profilo seriale",
       "serial_invalid_baud_rate": "Il baud rate deve essere maggiore di zero",
-      "serial_port_required": "Seleziona o inserisci il percorso di una porta seriale"
+      "serial_port_required": "Seleziona o inserisci il percorso di una porta seriale",
+      "tabs": {
+        "general": "Generale",
+        "general_auth": "Generale e Autenticazione",
+        "general_credentials": "Generale e Credenziali",
+        "proxy_route": "Proxy e Instradamento",
+        "terminal_advanced": "Terminal e Avanzate",
+        "display_features": "Schermo e Funzionalità",
+        "serial_parameters": "Parametri seriali",
+        "advanced": "Avanzate"
+      }
     },
     "managed_key": {
       "selector": {

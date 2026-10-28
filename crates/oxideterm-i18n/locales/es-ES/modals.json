@@ -488,7 +488,17 @@
       "serial_profile_name_placeholder": "Consola de laboratorio",
       "serial_save_failed": "No se pudo guardar el perfil serie",
       "serial_invalid_baud_rate": "La velocidad en baudios debe ser mayor que cero",
-      "serial_port_required": "Selecciona o introduce una ruta de puerto serie"
+      "serial_port_required": "Selecciona o introduce una ruta de puerto serie",
+      "tabs": {
+        "general": "General",
+        "general_auth": "General y Autenticación",
+        "general_credentials": "General y Credenciales",
+        "proxy_route": "Proxy y Ruta",
+        "terminal_advanced": "Terminal y Avanzado",
+        "display_features": "Pantalla y Funciones",
+        "serial_parameters": "Parámetros serie",
+        "advanced": "Avanzado"
+      }
     },
     "managed_key": {
       "selector": {

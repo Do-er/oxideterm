@@ -11,6 +11,7 @@ const NEW_CONNECTION_ADVANCED_GROUP_HEIGHT: f32 = 28.0;
 const NEW_CONNECTION_ADVANCED_GROUP_OFFSET: f32 =
     NEW_CONNECTION_ADVANCED_GROUP_HEIGHT + NEW_CONNECTION_TRANSPORT_ROW_GAP;
 
+#[allow(dead_code)]
 #[derive(Clone, Copy, Debug, Eq, PartialEq)]
 pub(super) enum ConnectionFormSection {
     Basic,
@@ -2806,6 +2807,70 @@ impl WorkspaceApp {
         )
     }
 
+    pub(super) fn render_connection_appearance_fields(
+        &self,
+        icon: &str,
+        color: &str,
+        background_color: &str,
+        icon_picker_expanded: bool,
+        supports_auto_icon: bool,
+        cx: &mut Context<Self>,
+    ) -> AnyElement {
+        div()
+            .pt(px(self.tokens.spacing.two))
+            .border_t_1()
+            .border_color(rgb(self.tokens.ui.border))
+            .flex()
+            .flex_col()
+            .gap(px(self.tokens.metrics.modal_section_gap))
+            .child(
+                div()
+                    .text_size(px(self.tokens.metrics.ui_text_sm))
+                    .font_weight(gpui::FontWeight::SEMIBOLD)
+                    .text_color(rgb(self.tokens.ui.text_heading))
+                    .child(self.i18n.t("ssh.form.appearance")),
+            )
+            .child(self.render_edit_icon_field(
+                icon,
+                color,
+                background_color,
+                icon_picker_expanded,
+                supports_auto_icon,
+                cx,
+            ))
+            .child(
+                div()
+                    .flex()
+                    .flex_row()
+                    .flex_wrap()
+                    .gap(px(self.tokens.spacing.three))
+                    .child(
+                        div()
+                            .flex_1()
+                            .min_w(px(CONNECTION_ICON_COLOR_CONTROL_MIN_WIDTH))
+                            .child(self.render_edit_color_field(
+                                self.i18n.t("sessionManager.edit_properties.icon_color"),
+                                color,
+                                NewConnectionField::Color,
+                                cx,
+                            )),
+                    )
+                    .child(
+                        div()
+                            .flex_1()
+                            .min_w(px(CONNECTION_ICON_COLOR_CONTROL_MIN_WIDTH))
+                            .child(self.render_edit_color_field(
+                                self.i18n
+                                    .t("sessionManager.edit_properties.icon_background_color"),
+                                background_color,
+                                NewConnectionField::IconBackgroundColor,
+                                cx,
+                            )),
+                    ),
+            )
+            .into_any_element()
+    }
+
     pub(in crate::workspace) fn render_transport_selector(
         &self,
         cx: &mut Context<Self>,
@@ -3040,6 +3105,7 @@ impl WorkspaceApp {
                                 form.standalone_connection_id = None;
                             }
                             form.transport = transport;
+                            form.active_tab = ConnectionFormTab::General;
                             form.focused_field = focus_field;
                             form.field_focused = false;
                             form.error = None;
@@ -3159,7 +3225,11 @@ impl WorkspaceApp {
         }
     }
 
-    pub(super) fn render_local_terminal_form_branch(&self, cx: &mut Context<Self>) -> AnyElement {
+    pub(super) fn render_local_terminal_form_branch(
+        &self,
+        shows_icon_field: bool,
+        cx: &mut Context<Self>,
+    ) -> AnyElement {
         let form = self
             .connection_form_state(cx)
             .form
@@ -3168,6 +3238,10 @@ impl WorkspaceApp {
         let name = form.name.clone();
         let cwd = form.local_cwd.clone();
         let group = form.group.clone();
+        let icon = form.icon.clone();
+        let color = form.color.clone();
+        let bg_color = form.icon_background_color.clone();
+        let icon_picker_expanded = form.icon_picker_expanded;
         let selected_shell_id = form.local_shell_id.as_deref();
         let resolved_shell = match selected_shell_id {
             Some(id) => self
@@ -3232,18 +3306,29 @@ impl WorkspaceApp {
             })
             .into_any_element();
 
-        let content = div()
+        div()
             .flex()
             .flex_col()
             .gap(px(self.tokens.metrics.modal_section_gap))
-            .child(self.render_connection_field(
-                self.i18n.t("ssh.form.name"),
-                &name,
-                self.i18n.t("ssh.form.name_placeholder"),
-                NewConnectionField::Name,
-                false,
-                cx,
-            ))
+            .child(
+                div()
+                    .flex()
+                    .flex_row()
+                    .gap(px(self.tokens.metrics.form_host_port_gap))
+                    .child(div().flex_1().child(self.render_connection_field(
+                        self.i18n.t("ssh.form.name"),
+                        &name,
+                        self.i18n.t("ssh.form.name_placeholder"),
+                        NewConnectionField::Name,
+                        false,
+                        cx,
+                    )))
+                    .child(div().flex_1().child(self.render_connection_group_select(
+                        self.i18n.t("ssh.form.group"),
+                        &group,
+                        cx,
+                    ))),
+            )
             .child(shell_field)
             .child(self.render_connection_field(
                 self.i18n.t("local_session.directory"),
@@ -3253,12 +3338,17 @@ impl WorkspaceApp {
                 false,
                 cx,
             ))
-            .child(self.render_connection_group_select(self.i18n.t("ssh.form.group"), &group, cx));
-        self.render_connection_form_section(
-            ConnectionFormSection::LocalShell,
-            content.into_any_element(),
-            cx,
-        )
+            .when(shows_icon_field, |content| {
+                content.child(self.render_connection_appearance_fields(
+                    &icon,
+                    &color,
+                    &bg_color,
+                    icon_picker_expanded,
+                    false,
+                    cx,
+                ))
+            })
+            .into_any_element()
     }
 
     pub(super) fn render_wsl_graphics_form_branch(&self, _cx: &mut Context<Self>) -> AnyElement {
@@ -3472,6 +3562,8 @@ impl WorkspaceApp {
     pub(super) fn render_remote_desktop_form_branch(
         &self,
         protocol: oxideterm_remote_desktop::RemoteDesktopProtocol,
+        active_tab: ConnectionFormTab,
+        shows_icon_field: bool,
         cx: &mut Context<Self>,
     ) -> AnyElement {
         let Some((
@@ -3484,6 +3576,10 @@ impl WorkspaceApp {
             group,
             notes,
             ssh_gateway_connection_id,
+            icon,
+            color,
+            bg_color,
+            icon_picker_expanded,
         )) = self.connection_form_state(cx).form.as_ref().map(|form| {
             (
                 form.name.clone(),
@@ -3496,6 +3592,10 @@ impl WorkspaceApp {
                 form.group.clone(),
                 form.notes.clone(),
                 form.remote_desktop_ssh_gateway_connection_id.clone(),
+                form.icon.clone(),
+                form.color.clone(),
+                form.icon_background_color.clone(),
+                form.icon_picker_expanded,
             )
         })
         else {
@@ -3509,149 +3609,185 @@ impl WorkspaceApp {
             !port.trim().is_empty() && !port.trim().parse::<u16>().is_ok_and(|port| port > 0);
         let capabilities =
             oxideterm_remote_desktop::builtin_provider_manifest(protocol).capabilities;
-        let basic = div()
-            .flex()
-            .flex_col()
-            .gap(px(self.tokens.metrics.modal_section_gap))
-            .child(self.render_connection_field(
-                self.i18n.t("ssh.form.name"),
-                &name,
-                self.i18n.t("ssh.form.name_placeholder"),
-                NewConnectionField::Name,
-                false,
-                cx,
-            ))
-            .child(self.render_connection_group_select(self.i18n.t("ssh.form.group"), &group, cx))
-            .child(
-                div()
-                    .flex()
-                    .flex_row()
-                    .gap(px(self.tokens.metrics.form_host_port_gap))
-                    .child(div().flex_1().child(self.render_connection_field(
-                        self.i18n.t("ssh.form.host"),
-                        &host,
-                        self.i18n.t("ssh.form.host_placeholder"),
-                        NewConnectionField::Host,
-                        false,
-                        cx,
-                    )))
-                    .child(div().w(px(self.tokens.metrics.form_port_width)).child(
-                        self.render_connection_field(
-                            self.i18n.t("ssh.form.port"),
-                            &port,
-                            port_placeholder.to_string(),
-                            NewConnectionField::Port,
-                            false,
-                            cx,
-                        ),
-                    )),
-            )
-            .when(port_invalid, |section| {
-                section.child(
-                    self.render_connection_hint_with_color(
-                        self.i18n
-                            .t("modals.new_connection.remote_desktop_invalid_port"),
-                        self.tokens.ui.error,
-                    ),
-                )
-            })
-            .child(self.render_connection_notes_fields(&notes, cx))
-            .into_any_element();
-        let username_placeholder =
-            if protocol == oxideterm_remote_desktop::RemoteDesktopProtocol::Rdp {
-                "Administrator".to_string()
-            } else {
-                self.i18n.t("modals.new_connection.remote_desktop_username")
-            };
-        let authentication = div()
-            .flex()
-            .flex_col()
-            .gap(px(self.tokens.metrics.modal_section_gap))
-            .child(self.render_connection_field(
-                self.i18n.t("modals.new_connection.remote_desktop_username"),
-                &username,
-                username_placeholder,
-                NewConnectionField::Username,
-                false,
-                cx,
-            ))
-            .child(self.render_connection_secret_field(
-                self.i18n.t("ssh.form.password"),
-                if keeps_saved_password {
-                    self.i18n
-                        .t("modals.new_connection.remote_desktop_password_keep_placeholder")
-                } else if protocol == oxideterm_remote_desktop::RemoteDesktopProtocol::Rdp {
-                    self.i18n
-                        .t("modals.new_connection.remote_desktop_password_placeholder")
-                } else {
-                    self.i18n.t("ssh.form.password")
-                },
-                NewConnectionField::Password,
-                cx,
-            ))
-            .child(self.render_connection_checkbox(
-                self.i18n.t("ssh.form.save_password"),
-                save_password,
-                |form| form.save_password = !form.save_password,
-                cx,
-            ))
-            .into_any_element();
 
-        div()
-            .flex()
-            .flex_col()
-            .gap(px(self.tokens.metrics.modal_section_gap))
-            .child({
+        match active_tab {
+            ConnectionFormTab::General => {
+                let username_placeholder =
+                    if protocol == oxideterm_remote_desktop::RemoteDesktopProtocol::Rdp {
+                        "Administrator".to_string()
+                    } else {
+                        self.i18n.t("modals.new_connection.remote_desktop_username")
+                    };
                 let available = self
                     .plugin_entity
                     .read(cx)
                     .remote_desktop_plugin_enabled(protocol);
+
                 div()
                     .flex()
-                    .items_center()
-                    .justify_between()
-                    .gap_3()
-                    .child(self.render_connection_hint_with_color(
-                        if available {
-                            self.i18n.t("remote_desktop.plugin_ready")
-                        } else {
-                            self.plugin_requirement_message(
-                                &format!("com.oxideterm.remote-desktop.{}", protocol.provider_id()),
-                                &protocol.provider_id().to_uppercase(),
-                                cx,
-                            )
-                        },
-                        if available {
-                            self.tokens.ui.success
-                        } else {
-                            self.tokens.ui.warning
-                        },
-                    ))
-                    .when(!available, |row| {
-                        row.child(self.workspace_toolbar_action_button(
-                            self.i18n.t("remote_desktop.manage_plugin"),
-                            None,
-                            ToolbarButtonOptions::default(),
-                            cx.listener(move |this, _event, window, cx| {
-                                this.close_new_connection_form(window, cx);
-                                this.open_remote_desktop_plugin(protocol, window, cx);
+                    .flex_col()
+                    .gap(px(self.tokens.metrics.modal_section_gap))
+                    .child(
+                        div()
+                            .flex()
+                            .items_center()
+                            .justify_between()
+                            .gap_3()
+                            .child(self.render_connection_hint_with_color(
+                                if available {
+                                    self.i18n.t("remote_desktop.plugin_ready")
+                                } else {
+                                    self.plugin_requirement_message(
+                                        &format!("com.oxideterm.remote-desktop.{}", protocol.provider_id()),
+                                        &protocol.provider_id().to_uppercase(),
+                                        cx,
+                                    )
+                                },
+                                if available {
+                                    self.tokens.ui.success
+                                } else {
+                                    self.tokens.ui.warning
+                                },
+                            ))
+                            .when(!available, |row| {
+                                row.child(self.workspace_toolbar_action_button(
+                                    self.i18n.t("remote_desktop.manage_plugin"),
+                                    None,
+                                    ToolbarButtonOptions::default(),
+                                    cx.listener(move |this, _event, window, cx| {
+                                        this.close_new_connection_form(window, cx);
+                                        this.open_remote_desktop_plugin(protocol, window, cx);
+                                    }),
+                                ))
                             }),
+                    )
+                    .child(
+                        div()
+                            .flex()
+                            .flex_row()
+                            .gap(px(self.tokens.metrics.form_host_port_gap))
+                            .child(div().flex_1().child(self.render_connection_field(
+                                self.i18n.t("ssh.form.name"),
+                                &name,
+                                self.i18n.t("ssh.form.name_placeholder"),
+                                NewConnectionField::Name,
+                                false,
+                                cx,
+                            )))
+                            .child(div().flex_1().child(self.render_connection_group_select(
+                                self.i18n.t("ssh.form.group"),
+                                &group,
+                                cx,
+                            ))),
+                    )
+                    .child(
+                        div()
+                            .flex()
+                            .flex_row()
+                            .gap(px(self.tokens.metrics.form_host_port_gap))
+                            .child(div().flex_1().child(self.render_connection_field(
+                                self.i18n.t("ssh.form.host"),
+                                &host,
+                                self.i18n.t("ssh.form.host_placeholder"),
+                                NewConnectionField::Host,
+                                false,
+                                cx,
+                            )))
+                            .child(div().w(px(self.tokens.metrics.form_port_width)).child(
+                                self.render_connection_field(
+                                    self.i18n.t("ssh.form.port"),
+                                    &port,
+                                    port_placeholder.to_string(),
+                                    NewConnectionField::Port,
+                                    false,
+                                    cx,
+                                ),
+                            )),
+                    )
+                    .when(port_invalid, |section| {
+                        section.child(self.render_connection_hint_with_color(
+                            self.i18n
+                                .t("modals.new_connection.remote_desktop_invalid_port"),
+                            self.tokens.ui.error,
                         ))
                     })
-            })
-            .child(self.render_connection_form_section(ConnectionFormSection::Basic, basic, cx))
-            .child(self.render_connection_form_section(
-                ConnectionFormSection::Authentication,
-                authentication,
-                cx,
-            ))
-            .child({
-                let mut gateway = div().flex().flex_col().gap_4().child(
-                    self.render_remote_desktop_ssh_gateway_select(
+                    .child(
+                        div()
+                            .pt(px(self.tokens.spacing.two))
+                            .border_t_1()
+                            .border_color(rgb(self.tokens.ui.border))
+                            .flex()
+                            .flex_col()
+                            .gap(px(self.tokens.metrics.modal_section_gap))
+                            .child(
+                                div()
+                                    .text_size(px(self.tokens.metrics.ui_text_sm))
+                                    .font_weight(gpui::FontWeight::SEMIBOLD)
+                                    .text_color(rgb(self.tokens.ui.text_heading))
+                                    .child(self.i18n.t("ssh.form.authentication")),
+                            )
+                            .child(self.render_connection_field(
+                                self.i18n.t("modals.new_connection.remote_desktop_username"),
+                                &username,
+                                username_placeholder,
+                                NewConnectionField::Username,
+                                false,
+                                cx,
+                            ))
+                            .child(self.render_connection_secret_field(
+                                self.i18n.t("ssh.form.password"),
+                                if keeps_saved_password {
+                                    self.i18n
+                                        .t("modals.new_connection.remote_desktop_password_keep_placeholder")
+                                } else if protocol == oxideterm_remote_desktop::RemoteDesktopProtocol::Rdp {
+                                    self.i18n
+                                        .t("modals.new_connection.remote_desktop_password_placeholder")
+                                } else {
+                                    self.i18n.t("ssh.form.password")
+                                },
+                                NewConnectionField::Password,
+                                cx,
+                            ))
+                            .child(self.render_connection_checkbox(
+                                self.i18n.t("ssh.form.save_password"),
+                                save_password,
+                                |form| form.save_password = !form.save_password,
+                                cx,
+                            )),
+                    )
+                    .when(shows_icon_field, |content| {
+                        content.child(self.render_connection_appearance_fields(
+                            &icon,
+                            &color,
+                            &bg_color,
+                            icon_picker_expanded,
+                            false,
+                            cx,
+                        ))
+                    })
+                    .child(self.render_connection_notes_fields(&notes, cx))
+                    .into_any_element()
+            }
+            ConnectionFormTab::Display => {
+                let mut display = div()
+                    .flex()
+                    .flex_col()
+                    .gap(px(self.tokens.metrics.modal_section_gap))
+                    .child(self.render_remote_desktop_features(protocol, &capabilities, cx));
+                if protocol == oxideterm_remote_desktop::RemoteDesktopProtocol::Vnc {
+                    display = display.child(self.render_vnc_connection_preferences(cx));
+                }
+                display.into_any_element()
+            }
+            ConnectionFormTab::Network => {
+                let mut gateway = div()
+                    .flex()
+                    .flex_col()
+                    .gap(px(self.tokens.metrics.modal_section_gap))
+                    .child(self.render_remote_desktop_ssh_gateway_select(
                         ssh_gateway_connection_id.as_deref(),
                         cx,
-                    ),
-                );
+                    ));
                 if protocol == oxideterm_remote_desktop::RemoteDesktopProtocol::Rdp {
                     gateway = gateway.child(
                         self.render_connection_hint(
@@ -3661,33 +3797,10 @@ impl WorkspaceApp {
                     );
                     gateway = gateway.child(self.render_upstream_proxy_policy_section(false, cx));
                 }
-                let gateway = gateway.into_any_element();
-                self.render_connection_form_section(
-                    ConnectionFormSection::RemoteGateway,
-                    gateway,
-                    cx,
-                )
-            })
-            .when(
-                protocol == oxideterm_remote_desktop::RemoteDesktopProtocol::Vnc,
-                |section| {
-                    let preferences = self.render_vnc_connection_preferences(cx);
-                    section.child(self.render_connection_form_section(
-                        ConnectionFormSection::VncPreferences,
-                        preferences,
-                        cx,
-                    ))
-                },
-            )
-            .child({
-                let features = self.render_remote_desktop_features(protocol, &capabilities, cx);
-                self.render_connection_form_section(
-                    ConnectionFormSection::RemoteFeatures,
-                    features,
-                    cx,
-                )
-            })
-            .into_any_element()
+                gateway.into_any_element()
+            }
+            ConnectionFormTab::Terminal => div().into_any_element(),
+        }
     }
 
     fn render_vnc_connection_preferences(&self, cx: &mut Context<Self>) -> AnyElement {
@@ -3992,79 +4105,104 @@ impl WorkspaceApp {
             .into_any_element()
     }
 
-    pub(super) fn render_telnet_form_branch(&self, cx: &mut Context<Self>) -> AnyElement {
-        let Some((host, port, profile_name, notes)) =
+    pub(super) fn render_telnet_form_branch(
+        &self,
+        active_tab: ConnectionFormTab,
+        shows_icon_field: bool,
+        cx: &mut Context<Self>,
+    ) -> AnyElement {
+        let Some((host, port, profile_name, group, notes, icon, color, bg_color, icon_picker_expanded)) =
             self.connection_form_state(cx).form.as_ref().map(|form| {
                 (
                     form.host.clone(),
                     form.port.clone(),
                     form.telnet_profile_name.clone(),
+                    form.group.clone(),
                     form.notes.clone(),
+                    form.icon.clone(),
+                    form.color.clone(),
+                    form.icon_background_color.clone(),
+                    form.icon_picker_expanded,
                 )
             })
         else {
             return div().into_any_element();
         };
         let telnet_port_invalid = !port.trim().is_empty() && port.trim().parse::<u16>().is_err();
-        let basic = div()
-            .flex()
-            .flex_col()
-            .gap(px(self.tokens.metrics.modal_section_gap))
-            .child(
-                self.render_connection_field(
-                    self.i18n.t("modals.new_connection.telnet_profile_name"),
-                    &profile_name,
-                    self.i18n
-                        .t("modals.new_connection.telnet_profile_name_placeholder"),
-                    NewConnectionField::TelnetProfileName,
-                    false,
-                    cx,
-                ),
-            )
-            .child(
+
+        match active_tab {
+            ConnectionFormTab::General => {
                 div()
                     .flex()
-                    .flex_row()
-                    .gap(px(self.tokens.metrics.form_host_port_gap))
-                    .child(div().flex_1().child(self.render_connection_field(
-                        self.i18n.t("modals.new_connection.telnet_host"),
-                        &host,
-                        self.i18n.t("modals.new_connection.telnet_host_placeholder"),
-                        NewConnectionField::Host,
-                        false,
-                        cx,
-                    )))
-                    .child(div().w(px(self.tokens.metrics.form_port_width)).child(
-                        self.render_connection_field(
-                            self.i18n.t("modals.new_connection.telnet_port"),
-                            &port,
-                            TELNET_DEFAULT_PORT_TEXT.to_string(),
-                            NewConnectionField::Port,
+                    .flex_col()
+                    .gap(px(self.tokens.metrics.modal_section_gap))
+                    .child(
+                        div()
+                            .flex()
+                            .flex_row()
+                            .gap(px(self.tokens.metrics.form_host_port_gap))
+                            .child(div().flex_1().child(self.render_connection_field(
+                                self.i18n.t("modals.new_connection.telnet_profile_name"),
+                                &profile_name,
+                                self.i18n
+                                    .t("modals.new_connection.telnet_profile_name_placeholder"),
+                                NewConnectionField::TelnetProfileName,
+                                false,
+                                cx,
+                            )))
+                            .child(div().flex_1().child(self.render_connection_group_select(
+                                self.i18n.t("ssh.form.group"),
+                                &group,
+                                cx,
+                            ))),
+                    )
+                    .child(
+                        div()
+                            .flex()
+                            .flex_row()
+                            .gap(px(self.tokens.metrics.form_host_port_gap))
+                            .child(div().flex_1().child(self.render_connection_field(
+                                self.i18n.t("modals.new_connection.telnet_host"),
+                                &host,
+                                self.i18n.t("modals.new_connection.telnet_host_placeholder"),
+                                NewConnectionField::Host,
+                                false,
+                                cx,
+                            )))
+                            .child(div().w(px(self.tokens.metrics.form_port_width)).child(
+                                self.render_connection_field(
+                                    self.i18n.t("modals.new_connection.telnet_port"),
+                                    &port,
+                                    TELNET_DEFAULT_PORT_TEXT.to_string(),
+                                    NewConnectionField::Port,
+                                    false,
+                                    cx,
+                                ),
+                            )),
+                    )
+                    .when(telnet_port_invalid, |section| {
+                        section.child(self.render_connection_hint_with_color(
+                            self.i18n.t("modals.new_connection.telnet_invalid_port"),
+                            self.tokens.ui.error,
+                        ))
+                    })
+                    .when(shows_icon_field, |content| {
+                        content.child(self.render_connection_appearance_fields(
+                            &icon,
+                            &color,
+                            &bg_color,
+                            icon_picker_expanded,
                             false,
                             cx,
-                        ),
-                    )),
-            )
-            .when(telnet_port_invalid, |section| {
-                section.child(self.render_connection_hint_with_color(
-                    self.i18n.t("modals.new_connection.telnet_invalid_port"),
-                    self.tokens.ui.error,
-                ))
-            })
-            .child(self.render_connection_notes_fields(&notes, cx))
-            .into_any_element();
-        div()
-            .flex()
-            .flex_col()
-            .gap(px(self.tokens.metrics.modal_section_gap))
-            .child(self.render_connection_form_section(ConnectionFormSection::Basic, basic, cx))
-            .child(self.render_upstream_proxy_policy_section(false, cx))
-            .child(self.render_connection_form_section(
-                ConnectionFormSection::Terminal,
-                self.render_connection_terminal_options(cx),
-                cx,
-            ))
-            .into_any_element()
+                        ))
+                    })
+                    .child(self.render_connection_notes_fields(&notes, cx))
+                    .into_any_element()
+            }
+            ConnectionFormTab::Network => self.render_upstream_proxy_policy_section(false, cx),
+            ConnectionFormTab::Terminal => self.render_connection_terminal_options(cx),
+            ConnectionFormTab::Display => div().into_any_element(),
+        }
     }
 
     pub(in crate::workspace) fn refresh_serial_ports(&mut self, cx: &mut Context<Self>) {
@@ -4102,7 +4240,12 @@ impl WorkspaceApp {
         cx.notify();
     }
 
-    pub(super) fn render_serial_form_branch(&self, cx: &mut Context<Self>) -> AnyElement {
+    pub(super) fn render_serial_form_branch(
+        &self,
+        active_tab: ConnectionFormTab,
+        shows_icon_field: bool,
+        cx: &mut Context<Self>,
+    ) -> AnyElement {
         let Some((
             ports,
             baud_rate,
@@ -4111,7 +4254,12 @@ impl WorkspaceApp {
             parity,
             flow_control,
             profile_name,
+            group,
             notes,
+            icon,
+            color,
+            bg_color,
+            icon_picker_expanded,
         )) = self.connection_form_state(cx).form.as_ref().map(|form| {
             (
                 form.serial_ports.clone(),
@@ -4121,7 +4269,12 @@ impl WorkspaceApp {
                 form.serial_parity,
                 form.serial_flow_control,
                 form.serial_profile_name.clone(),
+                form.group.clone(),
                 form.notes.clone(),
+                form.icon.clone(),
+                form.color.clone(),
+                form.icon_background_color.clone(),
+                form.icon_picker_expanded,
             )
         })
         else {
@@ -4129,91 +4282,107 @@ impl WorkspaceApp {
         };
         let serial_baud_rate_invalid = !baud_rate.trim().is_empty()
             && !baud_rate.trim().parse::<u32>().is_ok_and(|baud| baud > 0);
-        let parameters = div()
-            .flex()
-            .flex_col()
-            .gap(px(self.tokens.metrics.modal_section_gap))
-            .child(self.render_serial_port_field(&ports, cx))
-            .child(
+
+        match active_tab {
+            ConnectionFormTab::General => {
+                let parameters = div()
+                    .flex()
+                    .flex_col()
+                    .gap(px(self.tokens.metrics.modal_section_gap))
+                    .child(self.render_serial_port_field(&ports, cx))
+                    .child(
+                        div()
+                            .grid()
+                            .grid_cols(2)
+                            .gap(px(TAURI_SERIAL_GRID_GAP))
+                            .child(
+                                div()
+                                    .flex()
+                                    .flex_col()
+                                    .gap(px(self.tokens.spacing.two))
+                                    .child(self.render_connection_field(
+                                        self.i18n.t("modals.new_connection.serial_baud_rate"),
+                                        &baud_rate,
+                                        "115200".to_string(),
+                                        NewConnectionField::SerialBaudRate,
+                                        false,
+                                        cx,
+                                    ))
+                                    .when(serial_baud_rate_invalid, |section| {
+                                        section.child(
+                                            self.render_connection_hint_with_color(
+                                                self.i18n
+                                                    .t("modals.new_connection.serial_invalid_baud_rate"),
+                                                self.tokens.ui.error,
+                                            ),
+                                        )
+                                    }),
+                            )
+                            .child(self.render_serial_u8_select(
+                                self.i18n.t("modals.new_connection.serial_data_bits"),
+                                NewConnectionSelect::SerialDataBits,
+                                &[(5, "5"), (6, "6"), (7, "7"), (8, "8")],
+                                data_bits,
+                                cx,
+                            )),
+                    )
+                    .child(
+                        div()
+                            .grid()
+                            .grid_cols(3)
+                            .gap(px(TAURI_SERIAL_GRID_GAP))
+                            .child(self.render_serial_u8_select(
+                                self.i18n.t("modals.new_connection.serial_stop_bits"),
+                                NewConnectionSelect::SerialStopBits,
+                                &[(1, "1"), (2, "2")],
+                                stop_bits,
+                                cx,
+                            ))
+                            .child(self.render_serial_parity_select(parity, cx))
+                            .child(self.render_serial_flow_select(flow_control, cx)),
+                    );
+
                 div()
-                    .grid()
-                    .grid_cols(2)
-                    .gap(px(TAURI_SERIAL_GRID_GAP))
+                    .flex()
+                    .flex_col()
+                    .gap(px(self.tokens.metrics.modal_section_gap))
                     .child(
                         div()
                             .flex()
-                            .flex_col()
-                            .gap(px(self.tokens.spacing.two))
-                            .child(self.render_connection_field(
-                                self.i18n.t("modals.new_connection.serial_baud_rate"),
-                                &baud_rate,
-                                "115200".to_string(),
-                                NewConnectionField::SerialBaudRate,
+                            .flex_row()
+                            .gap(px(self.tokens.metrics.form_host_port_gap))
+                            .child(div().flex_1().child(self.render_connection_field(
+                                self.i18n.t("modals.new_connection.serial_profile_name"),
+                                &profile_name,
+                                self.i18n
+                                    .t("modals.new_connection.serial_profile_name_placeholder"),
+                                NewConnectionField::SerialProfileName,
                                 false,
                                 cx,
-                            ))
-                            .when(serial_baud_rate_invalid, |section| {
-                                section.child(
-                                    self.render_connection_hint_with_color(
-                                        self.i18n
-                                            .t("modals.new_connection.serial_invalid_baud_rate"),
-                                        self.tokens.ui.error,
-                                    ),
-                                )
-                            }),
+                            )))
+                            .child(div().flex_1().child(self.render_connection_group_select(
+                                self.i18n.t("ssh.form.group"),
+                                &group,
+                                cx,
+                            ))),
                     )
-                    .child(self.render_serial_u8_select(
-                        self.i18n.t("modals.new_connection.serial_data_bits"),
-                        NewConnectionSelect::SerialDataBits,
-                        &[(5, "5"), (6, "6"), (7, "7"), (8, "8")],
-                        data_bits,
-                        cx,
-                    )),
-            )
-            .child(
-                div()
-                    .grid()
-                    .grid_cols(3)
-                    .gap(px(TAURI_SERIAL_GRID_GAP))
-                    .child(self.render_serial_u8_select(
-                        self.i18n.t("modals.new_connection.serial_stop_bits"),
-                        NewConnectionSelect::SerialStopBits,
-                        &[(1, "1"), (2, "2")],
-                        stop_bits,
-                        cx,
-                    ))
-                    .child(self.render_serial_parity_select(parity, cx))
-                    .child(self.render_serial_flow_select(flow_control, cx)),
-            )
-            .into_any_element();
-        let basic = div()
-            .flex()
-            .flex_col()
-            .gap(px(self.tokens.metrics.modal_section_gap))
-            .child(
-                self.render_connection_field(
-                    self.i18n.t("modals.new_connection.serial_profile_name"),
-                    &profile_name,
-                    self.i18n
-                        .t("modals.new_connection.serial_profile_name_placeholder"),
-                    NewConnectionField::SerialProfileName,
-                    false,
-                    cx,
-                ),
-            )
-            .child(self.render_connection_notes_fields(&notes, cx))
-            .into_any_element();
-        div()
-            .flex()
-            .flex_col()
-            .gap(px(self.tokens.metrics.modal_section_gap))
-            .child(self.render_connection_form_section(ConnectionFormSection::Basic, basic, cx))
-            .child(self.render_connection_form_section(
-                ConnectionFormSection::SerialParameters,
-                parameters,
-                cx,
-            ))
-            .into_any_element()
+                    .child(parameters)
+                    .when(shows_icon_field, |content| {
+                        content.child(self.render_connection_appearance_fields(
+                            &icon,
+                            &color,
+                            &bg_color,
+                            icon_picker_expanded,
+                            false,
+                            cx,
+                        ))
+                    })
+                    .child(self.render_connection_notes_fields(&notes, cx))
+                    .into_any_element()
+            }
+            ConnectionFormTab::Terminal => self.render_connection_terminal_options(cx),
+            _ => div().into_any_element(),
+        }
     }
 
     fn render_serial_port_field(

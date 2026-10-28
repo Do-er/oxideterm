@@ -488,7 +488,17 @@
       "serial_profile_name_placeholder": "랩 콘솔",
       "serial_save_failed": "시리얼 프로필 저장 실패",
       "serial_invalid_baud_rate": "전송 속도는 0보다 커야 합니다",
-      "serial_port_required": "시리얼 포트 경로를 선택하거나 입력하세요"
+      "serial_port_required": "시리얼 포트 경로를 선택하거나 입력하세요",
+      "tabs": {
+        "general": "일반",
+        "general_auth": "일반 및 인증",
+        "general_credentials": "일반 및 자격 증명",
+        "proxy_route": "프록시 및 점프",
+        "terminal_advanced": "터미널 및 고급",
+        "display_features": "디스플레이 및 기능",
+        "serial_parameters": "직렬 포트 매개변수",
+        "advanced": "고급 설정"
+      }
     },
     "managed_key": {
       "selector": {

@@ -488,7 +488,17 @@
       "serial_profile_name_placeholder": "ラボコンソール",
       "serial_save_failed": "シリアルプロファイルの保存に失敗しました",
       "serial_invalid_baud_rate": "ボーレートは 0 より大きい必要があります",
-      "serial_port_required": "シリアルポートパスを選択または入力してください"
+      "serial_port_required": "シリアルポートパスを選択または入力してください",
+      "tabs": {
+        "general": "一般",
+        "general_auth": "一般と認証",
+        "general_credentials": "一般と認証情報",
+        "proxy_route": "プロキシと中継",
+        "terminal_advanced": "ターミナルと高度な設定",
+        "display_features": "表示と機能",
+        "serial_parameters": "シリアル設定",
+        "advanced": "高度な設定"
+      }
     },
     "managed_key": {
       "selector": {

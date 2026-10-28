@@ -488,7 +488,17 @@
       "serial_profile_name_placeholder": "實驗室主控台",
       "serial_save_failed": "儲存序列埠設定檔失敗",
       "serial_invalid_baud_rate": "鮑率必須大於 0",
-      "serial_port_required": "請選擇或輸入序列埠路徑"
+      "serial_port_required": "請選擇或輸入序列埠路徑",
+      "tabs": {
+        "general": "一般",
+        "general_auth": "一般與認證",
+        "general_credentials": "一般與憑證",
+        "proxy_route": "代理與跳板",
+        "terminal_advanced": "終端與進階",
+        "display_features": "顯示與功能",
+        "serial_parameters": "序列埠參數",
+        "advanced": "進階選項"
+      }
     },
     "managed_key": {
       "selector": {

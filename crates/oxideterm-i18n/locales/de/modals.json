@@ -488,7 +488,17 @@
       "serial_profile_name_placeholder": "Laborkonsole",
       "serial_save_failed": "Serielles Profil konnte nicht gespeichert werden",
       "serial_invalid_baud_rate": "Die Baudrate muss größer als null sein",
-      "serial_port_required": "Wähle einen seriellen Port aus oder gib einen Portpfad ein"
+      "serial_port_required": "Wähle einen seriellen Port aus oder gib einen Portpfad ein",
+      "tabs": {
+        "general": "Allgemein",
+        "general_auth": "Allgemein & Auth",
+        "general_credentials": "Allgemein & Anmeldedaten",
+        "proxy_route": "Proxy & Route",
+        "terminal_advanced": "Terminal & Erweitert",
+        "display_features": "Anzeige & Funktionen",
+        "serial_parameters": "Serielle Parameter",
+        "advanced": "Erweitert"
+      }
     },
     "managed_key": {
       "selector": {

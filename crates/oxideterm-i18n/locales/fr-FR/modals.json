@@ -488,7 +488,17 @@
       "serial_profile_name_placeholder": "Console de labo",
       "serial_save_failed": "Échec de l’enregistrement du profil série",
       "serial_invalid_baud_rate": "Le débit en bauds doit être supérieur à zéro",
-      "serial_port_required": "Sélectionnez ou saisissez un chemin de port série"
+      "serial_port_required": "Sélectionnez ou saisissez un chemin de port série",
+      "tabs": {
+        "general": "Général",
+        "general_auth": "Général & Authentification",
+        "general_credentials": "Général & Identifiants",
+        "proxy_route": "Proxy & Route",
+        "terminal_advanced": "Terminal & Avancé",
+        "display_features": "Affichage & Fonctionnalités",
+        "serial_parameters": "Paramètres série",
+        "advanced": "Avancé"
+      }
     },
     "managed_key": {
       "selector": {

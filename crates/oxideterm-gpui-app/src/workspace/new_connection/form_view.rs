@@ -9,7 +9,7 @@ use super::{
     ConnectionFormState,
     form_state::{
         CONNECTION_NOTES_LINE_HEIGHT, CONNECTION_NOTES_MIN_HEIGHT,
-        CONNECTION_NOTES_VERTICAL_PADDING, ConnectionRouteTarget, NewConnectionField,
+        CONNECTION_NOTES_VERTICAL_PADDING, ConnectionFormTab, ConnectionRouteTarget, NewConnectionField,
         NewConnectionForm, NewConnectionFormMode, NewConnectionProxyHop, NewConnectionSelect,
         NewConnectionSubmitAction, NewConnectionTransport, NewConnectionUpstreamProxyAuth,
         NewConnectionUpstreamProxyPolicy, RDP_DEFAULT_PORT_TEXT, RemoteDesktopSessionFeature,

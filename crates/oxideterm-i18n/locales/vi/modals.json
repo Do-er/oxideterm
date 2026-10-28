@@ -488,7 +488,17 @@
       "serial_profile_name_placeholder": "Console phòng lab",
       "serial_save_failed": "Không lưu được cấu hình serial",
       "serial_invalid_baud_rate": "Tốc độ baud phải lớn hơn 0",
-      "serial_port_required": "Chọn hoặc nhập đường dẫn cổng serial"
+      "serial_port_required": "Chọn hoặc nhập đường dẫn cổng serial",
+      "tabs": {
+        "general": "Chung",
+        "general_auth": "Chung & Xác thực",
+        "general_credentials": "Chung & Thông tin xác thực",
+        "proxy_route": "Proxy & Định tuyến",
+        "terminal_advanced": "Terminal & Nâng cao",
+        "display_features": "Hiển thị & Tính năng",
+        "serial_parameters": "Thông số nối tiếp",
+        "advanced": "Nâng cao"
+      }
     },
     "managed_key": {
       "selector": {

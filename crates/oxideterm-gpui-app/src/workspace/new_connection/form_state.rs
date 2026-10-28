@@ -36,6 +36,15 @@ pub(in crate::workspace) enum SshAuthTab {
     TwoFactor,
 }
 
+#[derive(Clone, Copy, Debug, Eq, PartialEq, Default)]
+pub(in crate::workspace) enum ConnectionFormTab {
+    #[default]
+    General,
+    Network,
+    Terminal,
+    Display,
+}
+
 #[derive(Clone, Copy, Debug, Eq, PartialEq)]
 pub(in crate::workspace) enum SshAuthFamily {
     Password,
@@ -782,6 +791,7 @@ pub(in crate::workspace) struct NewConnectionForm {
     // Reauthentication submits into the existing logical session, never a second sidebar row.
     pub(in crate::workspace) standalone_connection_id: Option<String>,
     pub(in crate::workspace) transport: NewConnectionTransport,
+    pub(in crate::workspace) active_tab: ConnectionFormTab,
     pub(in crate::workspace) local_profile_id: Option<String>,
     pub(in crate::workspace) local_cwd: String,
     /// Selects a discovered shell without retaining environment credentials.
@@ -1102,6 +1112,7 @@ impl Default for NewConnectionForm {
             totp_credential_id: None,
             standalone_connection_id: None,
             transport: NewConnectionTransport::Ssh,
+            active_tab: ConnectionFormTab::General,
             local_shell_id: None,
             local_profile_id: None,
             local_cwd: String::new(),

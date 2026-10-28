@@ -488,7 +488,17 @@
       "serial_profile_name_placeholder": "实验室控制台",
       "serial_save_failed": "保存串口配置失败",
       "serial_invalid_baud_rate": "波特率必须大于 0",
-      "serial_port_required": "请选择或输入串口路径"
+      "serial_port_required": "请选择或输入串口路径",
+      "tabs": {
+        "general": "常规",
+        "general_auth": "常规与认证",
+        "general_credentials": "常规与凭据",
+        "proxy_route": "代理与跳板",
+        "terminal_advanced": "终端与高级",
+        "display_features": "显示与功能",
+        "serial_parameters": "串口参数",
+        "advanced": "高级选项"
+      }
     },
     "managed_key": {
       "selector": {

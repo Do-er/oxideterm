@@ -488,7 +488,17 @@
       "serial_profile_name_placeholder": "Lab console",
       "serial_save_failed": "Failed to save serial profile",
       "serial_invalid_baud_rate": "Baud rate must be greater than zero",
-      "serial_port_required": "Select or enter a serial port path"
+      "serial_port_required": "Select or enter a serial port path",
+      "tabs": {
+        "general": "General",
+        "general_auth": "General & Auth",
+        "general_credentials": "General & Credentials",
+        "proxy_route": "Proxy & Route",
+        "terminal_advanced": "Terminal & Advanced",
+        "display_features": "Display & Features",
+        "serial_parameters": "Serial Parameters",
+        "advanced": "Advanced"
+      }
     },
     "managed_key": {
       "selector": {
