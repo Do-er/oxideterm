@@ -1197,25 +1197,6 @@ impl WorkspaceApp {
                         cx,
                     )),
             )
-            .when(tab == SettingsTab::Keybindings, |header| {
-                let note = self.i18n.t("settings_view.keybindings.intl_keyboard_note");
-                header.child(
-                    div()
-                        .mt(px(2.0))
-                        .w_full()
-                        .min_w(px(0.0))
-                        .text_size(px(self.tokens.metrics.ui_text_xs))
-                        .text_color(rgba((self.tokens.ui.text_muted << 8) | 0xb3))
-                        .line_height(px((self.tokens.metrics.ui_text_xs + 4.0).max(16.0)))
-                        .child(self.render_selectable_text_scoped(
-                            "settings-keybindings-note",
-                            "keybindings",
-                            note,
-                            self.tokens.ui.text_muted,
-                            cx,
-                        )),
-                )
-            })
             .into_any_element()
     }
 

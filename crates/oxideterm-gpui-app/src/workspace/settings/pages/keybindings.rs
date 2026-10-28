@@ -227,7 +227,6 @@ impl WorkspaceApp {
                     .items_center()
                     .gap(px(12.0))
                     .child(self.keybinding_search_input(cx))
-                    .child(self.keybinding_scope_filter(cx))
                     .child(div().flex_1().min_w(px(0.0)))
                     .child(self.keybinding_toolbar_button(
                         KeybindingToolbarAction::Import,
@@ -247,6 +246,7 @@ impl WorkspaceApp {
                         ))
                     }),
             )
+            .child(self.keybinding_scope_filter(cx))
             .into_any_element()
     }
 
