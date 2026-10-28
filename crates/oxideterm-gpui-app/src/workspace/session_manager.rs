@@ -97,10 +97,11 @@ const MANAGER_LIST_ESTIMATED_ROW_HEIGHT: f32 = 36.0;
 const MANAGER_TREE_ESTIMATED_ROW_HEIGHT: f32 = 36.0;
 const MANAGER_MAIN_VIEW_OVERSCAN: usize = 6;
 const MANAGER_ROW_ACTION_MENU_WIDTH: f32 = 176.0;
-const MANAGER_ROW_ACTION_MENU_CONNECTION_HEIGHT: f32 = 120.0;
-const MANAGER_ROW_ACTION_MENU_PROFILE_HEIGHT: f32 = 44.0;
+const MANAGER_ROW_ACTION_MENU_CONNECTION_HEIGHT: f32 = 220.0;
+const MANAGER_ROW_ACTION_MENU_PROFILE_HEIGHT: f32 = 140.0;
 const MANAGER_ROW_ACTION_MENU_EDITABLE_PROFILE_HEIGHT: f32 = 80.0;
-const MANAGER_ROW_ACTION_MENU_GROUP_HEIGHT: f32 = 120.0;
+const MANAGER_ROW_ACTION_MENU_GROUP_HEIGHT: f32 = 140.0;
+const MANAGER_ROW_ACTION_MENU_BATCH_HEIGHT: f32 = 110.0;
 const MANAGER_VIEW_MODE_MENU_WIDTH: f32 = 168.0; // Tauri DropdownMenuContent min-w-[160px] plus native menu padding.
 const MANAGER_VIEW_MODE_MENU_HEIGHT: f32 = 104.0; // Three compact radio rows plus menu padding.
 const MANAGER_SORT_MENU_WIDTH: f32 = 184.0; // Sort fields reuse the compact toolbar dropdown rhythm.
@@ -354,6 +355,7 @@ pub(super) enum SessionManagerRowActionTarget {
     RemoteDesktop(String),
     GroupRoot,
     Group(String),
+    Batch,
 }
 
 #[derive(Clone, Copy, Debug, Eq, PartialEq)]
@@ -430,6 +432,7 @@ pub(super) struct SessionManagerState {
     pub(super) sort_direction: SortDirection,
     pub(super) search_query: String,
     pub(super) selected_items: HashSet<SessionManagerSelectionTarget>,
+    pub(super) selection_anchor: Option<SessionManagerSelectionTarget>,
     pub(super) view_mode_menu_open: bool,
     pub(super) sort_menu_open: bool,
     pub(super) row_action_menu: Option<SessionManagerRowActionMenu>,
@@ -443,6 +446,7 @@ pub(super) struct SessionManagerState {
     pub(super) reopen_group_manager_after_delete: bool,
     pub(super) focused_basic_dialog_footer_action: Option<SessionManagerBasicDialogFooterAction>,
     pub(super) show_batch_move: bool,
+    pub(super) batch_move_anchor: Option<(f32, f32)>,
     pub(super) delete_confirm: Option<SessionManagerDeleteConfirm>,
     pub(super) oxide_import_dialog: Option<OxideImportDialogState>,
     pub(super) oxide_export_dialog: Option<OxideExportDialogState>,
@@ -490,6 +494,7 @@ impl Default for SessionManagerState {
             sort_direction: SortDirection::Asc,
             search_query: String::new(),
             selected_items: HashSet::new(),
+            selection_anchor: None,
             view_mode_menu_open: false,
             sort_menu_open: false,
             row_action_menu: None,
@@ -503,6 +508,7 @@ impl Default for SessionManagerState {
             reopen_group_manager_after_delete: false,
             focused_basic_dialog_footer_action: None,
             show_batch_move: false,
+            batch_move_anchor: None,
             delete_confirm: None,
             oxide_import_dialog: None,
             oxide_export_dialog: None,

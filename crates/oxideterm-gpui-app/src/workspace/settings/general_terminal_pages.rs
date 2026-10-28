@@ -22,15 +22,32 @@ impl WorkspaceApp {
         cx: &mut Context<Self>,
     ) -> AnyElement {
         let settings = self.settings_store.settings();
-        let window_behavior_sections =
-            usize::from(cfg!(any(target_os = "windows", target_os = "macos")));
         match section_index {
-            0 => self.settings_card(
-                "settings_view.general.language",
-                "",
-                vec![self.language_select_row(settings.general.language, cx)],
-            ),
-            index if index == 3 + window_behavior_sections => {
+            0 => {
+                let mut rows = Vec::new();
+                rows.push(self.language_select_row(settings.general.language, cx));
+                rows.push(self.card_separator());
+                rows.push(self.launch_at_login_row(cx));
+                #[cfg(any(target_os = "windows", target_os = "macos"))]
+                {
+                    let (label_key, hint_key) = close_to_background_label_keys();
+                    rows.push(self.card_separator());
+                    rows.push(self.general_checkbox_row(
+                        label_key,
+                        hint_key,
+                        settings.general.minimize_to_tray_on_close,
+                        |settings, enabled| settings.general.minimize_to_tray_on_close = enabled,
+                        cx,
+                    ));
+                }
+                self.settings_card(
+                    "settings_view.tabs.general",
+                    "settings_view.general.startup_hint",
+                    rows,
+                )
+            }
+            1 => self.render_app_lock_settings_card(cx),
+            2 => {
                 let data_dir_info = self.settings_data_directory_info();
                 let data_dir = data_dir_info.path.display().to_string();
                 self.settings_card(
@@ -42,18 +59,36 @@ impl WorkspaceApp {
                             .flex()
                             .flex_row()
                             .items_center()
-                            .gap(px(16.0))
+                            .gap(px(12.0))
                             .child(
                                 div()
                                     .flex_1()
                                     .min_w(px(0.0))
-                                    .text_size(px(self.tokens.metrics.ui_text_base))
-                                    .text_color(rgb(self.tokens.ui.text))
-                                    .font_family(settings_mono_font_family(
-                                        self.settings_store.settings(),
+                                    .flex()
+                                    .items_center()
+                                    .gap(px(8.0))
+                                    .p(px(8.0))
+                                    .rounded(px(self.tokens.radii.md))
+                                    .border_1()
+                                    .border_color(rgba((self.tokens.ui.border << 8) | 0x80))
+                                    .bg(rgba((self.tokens.ui.bg_secondary << 8) | 0x33))
+                                    .child(Self::render_lucide_icon(
+                                        LucideIcon::Folder,
+                                        16.0,
+                                        rgb(self.tokens.ui.text_muted),
                                     ))
-                                    .truncate()
-                                    .child(data_dir),
+                                    .child(
+                                        div()
+                                            .flex_1()
+                                            .min_w(px(0.0))
+                                            .text_size(px(self.tokens.metrics.ui_text_sm))
+                                            .text_color(rgb(self.tokens.ui.text))
+                                            .font_family(settings_mono_font_family(
+                                                self.settings_store.settings(),
+                                            ))
+                                            .truncate()
+                                            .child(data_dir),
+                                    ),
                             )
                             .when(data_dir_info.can_change, |row| {
                                 row.child(self.settings_data_directory_change_button(cx))
@@ -63,8 +98,16 @@ impl WorkspaceApp {
                             })
                             .into_any_element(),
                         div()
+                            .flex()
+                            .items_center()
+                            .gap(px(6.0))
                             .text_size(px(self.tokens.metrics.ui_text_xs))
                             .text_color(rgb(self.tokens.ui.warning))
+                            .child(Self::render_lucide_icon(
+                                LucideIcon::AlertTriangle,
+                                14.0,
+                                rgb(self.tokens.ui.warning),
+                            ))
                             .child(
                                 self.i18n
                                     .t("settings_view.general.data_directory_restart_notice"),
@@ -73,7 +116,7 @@ impl WorkspaceApp {
                     ],
                 )
             }
-            index if index == 4 + window_behavior_sections => {
+            3 => {
                 let cli = self.settings_workspace.read(cx).cli_companion_snapshot();
                 let cli_status = cli.status.as_ref();
                 let cli_loading = cli.loading;
@@ -121,31 +164,12 @@ impl WorkspaceApp {
                             &[("version", status.app_version.clone())],
                         )
                     });
-                self.plain_settings_card(vec![
-                    self.card_title("settings_view.general.cli_companion"),
-                    div()
-                        .flex()
-                        .flex_col()
-                        .gap(px(4.0))
-                        .child(
-                            div()
-                                .text_size(px(self.tokens.metrics.ui_text_sm))
-                                .font_weight(gpui::FontWeight::MEDIUM)
-                                .text_color(rgb(self.tokens.ui.text))
-                                .child(self.i18n.t("settings_view.general.cli_tool")),
-                        )
-                        .child(
-                            div()
-                                .text_size(px(self.tokens.metrics.ui_text_xs))
-                                .text_color(rgb(self.tokens.ui.text_muted))
-                                .child(self.i18n.t("settings_view.general.cli_tool_hint")),
-                        )
-                        .into_any_element(),
+                let mut card_rows = vec![
                     div()
                         .w_full()
                         .flex()
                         .flex_row()
-                        .items_end()
+                        .items_center()
                         .justify_between()
                         .gap(px(16.0))
                         .child(
@@ -153,7 +177,7 @@ impl WorkspaceApp {
                                 .flex_1()
                                 .flex()
                                 .flex_col()
-                                .gap(px(10.0))
+                                .gap(px(6.0))
                                 .min_w(px(0.0))
                                 .child(
                                     div()
@@ -172,6 +196,7 @@ impl WorkspaceApp {
                                                 .font_family(settings_mono_font_family(
                                                     self.settings_store.settings(),
                                                 ))
+                                                .font_weight(gpui::FontWeight::MEDIUM)
                                                 .text_color(rgb(self.tokens.ui.text))
                                                 .child(CLI_COMPANION_COMMAND_NAME),
                                         )
@@ -266,7 +291,10 @@ impl WorkspaceApp {
                             },
                         )
                         .into_any_element(),
-                    if legacy_cli_installed {
+                ];
+                if legacy_cli_installed {
+                    card_rows.push(self.card_separator());
+                    card_rows.push(
                         div()
                             .w_full()
                             .flex()
@@ -335,36 +363,21 @@ impl WorkspaceApp {
                                 },
                                 cx,
                             ))
-                            .into_any_element()
-                    } else {
-                        div().into_any_element()
-                    },
-                ])
-            }
-            1 => self.launch_at_login_settings_card(cx),
-            2 if cfg!(any(target_os = "windows", target_os = "macos")) => {
-                let (label_key, hint_key) = close_to_background_label_keys();
+                            .into_any_element(),
+                    );
+                }
                 self.settings_card(
-                    "settings_view.general.window_behavior",
-                    "settings_view.general.window_behavior_hint",
-                    vec![self.general_checkbox_row(
-                        label_key,
-                        hint_key,
-                        settings.general.minimize_to_tray_on_close,
-                        |settings, enabled| settings.general.minimize_to_tray_on_close = enabled,
-                        cx,
-                    )],
+                    "settings_view.general.cli_companion",
+                    "settings_view.general.cli_tool_hint",
+                    card_rows,
                 )
-            }
-            index if index == 2 + window_behavior_sections => {
-                self.render_app_lock_settings_card(cx)
             }
             _ => div().into_any_element(),
         }
     }
 
     #[cfg(target_os = "macos")]
-    pub(in crate::workspace) fn launch_at_login_settings_card(
+    pub(in crate::workspace) fn launch_at_login_row(
         &self,
         cx: &mut Context<Self>,
     ) -> AnyElement {
@@ -418,22 +431,18 @@ impl WorkspaceApp {
             }),
         );
 
-        self.settings_card(
-            "settings_view.general.startup",
-            "settings_view.general.startup_hint",
-            vec![settings_row(
-                &self.tokens,
-                div()
-                    .child(self.i18n.t("settings_view.general.launch_at_login"))
-                    .into_any_element(),
-                Some(description.into_any_element()),
-                manage_button.into_any_element(),
-            )],
+        settings_row(
+            &self.tokens,
+            div()
+                .child(self.i18n.t("settings_view.general.launch_at_login"))
+                .into_any_element(),
+            Some(description.into_any_element()),
+            manage_button.into_any_element(),
         )
     }
 
     #[cfg(not(target_os = "macos"))]
-    pub(in crate::workspace) fn launch_at_login_settings_card(
+    pub(in crate::workspace) fn launch_at_login_row(
         &self,
         cx: &mut Context<Self>,
     ) -> AnyElement {
@@ -497,17 +506,13 @@ impl WorkspaceApp {
             );
         }
 
-        self.settings_card(
-            "settings_view.general.startup",
-            "settings_view.general.startup_hint",
-            vec![settings_row(
-                &self.tokens,
-                div()
-                    .child(self.i18n.t("settings_view.general.launch_at_login"))
-                    .into_any_element(),
-                Some(label.into_any_element()),
-                control.into_any_element(),
-            )],
+        settings_row(
+            &self.tokens,
+            div()
+                .child(self.i18n.t("settings_view.general.launch_at_login"))
+                .into_any_element(),
+            Some(label.into_any_element()),
+            control.into_any_element(),
         )
     }
 

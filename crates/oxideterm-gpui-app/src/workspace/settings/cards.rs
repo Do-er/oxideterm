@@ -97,6 +97,33 @@ impl WorkspaceApp {
         description_key: &str,
         rows: Vec<AnyElement>,
     ) -> AnyElement {
+        let has_header = !title_key.is_empty();
+        let header = has_header.then(|| {
+            div()
+                .w_full()
+                .flex()
+                .items_baseline()
+                .gap(px(8.0))
+                .px(px(2.0))
+                .child(
+                    div()
+                        .text_size(px(self.tokens.metrics.ui_text_sm))
+                        .font_weight(gpui::FontWeight::MEDIUM)
+                        .text_color(rgb(self.tokens.ui.text))
+                        .child(self.i18n.t(title_key)),
+                )
+                .when(!description_key.is_empty(), |header| {
+                    header.child(
+                        div()
+                            .flex_1()
+                            .min_w(px(0.0))
+                            .text_size(px(self.tokens.metrics.ui_text_xs))
+                            .text_color(rgb(self.tokens.ui.text_muted))
+                            .child(self.i18n.t(description_key)),
+                    )
+                })
+        });
+
         let card = div()
             .w_full()
             .min_w(px(0.0))
@@ -107,25 +134,22 @@ impl WorkspaceApp {
             .flex()
             .flex_col()
             .gap(px(self.tokens.metrics.settings_card_gap))
-            .child(
-                div()
-                    .mb(px(self.tokens.metrics.settings_card_title_nudge_y))
-                    .text_size(px(self.tokens.metrics.ui_text_sm))
-                    .font_weight(gpui::FontWeight::MEDIUM)
-                    .text_color(rgb(self.tokens.ui.text))
-                    .child(self.i18n.t(title_key).to_uppercase()),
-            )
-            .when(!description_key.is_empty(), |card| {
-                card.child(
-                    div()
-                        .text_size(px(self.tokens.metrics.ui_text_xs))
-                        .text_color(rgb(self.tokens.ui.text_muted))
-                        .child(self.i18n.t(description_key)),
-                )
-            })
             .children(rows);
-        self.settings_card_surface(card, self.tokens.ui.bg_card)
-            .into_any_element()
+
+        let surfaced = self.settings_card_surface(card, self.tokens.ui.bg_card);
+
+        if let Some(header) = header {
+            div()
+                .w_full()
+                .flex()
+                .flex_col()
+                .gap(px(8.0))
+                .child(header)
+                .child(surfaced)
+                .into_any_element()
+        } else {
+            surfaced.into_any_element()
+        }
     }
 
     pub(in crate::workspace) fn plain_settings_card(&self, rows: Vec<AnyElement>) -> AnyElement {

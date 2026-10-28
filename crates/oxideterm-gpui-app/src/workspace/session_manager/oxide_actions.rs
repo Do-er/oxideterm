@@ -548,14 +548,19 @@ impl WorkspaceApp {
         });
     }
 
+    pub(in crate::workspace) fn session_manager_surface_visible(&self, cx: &App) -> bool {
+        self.keyboard_content_tab(cx)
+            .is_some_and(|tab| tab.kind == oxideterm_workspace::TabKind::SessionManager)
+            || (self.context_sidebar_visible()
+                && self.active_context_sidebar_panel == ContextSidebarPanel::Connections)
+    }
+
     pub(in crate::workspace) fn active_session_manager_input(
         &self,
         cx: &App,
     ) -> Option<SessionManagerInput> {
         let input = self.session_manager.read(cx).focused_input?;
-        let session_manager_tab_active = self
-            .keyboard_content_tab(cx)
-            .is_some_and(|tab| tab.kind == oxideterm_workspace::TabKind::SessionManager);
+        let session_manager_tab_active = self.session_manager_surface_visible(cx);
         let session_manager = self.session_manager.read(cx);
         session_manager_input_is_active(
             input,

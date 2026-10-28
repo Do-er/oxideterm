@@ -532,6 +532,7 @@ impl WorkspaceApp {
                 self.sync_ai_runtime_node_owner(&node_id, &state, cx);
                 self.resume_forward_starts(&node_id, &state, cx);
                 if node_readiness_became_ready(previous.as_ref(), &state) {
+                    self.spawn_detected_session_icon_sync(node_id.clone(), cx);
                     // Registry readiness, not shell lifetime, restores shared
                     // forwards and completes the connection trace.
                     self.restore_forwarding_session_for_node(&node_id, cx);

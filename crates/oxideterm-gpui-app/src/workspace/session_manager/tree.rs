@@ -8,15 +8,13 @@ impl WorkspaceApp {
         cx: &mut Context<Self>,
     ) -> AnyElement {
         let theme = self.tokens.ui;
-        let (selected_count, search_query, is_tree_mode) = {
+        let (search_query, is_tree_mode) = {
             let manager = self.session_manager.read(cx);
             (
-                manager.selected_items.len(),
                 manager.search_query.clone(),
                 manager.view_mode == SessionManagerViewMode::Tree,
             )
         };
-        let workspace = cx.entity();
         let _ = window;
         div()
             .h(px(36.0))
@@ -39,199 +37,30 @@ impl WorkspaceApp {
                         cx,
                     )),
             )
-            // New Connection (Icon only)
-            .child(self.workspace_tooltip_icon_button(
-                LucideIcon::Plus,
-                14.0,
-                rgb(self.tokens.ui.text),
-                IconButtonOptions {
-                    radius: ButtonRadius::Md,
-                    hover_background: Some(rgb(self.tokens.ui.bg_hover)),
-                    idle_opacity: 1.0,
-                    ..IconButtonOptions::compact(24.0)
-                },
-                self.i18n.t("sessionManager.toolbar.new_connection"),
-                "session-new-connection",
-                true,
-                cx.listener(|this, _event, window, cx| {
-                    this.open_new_connection_form(window, cx);
-                    cx.stop_propagation();
-                }),
-                cx.entity(),
-            ))
-            // New Group (Icon only)
-            .child(self.workspace_tooltip_icon_button(
-                LucideIcon::FolderPlus,
-                14.0,
-                rgb(self.tokens.ui.text),
-                IconButtonOptions {
-                    radius: ButtonRadius::Md,
-                    hover_background: Some(rgb(self.tokens.ui.bg_hover)),
-                    idle_opacity: 1.0,
-                    ..IconButtonOptions::compact(24.0)
-                },
-                self.i18n.t("sessionManager.folder_tree.new_group"),
-                "session-new-group",
-                true,
-                cx.listener(|this, _event, _window, cx| {
-                    this.open_session_group_creation(cx);
-                    cx.stop_propagation();
-                }),
-                cx.entity(),
-            ))
-            // When in Tree mode: Expand All & Collapse All
+            // When in Tree mode: Collapse All (Icon only)
             .when(is_tree_mode, |toolbar| {
-                toolbar
-                    .child(self.workspace_tooltip_icon_button(
-                        LucideIcon::ChevronDown,
-                        14.0,
-                        rgb(self.tokens.ui.text),
-                        IconButtonOptions {
-                            radius: ButtonRadius::Md,
-                            hover_background: Some(rgb(self.tokens.ui.bg_hover)),
-                            idle_opacity: 1.0,
-                            ..IconButtonOptions::compact(24.0)
-                        },
-                        self.i18n.t("sessionManager.views.expand_all"),
-                        "session-expand-all",
-                        true,
-                        cx.listener(|this, _event, _window, cx| {
-                            let (roots, children) = this.session_group_tree();
-                            let mut groups = HashSet::new();
-                            collect_session_group_paths(&roots, &children, &mut groups);
-                            this.session_manager.update(cx, |manager, cx| {
-                                manager.expanded_groups = groups;
-                                cx.notify();
-                            });
-                            cx.stop_propagation();
-                        }),
-                        cx.entity(),
-                    ))
-                    .child(self.workspace_tooltip_icon_button(
-                        LucideIcon::ChevronRight,
-                        14.0,
-                        rgb(self.tokens.ui.text),
-                        IconButtonOptions {
-                            radius: ButtonRadius::Md,
-                            hover_background: Some(rgb(self.tokens.ui.bg_hover)),
-                            idle_opacity: 1.0,
-                            ..IconButtonOptions::compact(24.0)
-                        },
-                        self.i18n.t("sessionManager.views.collapse_all"),
-                        "session-collapse-all",
-                        true,
-                        cx.listener(|this, _event, _window, cx| {
-                            this.session_manager.update(cx, |manager, cx| {
-                                manager.expanded_groups.clear();
-                                cx.notify();
-                            });
-                            cx.stop_propagation();
-                        }),
-                        cx.entity(),
-                    ))
-            })
-            // Toggle View Mode (Tree <-> List)
-            .child(self.workspace_tooltip_icon_button(
-                if is_tree_mode {
-                    LucideIcon::LayoutList
-                } else {
-                    LucideIcon::ListTree
-                },
-                14.0,
-                rgb(self.tokens.ui.text),
-                IconButtonOptions {
-                    radius: ButtonRadius::Md,
-                    hover_background: Some(rgb(self.tokens.ui.bg_hover)),
-                    idle_opacity: 1.0,
-                    ..IconButtonOptions::compact(24.0)
-                },
-                if is_tree_mode {
-                    self.i18n.t("sessionManager.views.list")
-                } else {
-                    self.i18n.t("sessionManager.views.tree")
-                },
-                "session-toggle-view-mode",
-                true,
-                cx.listener(|this, _event, _window, cx| {
-                    this.session_manager.update(cx, |manager, cx| {
-                        manager.view_mode = match manager.view_mode {
-                            SessionManagerViewMode::Tree => SessionManagerViewMode::List,
-                            _ => SessionManagerViewMode::Tree,
-                        };
-                        cx.notify();
-                    });
-                    cx.stop_propagation();
-                }),
-                cx.entity(),
-            ))
-            // More actions (SSH Config import & Connection Importers)
-            .child(self.render_session_manager_more_menu_trigger(has_background, cx))
-            // Batch Actions (when items are selected)
-            .when(selected_count > 0, |toolbar| {
-                toolbar.child(
-                    div()
-                        .flex_none()
-                        .flex()
-                        .items_center()
-                        .gap(px(4.0))
-                        .child(
-                            div()
-                                .flex_none()
-                                .px_1()
-                                .text_size(px(self.tokens.metrics.ui_text_xs))
-                                .text_color(rgb(theme.text_muted))
-                                .child(selected_count_label(&self.i18n, selected_count)),
-                        )
-                        .child(select_anchor_probe(
-                            SelectAnchorId::SessionManagerBatchMove,
-                            self.workspace_tooltip_icon_button(
-                                LucideIcon::FolderInput,
-                                14.0,
-                                rgb(self.tokens.ui.text),
-                                IconButtonOptions {
-                                    radius: ButtonRadius::Md,
-                                    hover_background: Some(rgb(self.tokens.ui.bg_hover)),
-                                    idle_opacity: 1.0,
-                                    ..IconButtonOptions::compact(24.0)
-                                },
-                                self.i18n.t("sessionManager.batch.move_to_group"),
-                                "session-batch-move",
-                                true,
-                                cx.listener(|this, _event, _window, cx| {
-                                    this.session_manager.update(cx, |manager, cx| {
-                                        manager.show_batch_move = !manager.show_batch_move;
-                                        cx.notify();
-                                    });
-                                    cx.stop_propagation();
-                                }),
-                                cx.entity(),
-                            ),
-                            move |anchor, _window, cx| {
-                                let _ = workspace.update(cx, |this, cx| {
-                                    this.update_select_anchor(anchor, cx);
-                                });
-                            },
-                        ))
-                        .child(self.workspace_tooltip_icon_button(
-                            LucideIcon::Trash2,
-                            14.0,
-                            rgb(self.tokens.ui.error),
-                            IconButtonOptions {
-                                radius: ButtonRadius::Md,
-                                hover_background: Some(rgb(self.tokens.ui.bg_hover)),
-                                idle_opacity: 1.0,
-                                ..IconButtonOptions::compact(24.0)
-                            },
-                            self.i18n.t("sessionManager.batch.delete"),
-                            "session-batch-delete",
-                            true,
-                            cx.listener(|this, _event, _window, cx| {
-                                this.request_delete_selected_connections(cx);
-                                cx.stop_propagation();
-                            }),
-                            cx.entity(),
-                        )),
-                )
+                toolbar.child(self.workspace_tooltip_icon_button(
+                    LucideIcon::ChevronsDownUp,
+                    14.0,
+                    rgb(self.tokens.ui.text),
+                    IconButtonOptions {
+                        radius: ButtonRadius::Md,
+                        hover_background: Some(rgb(self.tokens.ui.bg_hover)),
+                        idle_opacity: 1.0,
+                        ..IconButtonOptions::compact(24.0)
+                    },
+                    self.i18n.t("sessionManager.views.collapse_all"),
+                    "session-collapse-all",
+                    true,
+                    cx.listener(|this, _event, _window, cx| {
+                        this.session_manager.update(cx, |manager, cx| {
+                            manager.expanded_groups.clear();
+                            cx.notify();
+                        });
+                        cx.stop_propagation();
+                    }),
+                    cx.entity(),
+                ))
             })
             .into_any_element()
     }

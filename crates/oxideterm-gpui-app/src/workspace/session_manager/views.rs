@@ -1,5 +1,4 @@
 use super::*;
-use gpui::StatefulInteractiveElement;
 
 impl Render for SessionManagerDrag {
     fn render(&mut self, _window: &mut Window, _cx: &mut Context<Self>) -> impl IntoElement {
@@ -556,6 +555,34 @@ impl WorkspaceApp {
             .shadow_none()
             .border_color(self.workspace_chrome_divider())
             .bg(theme_bg(self.tokens.ui.bg, has_background))
+    }
+
+    pub(super) fn visible_session_selection_targets(
+        &self,
+        cx: &App,
+    ) -> Vec<SessionManagerSelectionTarget> {
+        let (view_mode, expanded_groups) = {
+            let manager = self.session_manager.read(cx);
+            (manager.view_mode, manager.expanded_groups.clone())
+        };
+        let items = self.session_manager_display_items(cx);
+        if view_mode == SessionManagerViewMode::Tree {
+            let (roots, children) = self.session_group_tree();
+            let rows = session_manager_tree_rows(&items, &roots, &children, &expanded_groups);
+            rows.into_iter()
+                .filter_map(|row| match row {
+                    SessionManagerTreeRow::Item { item_index, .. } => {
+                        items.get(item_index).and_then(|item| item.selection_target())
+                    }
+                    SessionManagerTreeRow::Group { .. } => None,
+                })
+                .collect()
+        } else {
+            items
+                .into_iter()
+                .filter_map(|item| item.selection_target())
+                .collect()
+        }
     }
 
     pub(super) fn session_manager_display_items(&self, cx: &App) -> Vec<SessionManagerDisplayItem> {
@@ -1464,7 +1491,6 @@ impl WorkspaceApp {
             Some(SessionManagerTreeRow::Item { item_index, depth }) => items
                 .get(*item_index)
                 .map(|item| {
-                    let context_target = item.row_action_target();
                     let drop_group = item.group().map(ToOwned::to_owned);
                     let theme = self.tokens.ui;
                     self.render_session_manager_display_item_row(
@@ -1491,20 +1517,6 @@ impl WorkspaceApp {
                             cx.stop_propagation();
                         }),
                     )
-                    .on_mouse_down(
-                        MouseButton::Right,
-                        cx.listener(move |this, event: &MouseDownEvent, _window, cx| {
-                            if let Some(target) = context_target.clone() {
-                                this.open_session_manager_context_menu(
-                                    target,
-                                    f32::from(event.position.x),
-                                    f32::from(event.position.y),
-                                    cx,
-                                );
-                            }
-                            cx.stop_propagation();
-                        }),
-                    )
                     .into_any_element()
                 })
                 .unwrap_or_else(|| div().into_any_element()),
@@ -1525,14 +1537,7 @@ impl WorkspaceApp {
         let group_name = group.rsplit('/').next().unwrap_or(group).to_string();
         let group_id = group.to_string();
         let context_group = group.to_string();
-        let menu_group = group.to_string();
         let drop_group = group.to_string();
-        let subgroup_parent = group.to_string();
-        let subgroup_tooltip = format!(
-            "{} — {group}",
-            self.i18n.t("sessionManager.folder_tree.new_subgroup")
-        );
-        let workspace = cx.entity();
         div()
             .w_full()
             .min_w(px(0.0))
@@ -1617,40 +1622,6 @@ impl WorkspaceApp {
                     .text_color(rgb(theme.text_muted))
                     .child(self.connection_count_for_group(group).to_string()),
             )
-            .child(self.workspace_tooltip_icon_button(
-                LucideIcon::FolderPlus,
-                MANAGER_ROW_ACTION_ICON_SIZE,
-                rgb(theme.text),
-                IconButtonOptions {
-                    has_background,
-                    ..IconButtonOptions::opaque_toolbar(MANAGER_ROW_ACTION_BUTTON, ButtonRadius::Sm)
-                },
-                subgroup_tooltip,
-                "session-manager-new-subgroup",
-                true,
-                cx.listener(move |this, _event, _window, cx| {
-                    this.open_session_subgroup_creation(&subgroup_parent, cx);
-                    cx.stop_propagation();
-                }),
-                workspace,
-            ))
-            .child(self.render_row_icon_button(
-                LucideIcon::MoreVertical,
-                MANAGER_ROW_ACTION_BUTTON,
-                MANAGER_ROW_ACTION_ICON_SIZE,
-                rgb(theme.text),
-                has_background,
-                move |this, event, _window, cx| {
-                    this.open_session_manager_row_action_menu(
-                        SessionManagerRowActionTarget::Group(menu_group.clone()),
-                        f32::from(event.position.x),
-                        f32::from(event.position.y),
-                        cx,
-                    );
-                    cx.stop_propagation();
-                },
-                cx,
-            ))
     }
 
     pub(super) fn render_session_manager_display_item_row(
@@ -1658,13 +1629,14 @@ impl WorkspaceApp {
         item: &SessionManagerDisplayItem,
         depth: usize,
         has_background: bool,
-        allow_drag: bool,
+        _allow_drag: bool,
         cx: &mut Context<Self>,
     ) -> Div {
         let theme = self.tokens.ui;
         let open_target = item.open_target();
         let selection_target = item.selection_target();
-        let checkbox_target = selection_target.clone();
+        let row_action_target = item.row_action_target();
+        let right_click_selection = selection_target.clone();
         let subtitle = if matches!(item, SessionManagerDisplayItem::SshConfig(_)) {
             format!(
                 "{} · {}",
@@ -1681,97 +1653,6 @@ impl WorkspaceApp {
                 .selected_items
                 .contains(target)
         });
-        let drag_handle = if allow_drag
-            && self.session_manager.read(cx).search_query.trim().is_empty()
-        {
-            selection_target.clone().map(|target| {
-                let selected_targets = &self.session_manager.read(cx).selected_items;
-                let targets = if is_selected {
-                    selected_targets.iter().cloned().collect::<Vec<_>>()
-                } else {
-                    vec![target]
-                };
-                let label = if targets.len() > 1 {
-                    selected_count_label(&self.i18n, targets.len())
-                } else {
-                    item.name().to_string()
-                };
-                let drag = SessionManagerDrag {
-                    targets,
-                    label,
-                    position: Point::default(),
-                    background: rgb(theme.bg_panel),
-                    border: rgb(theme.accent),
-                    text: rgb(theme.text),
-                };
-                let drag_workspace = cx.entity();
-                let grip_color = rgba((theme.text_muted << 8) | MANAGER_DRAG_GRIP_ALPHA);
-                div()
-                    .id(format!(
-                        "session-manager-item-drag-{}",
-                        session_manager_display_item_signature(item)
-                    ))
-                    .size(px(MANAGER_ROW_DRAG_HANDLE_SIZE))
-                    .flex_none()
-                    .flex()
-                    .items_center()
-                    .justify_center()
-                    .rounded(px(self.tokens.radii.sm))
-                    .cursor(CursorStyle::OpenHand)
-                    .hover(move |handle| {
-                        handle.bg(theme_row_hover_bg(theme.bg_hover, has_background))
-                    })
-                    .child(
-                        // A six-dot grip distinguishes moving from opening the connection row.
-                        div()
-                            .w(px(MANAGER_DRAG_GRIP_WIDTH))
-                            .flex()
-                            .flex_wrap()
-                            .gap(px(MANAGER_DRAG_GRIP_DOT_SIZE))
-                            .children((0..MANAGER_DRAG_GRIP_DOT_COUNT).map(move |_| {
-                                div()
-                                    .size(px(MANAGER_DRAG_GRIP_DOT_SIZE))
-                                    .rounded(px(MANAGER_DRAG_GRIP_DOT_SIZE / 2.0))
-                                    .bg(grip_color)
-                            })),
-                    )
-                    .on_drag(drag, move |drag, position, _window, cx| {
-                        let dragged_targets = drag.targets.iter().cloned().collect::<HashSet<_>>();
-                        let _ = drag_workspace.update(cx, |this, cx| {
-                            this.session_manager.update(cx, |session_manager, cx| {
-                                // Row mouse-down selection is restored to the exact drag payload.
-                                if session_manager.selected_items != dragged_targets {
-                                    session_manager.selected_items = dragged_targets;
-                                    cx.notify();
-                                }
-                            });
-                        });
-                        cx.new(|_| drag.with_position(position))
-                    })
-                    .into_any_element()
-            })
-        } else {
-            None
-        };
-        let selection = if let Some(target) = checkbox_target {
-            checkbox(&self.tokens, String::new(), is_selected)
-                .on_mouse_down(
-                    MouseButton::Left,
-                    cx.listener(move |this, _event, _window, cx| {
-                        this.toggle_session_selection(target.clone(), cx);
-                        cx.notify();
-                        cx.stop_propagation();
-                    }),
-                )
-                .into_any_element()
-        } else {
-            // Non-SSH profiles keep the selection column reserved so all
-            // identity and metadata columns remain aligned.
-            div()
-                .size(px(MANAGER_SELECTION_COLUMN_WIDTH))
-                .flex_none()
-                .into_any_element()
-        };
         div()
             .w_full()
             .min_w(px(0.0))
@@ -1804,25 +1685,79 @@ impl WorkspaceApp {
             .on_mouse_down(
                 MouseButton::Left,
                 cx.listener(move |this, event: &MouseDownEvent, window, cx| {
-                    match session_manager_item_pointer_action(
-                        event.click_count,
-                        selection_target.is_some(),
-                    ) {
-                        SessionManagerItemPointerAction::Select => {
-                            if let Some(target) = selection_target.clone() {
-                                this.toggle_session_selection(target, cx);
-                                cx.notify();
+                    if event.click_count == 2 {
+                        this.open_session_manager_target(open_target.clone(), window, cx);
+                    } else if event.click_count == 1 {
+                        if let Some(target) = selection_target.clone() {
+                            if event.modifiers.shift {
+                                this.select_session_range_to(
+                                    target,
+                                    event.modifiers.control || event.modifiers.platform,
+                                    cx,
+                                );
+                            } else if event.modifiers.control || event.modifiers.platform {
+                                this.session_manager.update(cx, |manager, cx| {
+                                    manager.selection_anchor = Some(target.clone());
+                                    if manager.selected_items.contains(&target) {
+                                        manager.selected_items.remove(&target);
+                                    } else {
+                                        manager.selected_items.insert(target);
+                                    }
+                                    cx.notify();
+                                });
+                            } else {
+                                this.session_manager.update(cx, |manager, cx| {
+                                    manager.selection_anchor = Some(target.clone());
+                                    manager.selected_items.clear();
+                                    manager.selected_items.insert(target);
+                                    cx.notify();
+                                });
                             }
+                            cx.notify();
                         }
-                        SessionManagerItemPointerAction::Open => {
-                            this.open_session_manager_target(open_target.clone(), window, cx);
-                        }
-                        SessionManagerItemPointerAction::None => {}
                     }
                 }),
             )
-            .when_some(drag_handle, |row, handle| row.child(handle))
-            .child(selection)
+            .on_mouse_down(
+                MouseButton::Right,
+                cx.listener(move |this, event: &MouseDownEvent, _window, cx| {
+                    let is_multi_selected = {
+                        let manager = this.session_manager.read(cx);
+                        let is_sel = right_click_selection
+                            .as_ref()
+                            .is_some_and(|t| manager.selected_items.contains(t));
+                        is_sel && manager.selected_items.len() > 1
+                    };
+
+                    if is_multi_selected {
+                        this.open_session_manager_context_menu(
+                            SessionManagerRowActionTarget::Batch,
+                            f32::from(event.position.x),
+                            f32::from(event.position.y),
+                            cx,
+                        );
+                    } else if let Some(target) = row_action_target.clone() {
+                        if let Some(ref sel_target) = right_click_selection {
+                            this.session_manager.update(cx, |manager, cx| {
+                                manager.selected_items.clear();
+                                manager.selected_items.insert(sel_target.clone());
+                                cx.notify();
+                            });
+                        }
+                        this.open_session_manager_context_menu(
+                            target,
+                            f32::from(event.position.x),
+                            f32::from(event.position.y),
+                            cx,
+                        );
+                    }
+                    cx.stop_propagation();
+                }),
+            )
+            .when(_allow_drag && depth > 0, |row| {
+                row.child(div().w(px(16.0)).flex_none())
+            })
+            .child(self.render_session_manager_row_icon(item))
             .child(
                 div()
                     .min_w(px(0.0))
@@ -1847,7 +1782,32 @@ impl WorkspaceApp {
                             .child(subtitle),
                     ),
             )
-            .child(self.render_session_manager_display_item_actions(item, has_background, cx))
+    }
+
+    pub(super) fn render_session_manager_row_icon(
+        &self,
+        item: &SessionManagerDisplayItem,
+    ) -> Div {
+        let theme = self.tokens.ui;
+        let icon = match item {
+            SessionManagerDisplayItem::Connection(connection) => {
+                if let Some(node_id) = self.saved_ssh_nodes.get(&connection.id) {
+                    self.node_session_icon(node_id)
+                } else {
+                    item.icon()
+                }
+            }
+            _ => item.icon(),
+        };
+
+        div()
+            .size(px(20.0))
+            .flex_none()
+            .rounded(px(self.tokens.radii.sm))
+            .flex()
+            .items_center()
+            .justify_center()
+            .child(icon.render(16.0, rgb(theme.text_muted)))
     }
 
     #[allow(dead_code)]
@@ -2471,6 +2431,7 @@ impl WorkspaceApp {
             }
             SessionManagerRowActionTarget::GroupRoot => MANAGER_ROW_ACTION_MENU_PROFILE_HEIGHT,
             SessionManagerRowActionTarget::Group(_) => MANAGER_ROW_ACTION_MENU_GROUP_HEIGHT,
+            SessionManagerRowActionTarget::Batch => MANAGER_ROW_ACTION_MENU_BATCH_HEIGHT,
         };
         let (requested_x, requested_y) = match menu.origin {
             SessionManagerRowActionMenuOrigin::ActionButton => (
@@ -2493,29 +2454,102 @@ impl WorkspaceApp {
         );
 
         if matches!(&menu.target, SessionManagerRowActionTarget::GroupRoot) {
-            popup = popup.child(self.render_session_manager_menu_action(
-                dropdown_menu_item(
-                    &self.tokens,
-                    self.i18n.t("sessionManager.folder_tree.new_group"),
-                    DropdownMenuItemKind::Plain,
+            popup = popup
+                .child(self.render_session_manager_menu_action(
+                    dropdown_menu_item(
+                        &self.tokens,
+                        self.i18n.t("sessionManager.toolbar.new_connection"),
+                        DropdownMenuItemKind::Plain,
+                        false,
+                        false,
+                    ),
                     false,
                     false,
-                ),
-                false,
-                false,
-                has_background,
-                move |this, _event, _window, cx| {
-                    this.open_session_group_creation(cx);
-                    cx.stop_propagation();
-                },
-                cx,
-            ));
+                    has_background,
+                    move |this, _event, window, cx| {
+                        this.open_new_connection_form(window, cx);
+                        cx.stop_propagation();
+                    },
+                    cx,
+                ))
+                .child(self.render_session_manager_menu_action(
+                    dropdown_menu_item(
+                        &self.tokens,
+                        self.i18n.t("sessionManager.folder_tree.new_group"),
+                        DropdownMenuItemKind::Plain,
+                        false,
+                        false,
+                    ),
+                    false,
+                    false,
+                    has_background,
+                    move |this, _event, _window, cx| {
+                        this.open_session_group_creation(cx);
+                        cx.stop_propagation();
+                    },
+                    cx,
+                ))
+                .child(dropdown_menu_separator(&self.tokens))
+                .child(self.render_session_manager_menu_action(
+                    dropdown_menu_item(
+                        &self.tokens,
+                        self.i18n.t("settings_view.connections.ssh_config.title"),
+                        DropdownMenuItemKind::Plain,
+                        false,
+                        false,
+                    ),
+                    false,
+                    false,
+                    has_background,
+                    move |this, _event, _window, cx| {
+                        this.close_session_row_menus(cx);
+                        this.open_settings_ssh_config_import_dialog(cx);
+                        cx.stop_propagation();
+                    },
+                    cx,
+                ))
+                .child(self.render_session_manager_menu_action(
+                    dropdown_menu_item(
+                        &self.tokens,
+                        self.i18n.t("settings_view.connections.importers.title"),
+                        DropdownMenuItemKind::Plain,
+                        false,
+                        false,
+                    ),
+                    false,
+                    false,
+                    has_background,
+                    move |this, _event, window, cx| {
+                        this.close_session_row_menus(cx);
+                        this.open_connection_importers_settings(window, cx);
+                        cx.stop_propagation();
+                    },
+                    cx,
+                ));
         }
 
         if let SessionManagerRowActionTarget::Group(group) = &menu.target {
+            let new_conn_group = group.clone();
             let subgroup_parent = group.clone();
             let rename_group = group.clone();
             popup = popup
+                .child(self.render_session_manager_menu_action(
+                    dropdown_menu_item(
+                        &self.tokens,
+                        self.i18n.t("sessionManager.toolbar.new_connection"),
+                        DropdownMenuItemKind::Plain,
+                        false,
+                        false,
+                    ),
+                    false,
+                    false,
+                    has_background,
+                    move |this, _event, window, cx| {
+                        this.open_new_connection_form_with_group(&new_conn_group, window, cx);
+                        cx.stop_propagation();
+                    },
+                    cx,
+                ))
                 .child(self.render_session_manager_menu_action(
                     dropdown_menu_item(
                         &self.tokens,
@@ -2554,27 +2588,47 @@ impl WorkspaceApp {
         }
 
         if let SessionManagerRowActionTarget::Connection(id) = &menu.target {
-            let test_id = id.clone();
-            popup = popup.child(self.render_session_manager_menu_action(
-                dropdown_menu_item(
-                    &self.tokens,
-                    self.i18n.t("sessionManager.actions.test_connection"),
-                    DropdownMenuItemKind::Plain,
-                    false,
-                    false,
-                ),
-                false,
-                false,
-                has_background,
-                move |this, _event, window, cx| {
-                    this.test_connection(&test_id, window, cx);
-                    cx.stop_propagation();
-                },
-                cx,
-            ));
-
+            let open_id = id.clone();
+            let edit_id = id.clone();
             let duplicate_id = id.clone();
+            let test_id = id.clone();
+            let move_id = id.clone();
             popup = popup
+                .child(self.render_session_manager_menu_action(
+                    dropdown_menu_item(
+                        &self.tokens,
+                        self.i18n.t("sessionManager.actions.connect"),
+                        DropdownMenuItemKind::Plain,
+                        false,
+                        false,
+                    ),
+                    false,
+                    false,
+                    has_background,
+                    move |this, _event, window, cx| {
+                        this.open_saved_connection(&open_id, window, cx);
+                        cx.stop_propagation();
+                    },
+                    cx,
+                ))
+                .child(dropdown_menu_separator(&self.tokens))
+                .child(self.render_session_manager_menu_action(
+                    dropdown_menu_item(
+                        &self.tokens,
+                        self.i18n.t("sessionManager.actions.edit"),
+                        DropdownMenuItemKind::Plain,
+                        false,
+                        false,
+                    ),
+                    false,
+                    false,
+                    has_background,
+                    move |this, _event, window, cx| {
+                        this.open_saved_connection_editor(&edit_id, None, window, cx);
+                        cx.stop_propagation();
+                    },
+                    cx,
+                ))
                 .child(self.render_session_manager_menu_action(
                     dropdown_menu_item(
                         &self.tokens,
@@ -2592,7 +2646,116 @@ impl WorkspaceApp {
                     },
                     cx,
                 ))
+                .child(self.render_session_manager_menu_action(
+                    dropdown_menu_item(
+                        &self.tokens,
+                        self.i18n.t("sessionManager.actions.test_connection"),
+                        DropdownMenuItemKind::Plain,
+                        false,
+                        false,
+                    ),
+                    false,
+                    false,
+                    has_background,
+                    move |this, _event, window, cx| {
+                        this.test_connection(&test_id, window, cx);
+                        cx.stop_propagation();
+                    },
+                    cx,
+                ))
+                .child(dropdown_menu_separator(&self.tokens))
+                .child(self.render_session_manager_menu_action(
+                    dropdown_menu_item(
+                        &self.tokens,
+                        self.i18n.t("sessionManager.actions.move_to_group"),
+                        DropdownMenuItemKind::Plain,
+                        false,
+                        false,
+                    ),
+                    false,
+                    false,
+                    has_background,
+                    move |this, event, _window, cx| {
+                        let click_pos = (f32::from(event.position.x), f32::from(event.position.y));
+                        this.session_manager.update(cx, |manager, cx| {
+                            manager.selected_items.clear();
+                            manager
+                                .selected_items
+                                .insert(SessionManagerSelectionTarget::Connection(move_id.clone()));
+                            manager.batch_move_anchor = Some(click_pos);
+                            manager.show_batch_move = true;
+                            cx.notify();
+                        });
+                        cx.stop_propagation();
+                    },
+                    cx,
+                ))
                 .child(dropdown_menu_separator(&self.tokens));
+        }
+
+        if matches!(&menu.target, SessionManagerRowActionTarget::Batch) {
+            popup = popup
+                .child(self.render_session_manager_menu_action(
+                    dropdown_menu_item(
+                        &self.tokens,
+                        self.i18n.t("sessionManager.batch.move_to_group"),
+                        DropdownMenuItemKind::Plain,
+                        false,
+                        false,
+                    ),
+                    false,
+                    false,
+                    has_background,
+                    move |this, event, _window, cx| {
+                        let click_pos = (f32::from(event.position.x), f32::from(event.position.y));
+                        this.session_manager.update(cx, |manager, cx| {
+                            manager.batch_move_anchor = Some(click_pos);
+                            manager.show_batch_move = true;
+                            cx.notify();
+                        });
+                        cx.stop_propagation();
+                    },
+                    cx,
+                ))
+                .child(self.render_session_manager_menu_action(
+                    dropdown_menu_item(
+                        &self.tokens,
+                        self.i18n.t("sessionManager.batch.delete"),
+                        DropdownMenuItemKind::Plain,
+                        false,
+                        false,
+                    )
+                    .text_color(rgb(self.tokens.ui.error)),
+                    false,
+                    false,
+                    has_background,
+                    move |this, _event, _window, cx| {
+                        this.request_delete_selected_connections(cx);
+                        cx.stop_propagation();
+                    },
+                    cx,
+                ))
+                .child(dropdown_menu_separator(&self.tokens))
+                .child(self.render_session_manager_menu_action(
+                    dropdown_menu_item(
+                        &self.tokens,
+                        self.i18n.t("common.cancel"),
+                        DropdownMenuItemKind::Plain,
+                        false,
+                        false,
+                    ),
+                    false,
+                    false,
+                    has_background,
+                    move |this, _event, _window, cx| {
+                        this.session_manager.update(cx, |manager, cx| {
+                            manager.selected_items.clear();
+                            cx.notify();
+                        });
+                        cx.stop_propagation();
+                    },
+                    cx,
+                ));
         }
 
         if let SessionManagerRowActionTarget::RemoteDesktop(id) = &menu.target {
@@ -2826,7 +2989,8 @@ impl WorkspaceApp {
                 group.clone(),
                 self.i18n.t("sessionManager.folder_tree.delete_group"),
             )),
-            SessionManagerRowActionTarget::GroupRoot => None,
+            SessionManagerRowActionTarget::GroupRoot
+            | SessionManagerRowActionTarget::Batch => None,
         };
         if let Some((delete_id, delete_label)) = delete_action {
             let delete_target = menu.target;
@@ -2846,26 +3010,19 @@ impl WorkspaceApp {
                     move |this, _event, _window, cx| {
                         match &delete_target {
                             SessionManagerRowActionTarget::Tunnel(_) => {
-                                this.session_manager.update(cx, |state, cx| {
-                                    state.delete_confirm =
-                                        Some(SessionManagerDeleteConfirm::Batch {
-                                            targets: vec![SessionManagerSelectionTarget::Tunnel(
-                                                delete_id.clone(),
-                                            )],
-                                        });
-                                    cx.notify();
+                                this.session_manager.update(cx, |state, _cx| {
+                                    close_session_menu_state(state);
                                 });
+                                this.stop_ssh_tunnel(&delete_id, true, cx);
                             }
                             SessionManagerRowActionTarget::Plugin(_) => {
-                                this.session_manager.update(cx, |state, cx| {
-                                    state.delete_confirm =
-                                        Some(SessionManagerDeleteConfirm::Batch {
-                                            targets: vec![SessionManagerSelectionTarget::Plugin(
-                                                delete_id.clone(),
-                                            )],
-                                        });
-                                    cx.notify();
+                                this.session_manager.update(cx, |state, _cx| {
+                                    close_session_menu_state(state);
                                 });
+                                this.delete_selected_session_items(
+                                    vec![SessionManagerSelectionTarget::Plugin(delete_id.clone())],
+                                    cx,
+                                );
                             }
                             SessionManagerRowActionTarget::Ftp(_) => {
                                 this.request_delete_ftp_profile(&delete_id, cx)
@@ -2894,7 +3051,8 @@ impl WorkspaceApp {
                             SessionManagerRowActionTarget::Group(_) => {
                                 this.request_delete_session_group(&delete_id, cx)
                             }
-                            SessionManagerRowActionTarget::GroupRoot => {}
+                            SessionManagerRowActionTarget::GroupRoot
+                            | SessionManagerRowActionTarget::Batch => {}
                         }
                         cx.stop_propagation();
                     },

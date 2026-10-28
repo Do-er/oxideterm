@@ -1152,7 +1152,7 @@ impl Default for NewConnectionForm {
             proxy_command_keychain_id: None,
             color: String::new(),
             icon_background_color: String::new(),
-            icon: String::new(),
+            icon: "rocky".to_string(),
             icon_picker_expanded: false,
             basic_section_expanded: None,
             authentication_section_expanded: None,

@@ -1,6 +1,6 @@
 use super::WorkspaceApp;
 use crate::assets::{DISTRO_ICONS, DistroIcon, LucideIcon};
-use gpui::{AnyElement, IntoElement, Rgba, Styled, StyledImage, img, px};
+use gpui::{AnyElement, Context, IntoElement, Rgba, Styled, StyledImage, img, px};
 
 #[derive(Clone, Copy, Debug, Eq, PartialEq)]
 pub(super) enum SessionIcon {
@@ -59,7 +59,133 @@ pub(super) fn resolved_session_icon(
         .unwrap_or(LucideIcon::Server.into())
 }
 
+pub(super) fn detect_distro_icon_id_from_name(system_name: &str) -> Option<&'static str> {
+    DISTRO_ICONS
+        .iter()
+        .find(|icon| {
+            let mut words = system_name.split_whitespace();
+            if words
+                .next()
+                .is_some_and(|word| word.eq_ignore_ascii_case(icon.id))
+            {
+                return true;
+            }
+            let mut words = system_name.split_whitespace();
+            icon.name.split_whitespace().all(|part| {
+                words
+                    .next()
+                    .is_some_and(|word| word.eq_ignore_ascii_case(part))
+            })
+        })
+        .map(|icon| icon.id)
+}
+
+pub(super) fn is_distro_icon_id(id: &str) -> bool {
+    DISTRO_ICONS.iter().any(|icon| icon.id == id)
+}
+
 impl WorkspaceApp {
+    pub(in crate::workspace) fn try_sync_detected_session_icon(
+        &mut self,
+        node_id: &oxideterm_ssh::NodeId,
+        cx: &mut Context<Self>,
+    ) -> bool {
+        let Some(saved_id) = self
+            .ssh_nodes
+            .get(node_id)
+            .and_then(|node| node.saved_connection_id.clone())
+        else {
+            return false;
+        };
+        let Some(connection_id) = self.node_router.connection_id_for_node(node_id) else {
+            return false;
+        };
+        let Some(handle) = self.ssh_registry.get(&connection_id) else {
+            return false;
+        };
+        let Some(env) = handle.remote_env() else {
+            return false;
+        };
+        let Some(detected_id) = env
+            .os_version
+            .as_deref()
+            .and_then(detect_distro_icon_id_from_name)
+        else {
+            return false;
+        };
+
+        let Some(conn) = self.connection_store.get(&saved_id).cloned() else {
+            return false;
+        };
+
+        // If user configured a manual non-distro icon, respect their explicit choice.
+        if let Some(ref curr) = conn.icon {
+            if !is_distro_icon_id(curr) {
+                return true;
+            }
+            if curr == detected_id {
+                return true;
+            }
+        }
+
+        let request = oxideterm_connections::SaveConnectionRequest {
+            totp_credential_id: None,
+            id: Some(conn.id),
+            name: conn.name,
+            group: conn.group,
+            notes: conn.notes,
+            host: conn.host,
+            port: conn.port,
+            username: conn.username,
+            auth: conn.auth,
+            proxy_chain: conn.proxy_chain,
+            upstream_proxy: conn.upstream_proxy,
+            proxy_command: conn.proxy_command,
+            color: conn.color,
+            icon_background_color: conn.icon_background_color,
+            icon: Some(detected_id.to_string()),
+            tags: conn.tags,
+            connect_timeout_seconds: conn.options.effective_connect_timeout_seconds(),
+            agent_forwarding: conn.options.agent_forwarding,
+            identity_agent: conn.options.identity_agent,
+            agent_forwarding_socket: conn.options.agent_forwarding_socket,
+            legacy_ssh_compatibility: conn.options.legacy_ssh_compatibility,
+            ssh_algorithms: conn.options.ssh_algorithms,
+            dedicated_new_terminal_connection: conn.options.dedicated_new_terminal_connection,
+            ssh_channel_strategy: conn.options.ssh_channel_strategy,
+            x11_forwarding: conn.options.x11_forwarding,
+            post_connect_command: conn.post_connect_command,
+            terminal: conn.options.terminal,
+        };
+
+        if self.connection_store.upsert(request).is_ok() {
+            self.queue_cloud_sync_dirty_refresh(cx);
+            cx.notify();
+            return true;
+        }
+        false
+    }
+
+    pub(in crate::workspace) fn spawn_detected_session_icon_sync(
+        &self,
+        node_id: oxideterm_ssh::NodeId,
+        cx: &mut Context<Self>,
+    ) {
+        let entity = cx.entity().clone();
+        cx.spawn(async move |_, cx| {
+            for _ in 0..30 {
+                tokio::time::sleep(std::time::Duration::from_millis(500)).await;
+                let done = entity.update(cx, |this, cx| {
+                    this.try_sync_detected_session_icon(&node_id, cx)
+                });
+                if done {
+                    break;
+                }
+            }
+        })
+        .detach();
+    }
+
     pub(in crate::workspace) fn node_session_icon(
         &self,
         node_id: &oxideterm_ssh::NodeId,

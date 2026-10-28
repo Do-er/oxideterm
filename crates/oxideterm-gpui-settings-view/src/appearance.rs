@@ -90,7 +90,7 @@ pub fn settings_appearance_card_title(
         .font_weight(gpui::FontWeight::MEDIUM)
         .text_color(rgb(tokens.ui.text))
         .when_some(icon, |title, icon| title.child(icon));
-    title_el.child(title.to_uppercase()).into_any_element()
+    title_el.child(title).into_any_element()
 }
 
 pub fn settings_appearance_card_header(

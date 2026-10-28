@@ -43,6 +43,7 @@ pub(crate) enum LucideIcon {
     ChevronDown,
     ChevronLeft,
     ChevronRight,
+    ChevronsDownUp,
     Circle,
     Clock,
     Cloud,
@@ -180,6 +181,7 @@ impl LucideIcon {
             "chevrondown" => Self::ChevronDown,
             "chevronleft" => Self::ChevronLeft,
             "chevronright" => Self::ChevronRight,
+            "chevronsdownup" | "collapseall" | "collapse-all" => Self::ChevronsDownUp,
             "circle" => Self::Circle,
             "clock" => Self::Clock,
             "cloud" => Self::Cloud,
@@ -312,6 +314,7 @@ impl LucideIcon {
             Self::ChevronDown => "lucide/chevron-down.svg",
             Self::ChevronLeft => "lucide/chevron-left.svg",
             Self::ChevronRight => "lucide/chevron-right.svg",
+            Self::ChevronsDownUp => "lucide/chevrons-down-up.svg",
             Self::Circle => "lucide/circle.svg",
             Self::Clock => "lucide/clock.svg",
             Self::Cloud => "lucide/cloud.svg",
@@ -515,6 +518,7 @@ impl AssetSource for NativeAssets {
             "lucide/chevron-down.svg" => CHEVRON_DOWN,
             "lucide/chevron-left.svg" => CHEVRON_LEFT,
             "lucide/chevron-right.svg" => CHEVRON_RIGHT,
+            "lucide/chevrons-down-up.svg" => CHEVRONS_DOWN_UP,
             "lucide/circle.svg" => CIRCLE,
             "lucide/clock.svg" => CLOCK,
             "lucide/cloud.svg" => CLOUD,
@@ -661,6 +665,7 @@ impl AssetSource for NativeAssets {
                 "chevron-down.svg",
                 "chevron-left.svg",
                 "chevron-right.svg",
+                "chevrons-down-up.svg",
                 "clock.svg",
                 "cloud.svg",
                 "code-2.svg",
@@ -891,6 +896,7 @@ const CHECK_SQUARE: &str = r#"<svg xmlns="http://www.w3.org/2000/svg" width="24"
 const CHEVRON_DOWN: &str = r#"<svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="m6 9 6 6 6-6"/></svg>"#;
 const CHEVRON_LEFT: &str = r#"<svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="m15 18-6-6 6-6"/></svg>"#;
 const CHEVRON_RIGHT: &str = r#"<svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="m9 18 6-6-6-6"/></svg>"#;
+const CHEVRONS_DOWN_UP: &str = r#"<svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="m7 20 5-5 5 5"/><path d="m7 4 5 5 5-5"/></svg>"#;
 const CIRCLE: &str = r#"<svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"/></svg>"#;
 const CLOCK: &str = r#"<svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"/><polyline points="12 6 12 12 16 14"/></svg>"#;
 const CLOUD: &str = r#"<svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M17.5 19H9a7 7 0 1 1 6.71-9h1.79a4.5 4.5 0 1 1 0 9Z"/></svg>"#;

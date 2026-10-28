@@ -19,12 +19,13 @@ enum SessionManagerMoveInteraction {
 
 impl WorkspaceApp {
     pub(super) fn request_delete_ftp_profile(&mut self, id: &str, cx: &mut Context<Self>) {
-        self.session_manager.update(cx, |state, cx| {
-            state.delete_confirm = Some(SessionManagerDeleteConfirm::Batch {
-                targets: vec![SessionManagerSelectionTarget::Ftp(id.to_owned())],
-            });
-            cx.notify();
+        self.session_manager.update(cx, |state, _cx| {
+            close_session_menu_state(state);
         });
+        self.delete_selected_session_items(
+            vec![SessionManagerSelectionTarget::Ftp(id.to_owned())],
+            cx,
+        );
     }
     pub(super) fn connection_count_for_group(&self, group: &str) -> usize {
         let connection_count = self
@@ -339,6 +340,7 @@ impl WorkspaceApp {
         cx: &mut Context<Self>,
     ) {
         self.session_manager.update(cx, |session_manager, cx| {
+            session_manager.selection_anchor = Some(target.clone());
             if session_manager.selected_items.contains(&target) {
                 session_manager.selected_items.remove(&target);
             } else {
@@ -346,6 +348,46 @@ impl WorkspaceApp {
             }
             cx.notify();
         });
+    }
+
+    pub(super) fn select_session_range_to(
+        &mut self,
+        target: SessionManagerSelectionTarget,
+        additive: bool,
+        cx: &mut Context<Self>,
+    ) {
+        let visible_targets = self.visible_session_selection_targets(cx);
+        let anchor = self
+            .session_manager
+            .read(cx)
+            .selection_anchor
+            .clone()
+            .unwrap_or_else(|| target.clone());
+
+        let start_idx = visible_targets
+            .iter()
+            .position(|t| t == &anchor)
+            .unwrap_or(0);
+        let end_idx = visible_targets
+            .iter()
+            .position(|t| t == &target)
+            .unwrap_or(start_idx);
+
+        let min_idx = start_idx.min(end_idx);
+        let max_idx = start_idx.max(end_idx);
+
+        if let Some(range) = visible_targets.get(min_idx..=max_idx) {
+            let range_targets = range.to_vec();
+            self.session_manager.update(cx, |manager, cx| {
+                if !additive {
+                    manager.selected_items.clear();
+                }
+                for t in range_targets {
+                    manager.selected_items.insert(t);
+                }
+                cx.notify();
+            });
+        }
     }
 
     pub(in crate::workspace) fn clear_session_selection_for_invisible_rows(
@@ -545,18 +587,15 @@ impl WorkspaceApp {
     }
 
     pub(super) fn request_delete_session_group(&mut self, group: &str, cx: &mut Context<Self>) {
-        let name = group.to_string();
-        self.session_manager.update(cx, |session_manager, cx| {
+        self.session_manager.update(cx, |session_manager, _cx| {
             close_session_menu_state(session_manager);
-            session_manager.reopen_group_manager_after_delete = session_manager.show_group_manager;
             session_manager.show_group_manager = false;
             session_manager.group_editor = None;
             session_manager.group_editor_error = None;
             session_manager.focused_input = None;
             session_manager.focused_basic_dialog_footer_action = None;
-            session_manager.delete_confirm = Some(SessionManagerDeleteConfirm::Group { name });
-            cx.notify();
         });
+        self.delete_session_group(group, cx);
     }
 
     pub(in crate::workspace) fn close_session_group_manager(&mut self, cx: &mut Context<Self>) {
@@ -661,39 +700,17 @@ impl WorkspaceApp {
     }
 
     pub(super) fn request_delete_connection(&mut self, id: &str, cx: &mut Context<Self>) {
-        let Some(conn) = self.connection_info_by_id(id) else {
-            return;
-        };
-        // Tauri snapshots the row payload before opening useConfirm; native
-        // keeps the same target stable while the dialog is open.
-        self.session_manager.update(cx, |session_manager, cx| {
+        self.session_manager.update(cx, |session_manager, _cx| {
             close_session_menu_state(session_manager);
-            session_manager.delete_confirm = Some(SessionManagerDeleteConfirm::Single {
-                id: conn.id,
-                name: conn.name,
-            });
-            cx.notify();
         });
+        self.delete_connection(id, cx);
     }
 
     pub(super) fn request_delete_serial_profile(&mut self, id: &str, cx: &mut Context<Self>) {
-        let Some(profile) = self
-            .connection_store
-            .serial_profiles()
-            .iter()
-            .find(|profile| profile.id == id)
-            .cloned()
-        else {
-            return;
-        };
-        self.session_manager.update(cx, |session_manager, cx| {
+        self.session_manager.update(cx, |session_manager, _cx| {
             close_session_menu_state(session_manager);
-            session_manager.delete_confirm = Some(SessionManagerDeleteConfirm::SerialProfile {
-                id: profile.id,
-                name: profile.name,
-            });
-            cx.notify();
         });
+        self.delete_serial_profile(id, cx);
     }
 
     pub(super) fn request_delete_local_terminal_profile(
@@ -701,58 +718,24 @@ impl WorkspaceApp {
         id: &str,
         cx: &mut Context<Self>,
     ) {
-        let Some(profile) = self
-            .connection_store
-            .local_terminal_profiles()
-            .iter()
-            .find(|profile| profile.id == id)
-            .cloned()
-        else {
-            return;
-        };
-        self.session_manager.update(cx, |session_manager, cx| {
+        self.session_manager.update(cx, |session_manager, _cx| {
             close_session_menu_state(session_manager);
-            session_manager.delete_confirm =
-                Some(SessionManagerDeleteConfirm::LocalTerminalProfile {
-                    id: profile.id,
-                    name: profile.name,
-                });
-            cx.notify();
         });
+        self.delete_local_terminal_profile(id, cx);
     }
 
     pub(super) fn request_delete_telnet_profile(&mut self, id: &str, cx: &mut Context<Self>) {
-        let Some(profile) = self
-            .connection_store
-            .telnet_profiles()
-            .iter()
-            .find(|profile| profile.id == id)
-        else {
-            return;
-        };
-        let profile_name = profile.name.clone();
-        self.session_manager.update(cx, |session_manager, cx| {
-            session_manager.delete_confirm = Some(SessionManagerDeleteConfirm::TelnetProfile {
-                id: id.to_string(),
-                name: profile_name,
-            });
-            cx.notify();
+        self.session_manager.update(cx, |session_manager, _cx| {
+            close_session_menu_state(session_manager);
         });
+        self.delete_telnet_profile(id, cx);
     }
 
     pub(super) fn request_delete_mosh_profile(&mut self, id: &str, cx: &mut Context<Self>) {
-        let Some(profile) = self.connection_store.get_mosh_profile(id) else {
-            return;
-        };
-        let confirm = SessionManagerDeleteConfirm::MoshProfile {
-            id: profile.id.clone(),
-            name: profile.name.clone(),
-        };
-        self.session_manager.update(cx, |session_manager, cx| {
+        self.session_manager.update(cx, |session_manager, _cx| {
             close_session_menu_state(session_manager);
-            session_manager.delete_confirm = Some(confirm);
-            cx.notify();
         });
+        self.delete_mosh_profile(id, cx);
     }
 
     pub(super) fn request_delete_standalone_sftp_profile(
@@ -760,18 +743,10 @@ impl WorkspaceApp {
         id: &str,
         cx: &mut Context<Self>,
     ) {
-        let Some(profile) = self.connection_store.get_standalone_sftp_profile(id) else {
-            return;
-        };
-        let confirm = SessionManagerDeleteConfirm::StandaloneSftpProfile {
-            id: profile.id.clone(),
-            name: profile.name.clone(),
-        };
-        self.session_manager.update(cx, |session_manager, cx| {
+        self.session_manager.update(cx, |session_manager, _cx| {
             close_session_menu_state(session_manager);
-            session_manager.delete_confirm = Some(confirm);
-            cx.notify();
         });
+        self.delete_standalone_sftp_profile(id, cx);
     }
 
     pub(super) fn request_delete_remote_desktop_profile(
@@ -779,18 +754,10 @@ impl WorkspaceApp {
         id: &str,
         cx: &mut Context<Self>,
     ) {
-        let Some(profile) = self.connection_store.get_remote_desktop_profile(id) else {
-            return;
-        };
-        let confirm = SessionManagerDeleteConfirm::RemoteDesktopProfile {
-            id: profile.id.clone(),
-            name: profile.name.clone(),
-        };
-        self.session_manager.update(cx, |session_manager, cx| {
+        self.session_manager.update(cx, |session_manager, _cx| {
             close_session_menu_state(session_manager);
-            session_manager.delete_confirm = Some(confirm);
-            cx.notify();
         });
+        self.delete_remote_desktop_profile(id, cx);
     }
 
     pub(super) fn request_delete_selected_connections(&mut self, cx: &mut Context<Self>) {
@@ -804,13 +771,10 @@ impl WorkspaceApp {
         if targets.is_empty() {
             return;
         }
-        // Batch delete follows Tauri's confirm closure and freezes the selected
-        // ids at the time the destructive action is requested.
-        self.session_manager.update(cx, |session_manager, cx| {
+        self.session_manager.update(cx, |session_manager, _cx| {
             close_session_menu_state(session_manager);
-            session_manager.delete_confirm = Some(SessionManagerDeleteConfirm::Batch { targets });
-            cx.notify();
         });
+        self.delete_selected_session_items(targets, cx);
     }
 
     pub(super) fn cancel_session_manager_delete(&mut self, cx: &mut Context<Self>) {
@@ -1394,6 +1358,22 @@ impl WorkspaceApp {
         cx.notify();
     }
 
+    pub(in crate::workspace) fn open_new_connection_form_with_group(
+        &mut self,
+        group: &str,
+        window: &mut Window,
+        cx: &mut Context<Self>,
+    ) {
+        self.open_new_connection_form(window, cx);
+        let group_name = group.to_string();
+        self.update_connection_form_state(cx, move |state| {
+            if let Some(form) = state.form.as_mut() {
+                form.group = group_name;
+            }
+        });
+        cx.notify();
+    }
+
     pub(super) fn delete_selected_session_items(
         &mut self,
         targets: Vec<SessionManagerSelectionTarget>,
@@ -1677,6 +1657,7 @@ impl WorkspaceApp {
                 self.session_manager.update(cx, |session_manager, cx| {
                     session_manager.selected_items.clear();
                     session_manager.show_batch_move = false;
+                    session_manager.batch_move_anchor = None;
                     cx.notify();
                 });
             }
@@ -1714,6 +1695,7 @@ impl WorkspaceApp {
                             ));
                             session_manager.selected_items.clear();
                             session_manager.show_batch_move = false;
+                            session_manager.batch_move_anchor = None;
                         }
                         SessionManagerMoveInteraction::DragDrop => {
                             // Keep moved rows selected and reveal their destination as direct feedback.
@@ -1810,10 +1792,12 @@ pub(super) fn close_session_menu_state(session_manager: &mut SessionManagerState
     let changed = session_manager.view_mode_menu_open
         || session_manager.sort_menu_open
         || session_manager.show_batch_move
-        || session_manager.row_action_menu.is_some();
+        || session_manager.row_action_menu.is_some()
+        || session_manager.batch_move_anchor.is_some();
     session_manager.view_mode_menu_open = false;
     session_manager.sort_menu_open = false;
     session_manager.show_batch_move = false;
     session_manager.row_action_menu = None;
+    session_manager.batch_move_anchor = None;
     changed
 }

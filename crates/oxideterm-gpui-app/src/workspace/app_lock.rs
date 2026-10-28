@@ -726,48 +726,52 @@ impl WorkspaceApp {
             ));
         }
 
-        self.plain_settings_card(vec![
-            self.card_title("settings_view.general.app_lock_title"),
-            oxideterm_gpui_settings_view::settings_row(
-                &self.tokens,
-                div()
-                    .flex()
-                    .flex_wrap()
-                    .items_center()
-                    .gap(px(8.0))
-                    .child(Self::render_lucide_icon(
-                        LucideIcon::Lock,
-                        16.0,
-                        rgb(self.tokens.ui.text),
-                    ))
-                    .child(
-                        div()
-                            .text_size(px(self.tokens.metrics.ui_text_sm))
-                            .font_weight(gpui::FontWeight::MEDIUM)
-                            .child(self.i18n.t("settings_view.general.app_lock_label")),
-                    )
-                    .child(self.text_badge(status_label, status_color))
-                    .into_any_element(),
-                Some(
+        self.settings_card(
+            "settings_view.general.app_lock_title",
+            "",
+            vec![
+                oxideterm_gpui_settings_view::settings_row(
+                    &self.tokens,
                     div()
-                        .child(self.i18n.t("settings_view.general.app_lock_description"))
+                        .flex()
+                        .flex_wrap()
+                        .items_center()
+                        .gap(px(8.0))
+                        .child(Self::render_lucide_icon(
+                            LucideIcon::Lock,
+                            16.0,
+                            rgb(self.tokens.ui.text),
+                        ))
+                        .child(
+                            div()
+                                .text_size(px(self.tokens.metrics.ui_text_sm))
+                                .font_weight(gpui::FontWeight::MEDIUM)
+                                .child(self.i18n.t("settings_view.general.app_lock_label")),
+                        )
+                        .child(self.text_badge(status_label, status_color))
                         .into_any_element(),
+                    Some(
+                        div()
+                            .child(self.i18n.t("settings_view.general.app_lock_description"))
+                            .into_any_element(),
+                    ),
+                    actions.into_any_element(),
                 ),
-                actions.into_any_element(),
-            ),
-            self.general_checkbox_row(
-                "settings_view.general.app_lock_show_sidebar_icon",
-                "settings_view.general.app_lock_show_sidebar_icon_hint",
-                self.settings_store.settings().sidebar_ui.show_app_lock_icon,
-                |settings, enabled| settings.sidebar_ui.show_app_lock_icon = enabled,
-                cx,
-            ),
-            self.app_lock
-                .error
-                .clone()
-                .map(|error| self.app_lock_error_message(error))
-                .unwrap_or_else(|| div().into_any_element()),
-        ])
+                self.card_separator(),
+                self.general_checkbox_row(
+                    "settings_view.general.app_lock_show_sidebar_icon",
+                    "settings_view.general.app_lock_show_sidebar_icon_hint",
+                    self.settings_store.settings().sidebar_ui.show_app_lock_icon,
+                    |settings, enabled| settings.sidebar_ui.show_app_lock_icon = enabled,
+                    cx,
+                ),
+                self.app_lock
+                    .error
+                    .clone()
+                    .map(|error| self.app_lock_error_message(error))
+                    .unwrap_or_else(|| div().into_any_element()),
+            ],
+        )
     }
 
     fn app_lock_settings_action_button(

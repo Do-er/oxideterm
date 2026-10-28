@@ -511,18 +511,30 @@ impl WorkspaceApp {
         cx: &mut Context<Self>,
     ) -> AnyElement {
         let theme = self.tokens.ui;
-        let groups = self.connection_store.groups().to_vec();
-        let Some(anchor) = self
+        let (roots, children) = self.session_group_tree();
+        let mut group_set = HashSet::new();
+        collect_session_group_paths(&roots, &children, &mut group_set);
+        for group in self.connection_store.groups() {
+            group_set.insert(group.clone());
+        }
+        let mut groups = group_set.into_iter().collect::<Vec<_>>();
+        groups.sort_by_key(|group| group.to_lowercase());
+
+        let (anchor_x, anchor_y) = if let Some(pos) = self.session_manager.read(cx).batch_move_anchor {
+            pos
+        } else if let Some(anchor) = self
             .select_anchors
             .get(&SelectAnchorId::SessionManagerBatchMove)
             .copied()
-        else {
+        {
+            (f32::from(anchor.bounds.left()), f32::from(anchor.bounds.bottom()) + 4.0)
+        } else {
             return div().into_any_element();
         };
         let viewport = window.viewport_size();
         let placement = browser_behavior::clamp_context_menu_position(
-            f32::from(anchor.bounds.left()),
-            f32::from(anchor.bounds.bottom()) + 4.0,
+            anchor_x,
+            anchor_y,
             f32::from(viewport.width),
             f32::from(viewport.height),
             MANAGER_BATCH_MOVE_MENU_WIDTH,
@@ -536,6 +548,9 @@ impl WorkspaceApp {
             .selectable_overflow_y_scroll(
                 &self.selectable_text_scroll_handle("session-manager-batch-move-scroll"),
             )
+            .flex()
+            .flex_col()
+            .py_1()
             .rounded(px(self.tokens.radii.md))
             .border_1()
             .border_color(rgb(theme.border))
@@ -571,14 +586,21 @@ impl WorkspaceApp {
         cx: &mut Context<Self>,
     ) -> AnyElement {
         let theme = self.tokens.ui;
+        let icon: session_icons::SessionIcon = if group.is_some() {
+            LucideIcon::Folder.into()
+        } else {
+            LucideIcon::FolderInput.into()
+        };
         div()
-            .h(px(34.0))
+            .h(px(32.0))
             .px_3()
+            .gap_2()
             .flex()
             .items_center()
             .cursor_pointer()
             .text_size(px(self.tokens.metrics.ui_text_sm))
             .hover(move |row| row.bg(rgb(theme.bg_hover)))
+            .child(icon.render(14.0, rgb(theme.text_muted)))
             .child(self.render_display_text_with_role(
                 SelectableTextRole::NonSelectable,
                 "batch-move-item",

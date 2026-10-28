@@ -988,6 +988,7 @@ impl WorkspaceApp {
                 return false;
             }
             session_manager.show_batch_move = false;
+            session_manager.batch_move_anchor = None;
             cx.notify();
             true
         }) {
