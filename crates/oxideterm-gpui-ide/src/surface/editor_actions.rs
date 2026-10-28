@@ -246,7 +246,7 @@ impl IdeSurface {
 
     pub fn open_active_editor_search(&mut self, cx: &mut Context<Self>) -> bool {
         if let Some(tab_id) = self.workspace.active_tab() {
-            self.show_markdown_source(tab_id);
+            self.show_markdown_source(tab_id, cx);
         }
         let Some(editor) = self.active_editor() else {
             return false;
@@ -962,7 +962,7 @@ impl IdeSurface {
         else {
             return;
         };
-        self.show_markdown_source(tab_id);
+        self.show_markdown_source(tab_id, cx);
         if let Some(editor) = self.editors.get(&tab_id) {
             editor.update(cx, |editor, cx| editor.set_find_query(query, cx));
         }
@@ -988,7 +988,7 @@ impl IdeSurface {
         else {
             return;
         };
-        self.show_markdown_source(tab_id);
+        self.show_markdown_source(tab_id, cx);
         if let Some(editor) = self.editors.get(&tab_id) {
             editor.update(cx, |editor, cx| {
                 editor.reveal_line_column(reveal.line, reveal.column, cx)
@@ -1071,6 +1071,7 @@ impl IdeSurface {
             .map(|tab| tab.id)
         {
             let _ = self.workspace.set_active_tab(tab_id);
+            self.sync_tab_render_caches(cx);
             self.apply_pending_reconnect_dirty_for_tab(tab_id, cx);
             self.apply_pending_search_query_for_location(&location, cx);
             self.apply_pending_editor_reveal_for_location(&location, cx);
@@ -1095,6 +1096,7 @@ impl IdeSurface {
             }
         };
         self.loading_file_tabs.insert(tab_id);
+        self.sync_tab_render_caches(cx);
         self.loading_paths.insert(key.clone());
         let fs = self.fs.clone();
         let generation = self.generation;
@@ -1238,7 +1240,14 @@ impl IdeSurface {
             }));
             editor
         });
-        self.editors.insert(tab_id, editor);
+        if self.editors.insert(tab_id, editor).is_some()
+            && let Some(state) = self.markdown_previews.get_mut(&tab_id)
+        {
+            state.release_cache();
+            state.source_version = None;
+            state.suspended_selection = None;
+        }
+        self.sync_tab_render_caches(cx);
     }
 
     fn apply_pending_reconnect_dirty_for_tab(
@@ -1309,6 +1318,7 @@ impl IdeSurface {
             self.save_tab_with_source(previous_tab_id, oxideterm_audit::AuditSource::System, cx);
         }
         let _ = self.workspace.set_active_tab(tab_id);
+        self.sync_tab_render_caches(cx);
         cx.notify();
     }
 
@@ -1317,6 +1327,7 @@ impl IdeSurface {
         match self.workspace.request_close_tab(tab_id) {
             Ok(None) => {
                 self.remove_editor(tab_id);
+                self.sync_tab_render_caches(cx);
                 self.loading_file_tabs.remove(&tab_id);
                 self.file_open_errors.remove(&tab_id);
                 self.pending_saves.remove(&tab_id);
