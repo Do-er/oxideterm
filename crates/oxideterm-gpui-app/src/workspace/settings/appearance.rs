@@ -114,7 +114,12 @@ impl WorkspaceApp {
     ) -> AnyElement {
         let mut rows = self.appearance_theme_controls(settings, cx);
         rows.push(self.appearance_theme_preview(settings, cx));
-        self.appearance_card(self.i18n.t("settings_view.appearance.theme"), None, rows)
+        self.appearance_card(
+            self.i18n.t("settings_view.appearance.theme"),
+            Some(self.i18n.t("settings_view.appearance.theme_desc")),
+            None,
+            rows,
+        )
     }
 
     pub(in crate::workspace) fn appearance_theme_controls(
@@ -362,6 +367,7 @@ impl WorkspaceApp {
     ) -> AnyElement {
         self.appearance_card(
             self.i18n.t("settings_view.appearance.layout"),
+            Some(self.i18n.t("settings_view.appearance.layout_desc")),
             None,
             vec![
                 self.appearance_row(
@@ -419,6 +425,7 @@ impl WorkspaceApp {
     ) -> AnyElement {
         self.appearance_card(
             self.i18n.t("settings_view.appearance.effects"),
+            Some(self.i18n.t("settings_view.appearance.effects_desc")),
             None,
             vec![
                 self.appearance_row(
@@ -476,9 +483,10 @@ impl WorkspaceApp {
         settings: &PersistedSettings,
         cx: &mut Context<Self>,
     ) -> AnyElement {
-        self.appearance_card_with_icon(
-            LucideIcon::AppWindow,
+        self.appearance_card(
             self.i18n.t("settings_view.appearance.app_icon"),
+            Some(self.i18n.t("settings_view.appearance.app_icon_desc")),
+            None,
             vec![self.appearance_app_icon_row(settings.appearance.app_icon, cx)],
         )
     }
@@ -610,6 +618,36 @@ impl WorkspaceApp {
         settings: &PersistedSettings,
         cx: &mut Context<Self>,
     ) -> AnyElement {
+        let enabled = settings.terminal.background_enabled;
+        let mut rows = vec![self.appearance_row(
+            "settings_view.terminal.bg_enabled",
+            "settings_view.terminal.bg_enabled_hint",
+            checkbox(&self.tokens, String::new(), enabled)
+                .on_mouse_down(
+                    MouseButton::Left,
+                    cx.listener(move |this, _, _, cx| {
+                        this.edit_background_style(|style| style.enabled = !enabled, cx);
+                        cx.stop_propagation();
+                    }),
+                )
+                .into_any_element(),
+        )];
+        if enabled {
+            rows.extend(self.appearance_background_detail_rows(settings, cx));
+        }
+        self.appearance_card(
+            self.i18n.t("settings_view.terminal.bg_title"),
+            Some(self.i18n.t("settings_view.terminal.bg_desc")),
+            None,
+            rows,
+        )
+    }
+
+    fn appearance_background_detail_rows(
+        &self,
+        settings: &PersistedSettings,
+        cx: &mut Context<Self>,
+    ) -> Vec<AnyElement> {
         let terminal = &settings.terminal;
         let editor_open = self.settings_workspace.read(cx).theme_editor().is_some();
         let has_background =
@@ -622,24 +660,6 @@ impl WorkspaceApp {
             rows.push(self.appearance_scheme_control("background-scheme", cx));
             let preview = self.settings_workspace.read(cx).background_preview.clone();
             rows.push(self.appearance_preview(self.settings_store.settings(), preview, cx));
-        }
-        if has_background {
-            let enabled = terminal.background_enabled;
-            rows.push(
-                self.appearance_row(
-                    "settings_view.terminal.bg_enabled",
-                    "settings_view.terminal.bg_enabled_hint",
-                    checkbox(&self.tokens, String::new(), enabled)
-                        .on_mouse_down(
-                            MouseButton::Left,
-                            cx.listener(move |this, _, _, cx| {
-                                this.edit_background_style(|style| style.enabled = !enabled, cx);
-                                cx.stop_propagation();
-                            }),
-                        )
-                        .into_any_element(),
-                ),
-            );
         }
         rows.push(self.appearance_background_image_slot(settings, cx));
         if terminal.background_image.is_some() {
@@ -727,7 +747,6 @@ impl WorkspaceApp {
         rows.push(settings_appearance_card_title(
             &self.tokens,
             self.i18n.t("settings_view.terminal.bg_effects"),
-            None,
         ));
         use oxideterm_settings::GeneratedBackgroundKind;
         rows.push(
@@ -828,11 +847,7 @@ impl WorkspaceApp {
                 rows.push(self.appearance_background_tabs(settings, cx));
             }
         }
-        self.appearance_card_with_icon(
-            LucideIcon::Image,
-            self.i18n.t("settings_view.terminal.bg_title"),
-            rows,
-        )
+        rows
     }
 
     fn appearance_background_effect_rows(
@@ -1115,32 +1130,12 @@ impl WorkspaceApp {
     pub(in crate::workspace) fn appearance_card(
         &self,
         title: String,
+        description: Option<String>,
         actions: Option<AnyElement>,
         rows: Vec<AnyElement>,
     ) -> AnyElement {
         self.appearance_card_shell(
-            settings_appearance_card_header(&self.tokens, title, None, actions),
-            rows,
-        )
-    }
-
-    pub(in crate::workspace) fn appearance_card_with_icon(
-        &self,
-        icon: LucideIcon,
-        title: String,
-        rows: Vec<AnyElement>,
-    ) -> AnyElement {
-        self.appearance_card_shell(
-            settings_appearance_card_header(
-                &self.tokens,
-                title,
-                Some(Self::render_lucide_icon(
-                    icon,
-                    16.0,
-                    rgb(self.tokens.ui.text),
-                )),
-                None,
-            ),
+            settings_appearance_card_header(&self.tokens, title, description, actions),
             rows,
         )
     }

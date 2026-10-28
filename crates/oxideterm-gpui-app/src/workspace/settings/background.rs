@@ -12,7 +12,6 @@ impl WorkspaceApp {
         let mut rows = vec![settings_appearance_card_title(
             &self.tokens,
             self.i18n.t("settings_view.terminal.bg_interactions"),
-            None,
         )];
         for (index, key, enabled, visible) in [
             (

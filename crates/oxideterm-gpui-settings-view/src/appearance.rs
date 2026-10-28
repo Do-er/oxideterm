@@ -63,54 +63,64 @@ pub fn settings_appearance_card_shell(
         .flex()
         .flex_col()
         .gap(px(tokens.metrics.settings_card_gap))
-        .child(header)
         .children(rows);
-    oxideterm_gpui_ui::theme_card_surface(
+    let surfaced = oxideterm_gpui_ui::theme_card_surface(
         card,
         tokens,
         background_active,
         oxideterm_gpui_ui::theme_glass_card_background_alpha(tokens),
-    )
-    .into_any_element()
+    );
+    // Group headers sit outside the card so appearance shares the General page
+    // geometry: label row above, pure card surface below.
+    div()
+        .w_full()
+        .flex()
+        .flex_col()
+        .gap(px(8.0))
+        .child(header)
+        .child(surfaced)
+        .into_any_element()
 }
 
-pub fn settings_appearance_card_title(
-    tokens: &ThemeTokens,
-    title: String,
-    icon: Option<AnyElement>,
-) -> AnyElement {
-    // The title builder takes a rendered icon so the app crate can keep owning
-    // its Lucide asset enum without leaking that type into this view crate.
-    let title_el = div()
-        .flex()
-        .flex_row()
-        .items_center()
-        .gap(px(8.0))
+pub fn settings_appearance_card_title(tokens: &ThemeTokens, title: String) -> AnyElement {
+    div()
         .text_size(px(tokens.metrics.ui_text_sm))
         .font_weight(gpui::FontWeight::MEDIUM)
         .text_color(rgb(tokens.ui.text))
-        .when_some(icon, |title, icon| title.child(icon));
-    title_el.child(title).into_any_element()
+        .child(title)
+        .into_any_element()
 }
 
 pub fn settings_appearance_card_header(
     tokens: &ThemeTokens,
     title: String,
-    icon: Option<AnyElement>,
+    description: Option<String>,
     actions: Option<AnyElement>,
 ) -> AnyElement {
-    // Header layout is presentational; callers supply rendered icons/actions
-    // so app-specific asset and event types do not cross this crate boundary.
-    div()
+    // Header layout is presentational; callers supply actions and
+    // already-translated copy so this crate keeps no app state.
+    let mut row = div()
         .w_full()
         .flex()
         .flex_row()
-        .items_center()
-        .justify_between()
-        .gap(px(12.0))
-        .child(settings_appearance_card_title(tokens, title, icon))
-        .when_some(actions, |header, actions| header.child(actions))
-        .into_any_element()
+        .items_baseline()
+        .gap(px(8.0))
+        .px(px(2.0))
+        .child(settings_appearance_card_title(tokens, title));
+    if let Some(description) = description {
+        row = row.child(
+            div()
+                .flex_1()
+                .min_w(px(0.0))
+                .text_size(px(tokens.metrics.ui_text_xs))
+                .text_color(rgb(tokens.ui.text_muted))
+                .child(description),
+        );
+    }
+    if let Some(actions) = actions {
+        row = row.child(div().ml_auto().child(actions));
+    }
+    row.into_any_element()
 }
 
 pub fn settings_appearance_row(

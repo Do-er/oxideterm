@@ -642,7 +642,7 @@ impl Default for TerminalSettings {
             remote_shell_integration_mode: RemoteShellIntegrationMode::Ask,
             remote_shell_integration_deferred: Default::default(),
             command_marks: TerminalCommandMarksSettings::default(),
-            background_enabled: true,
+            background_enabled: false,
             background_image: None,
             background_opacity: DEFAULT_TERMINAL_BACKGROUND_OPACITY,
             background_blur: 0,
