@@ -310,7 +310,7 @@ use self::session_manager::{SessionManagerState, SessionManagerWorkspaceEvent};
 use self::sidebar::AiInlinePanelState;
 #[cfg(test)]
 use self::sidebar::AiStreamDeliveryEvent;
-use self::sidebar::{ActiveSessionSidebarViewMode, SidebarSection};
+use self::sidebar::SidebarSection;
 use self::sidebar::{
     AiCompactionDelivery, AiCompactionDeliverySender, AiStreamDelivery, AiStreamDeliverySender,
     ai_now_ms,
@@ -402,7 +402,6 @@ const DETACHED_LOCAL_TERMINAL_LIST_OVERSCAN: usize = 4;
 const ACTIVE_SESSION_SIDEBAR_LIST_INITIAL_ITEM_COUNT: usize = 0;
 const ACTIVE_SESSION_SIDEBAR_LIST_ESTIMATED_HEIGHT: f32 = 40.0;
 const ACTIVE_SESSION_SIDEBAR_LIST_OVERSCAN: usize = 8;
-const ACTIVE_SESSION_FOCUS_LIST_ESTIMATED_HEIGHT: f32 = 76.0;
 const OXIDE_EXPORT_CONNECTION_LIST_INITIAL_ITEM_COUNT: usize = 0;
 const OXIDE_EXPORT_CONNECTION_LIST_ESTIMATED_HEIGHT: f32 = 58.0;
 const OXIDE_EXPORT_CONNECTION_LIST_OVERSCAN: usize = 8;
@@ -848,13 +847,11 @@ pub(crate) struct WorkspaceApp {
     needs_active_pane_focus: bool,
     active_sidebar_section: SidebarSection,
     active_surface: ActiveSurface,
-    active_session_sidebar_view_mode: ActiveSessionSidebarViewMode,
     session_sort_menu_open: bool,
     context_tools_menu: Option<ContextSidebarTool>,
     context_tools_menu_scroll: ScrollHandle,
     session_search_open: bool,
     session_search_query: String,
-    active_session_sidebar_focused_node_id: Option<NodeId>,
     active_session_sidebar_list_state: ListState,
     active_session_sidebar_list_cache: RefCell<VirtualListSignatureCache>,
     knowledge_workspace_list_state: ListState,

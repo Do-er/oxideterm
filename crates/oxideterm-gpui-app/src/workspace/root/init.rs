@@ -711,21 +711,12 @@ impl WorkspaceApp {
                 &settings.sidebar_ui.active_section,
             ),
             active_surface: ActiveSurface::Terminal,
-            active_session_sidebar_view_mode: ActiveSessionSidebarViewMode::Tree,
             session_sort_menu_open: false,
             context_tools_menu: None,
             context_tools_menu_scroll: ScrollHandle::new(),
             session_search_open: false,
             session_search_query: String::new(),
-            active_session_sidebar_focused_node_id: settings
-                .tree_ui
-                .focused_node_id
-                .clone()
-                .map(NodeId::new),
-            // Session sidebar is a browser-style tree/focus list from Tauri's
-            // Sidebar.tsx. The same ListState is resynced by mode-specific
-            // row signatures so switching views does not leave stale row
-            // measurements behind.
+            // Session sidebar is a tree list representing active SSH/local sessions.
             active_session_sidebar_list_state: ListState::new(
                 ACTIVE_SESSION_SIDEBAR_LIST_INITIAL_ITEM_COUNT,
                 ListAlignment::Top,

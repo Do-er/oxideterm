@@ -625,7 +625,7 @@ impl Default for TerminalSettings {
             smart_copy: true,
             osc52_clipboard: true,
             osc52_clipboard_read: false,
-            copy_on_select: false,
+            copy_on_select: true,
             middle_click_paste: false,
             right_click_paste: false,
             open_links_with_modifier: true,

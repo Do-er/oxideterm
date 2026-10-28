@@ -180,21 +180,9 @@ impl WorkspaceApp {
                             .when(
                                 self.active_context_sidebar_panel == ContextSidebarPanel::Sessions,
                                 |header| {
-                                    let (view_icon, view_action) =
-                                        match self.active_session_sidebar_view_mode {
-                                            ActiveSessionSidebarViewMode::Tree => (
-                                                LucideIcon::Folder,
-                                                SidebarActionKind::ToggleSessionView,
-                                            ),
-                                            ActiveSessionSidebarViewMode::Focus => (
-                                                LucideIcon::ListChecks,
-                                                SidebarActionKind::ToggleSessionView,
-                                            ),
-                                        };
                                     header
                                         .child(self.render_session_search_button(cx))
                                         .child(self.render_session_sort_button(cx))
-                                        .child(self.render_sidebar_action(view_icon, view_action, cx))
                                         .child(self.render_sidebar_action(
                                             LucideIcon::Plus,
                                             SidebarActionKind::NewConnection,
@@ -486,42 +474,25 @@ impl WorkspaceApp {
     ) -> AnyElement {
         let theme = self.tokens.ui;
         let label = match action {
-            SidebarActionKind::ToggleSessionView => match self.active_session_sidebar_view_mode {
-                ActiveSessionSidebarViewMode::Tree => self.i18n.t("sidebar.tooltips.switch_focus"),
-                ActiveSessionSidebarViewMode::Focus => self.i18n.t("sidebar.tooltips.switch_tree"),
-            },
             SidebarActionKind::NewConnection => self.i18n.t("sidebar.tooltips.new_connection"),
         };
 
-        let toggle_focus_active = action == SidebarActionKind::ToggleSessionView
-            && self.active_session_sidebar_view_mode == ActiveSessionSidebarViewMode::Focus;
-
         // Tauri sidebar header actions are icon buttons with title tooltips.
-        // The view-mode action is the old Folder/ListChecks toggle from
-        // Sidebar.tsx; keep its active "secondary" chrome only in focus mode.
         div()
             .ml_1()
             .child(self.workspace_tooltip_icon_button(
                 icon,
                 self.tokens.metrics.sidebar_action_icon_size,
                 rgb(theme.text),
-                IconButtonOptions {
-                    has_background: toggle_focus_active,
-                    background: toggle_focus_active.then_some(rgb(theme.bg_hover)),
-                    hover_background: Some(rgb(theme.bg_hover)),
-                    ..IconButtonOptions::opaque_toolbar(
-                        self.tokens.metrics.sidebar_action_size,
-                        ButtonRadius::Md,
-                    )
-                },
+                IconButtonOptions::opaque_toolbar(
+                    self.tokens.metrics.sidebar_action_size,
+                    ButtonRadius::Md,
+                ),
                 label,
                 "sidebar-action",
                 false,
                 cx.listener(move |this, _event, window, cx| {
                     match action {
-                        SidebarActionKind::ToggleSessionView => {
-                            this.toggle_active_session_sidebar_view(cx)
-                        }
                         SidebarActionKind::NewConnection => {
                             this.open_new_connection_form(window, cx)
                         }
@@ -1058,7 +1029,6 @@ pub(in crate::workspace) fn notification_sidebar_row_signatures(
 
 #[derive(Clone, Copy, Debug, Eq, PartialEq)]
 pub(in crate::workspace) enum SidebarActionKind {
-    ToggleSessionView,
     NewConnection,
 }
 

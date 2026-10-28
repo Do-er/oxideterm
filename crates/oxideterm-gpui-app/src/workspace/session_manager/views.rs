@@ -1096,7 +1096,7 @@ impl WorkspaceApp {
         });
         self.session_manager_card_surface(self.tokens.radii.lg, has_background)
             .when(is_selected, |card| {
-                card.bg(rgba((theme.accent << 8) | 0x12))
+                card.bg(rgba((theme.accent << 8) | 0x24))
             })
             .hover(|card| card.bg(theme_row_hover_bg(theme.bg_hover, has_background)))
             .min_w(px(260.0))
@@ -1784,8 +1784,13 @@ impl WorkspaceApp {
             .items_center()
             .gap(px(self.tokens.spacing.two))
             .relative()
+            .bg(if is_selected {
+                rgba((theme.accent << 8) | 0x24)
+            } else {
+                theme_secondary_bg(theme.bg_secondary, has_background)
+            })
             .when(is_selected, |row| {
-                row.bg(rgba((theme.accent << 8) | 0x12)).child(
+                row.child(
                     div()
                         .absolute()
                         .left_0()
