@@ -107,6 +107,11 @@ impl WorkspaceApp {
                 "sessions".to_string(),
                 LucideIcon::Link2,
             ),
+            ContextSidebarPanel::Connections => (
+                self.i18n.t("sidebar.panels.session_manager"),
+                "connections".to_string(),
+                LucideIcon::Server,
+            ),
             ContextSidebarPanel::Assistant => (
                 self.i18n.t("sidebar.panels.ai"),
                 "assistant".to_string(),
@@ -214,6 +219,9 @@ impl WorkspaceApp {
                                 let content = match self.active_context_sidebar_panel {
                                     ContextSidebarPanel::Sessions => {
                                         self.render_sessions_context_panel(window, cx)
+                                    }
+                                    ContextSidebarPanel::Connections => {
+                                        self.render_session_manager_surface(window, cx)
                                     }
                                     ContextSidebarPanel::Assistant => {
                                         self.render_ai_sidebar_content(cx)

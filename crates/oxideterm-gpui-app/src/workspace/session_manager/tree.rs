@@ -8,30 +8,30 @@ impl WorkspaceApp {
         cx: &mut Context<Self>,
     ) -> AnyElement {
         let theme = self.tokens.ui;
-        let (selected_count, search_query) = {
+        let (selected_count, search_query, is_tree_mode) = {
             let manager = self.session_manager.read(cx);
-            (manager.selected_items.len(), manager.search_query.clone())
+            (
+                manager.selected_items.len(),
+                manager.search_query.clone(),
+                manager.view_mode == SessionManagerViewMode::Tree,
+            )
         };
-        let viewport_width = f32::from(window.viewport_size().width);
-        let show_primary_labels = viewport_width >= MANAGER_RESPONSIVE_SM;
-        let show_secondary_labels = viewport_width >= MANAGER_RESPONSIVE_MD;
         let workspace = cx.entity();
+        let _ = window;
         div()
-            .min_h(px(48.0))
+            .h(px(36.0))
             .flex()
-            .flex_wrap()
             .items_center()
-            .gap(px(8.0))
-            .px_3()
-            .py_2()
+            .gap(px(4.0))
+            .px_2()
             .border_b_1()
             .border_color(self.workspace_chrome_divider())
             .bg(theme_bg(theme.bg, has_background))
+            // Search Input
             .child(
                 div()
                     .flex_1()
-                    .min_w(px(160.0))
-                    .max_w(px(MANAGER_TOOLBAR_SEARCH_WIDTH))
+                    .min_w(px(60.0))
                     .child(self.render_session_text_input(
                         SessionManagerInput::Search,
                         &search_query,
@@ -39,54 +39,141 @@ impl WorkspaceApp {
                         cx,
                     )),
             )
-            .child(
-                self.render_toolbar_button(
-                    LucideIcon::Plus,
-                    self.i18n.t("sessionManager.toolbar.new_connection"),
-                    ButtonVariant::Ghost,
-                    has_background,
-                    show_primary_labels,
-                    cx.listener(|this, _event, window, cx| {
-                        this.open_new_connection_form(window, cx);
-                        cx.stop_propagation();
-                    }),
-                )
-                .flex_none(),
-            )
-            .child(
-                div()
-                    .flex_none()
-                    .border_l_1()
-                    .border_color(self.workspace_chrome_divider())
-                    .pl(px(8.0))
-                    .child(self.render_session_manager_sort_trigger(
-                        has_background,
-                        show_secondary_labels,
-                        cx,
-                    )),
-            )
-            .child(
-                div()
-                    .flex_none()
-                    .border_l_1()
-                    .border_color(self.workspace_chrome_divider())
-                    .pl(px(8.0))
-                    .child(self.render_session_manager_view_mode_trigger(
-                        has_background,
-                        show_secondary_labels,
-                        cx,
-                    )),
-            )
+            // New Connection (Icon only)
+            .child(self.workspace_tooltip_icon_button(
+                LucideIcon::Plus,
+                14.0,
+                rgb(self.tokens.ui.text),
+                IconButtonOptions {
+                    radius: ButtonRadius::Md,
+                    hover_background: Some(rgb(self.tokens.ui.bg_hover)),
+                    idle_opacity: 1.0,
+                    ..IconButtonOptions::compact(24.0)
+                },
+                self.i18n.t("sessionManager.toolbar.new_connection"),
+                "session-new-connection",
+                true,
+                cx.listener(|this, _event, window, cx| {
+                    this.open_new_connection_form(window, cx);
+                    cx.stop_propagation();
+                }),
+                cx.entity(),
+            ))
+            // New Group (Icon only)
+            .child(self.workspace_tooltip_icon_button(
+                LucideIcon::FolderPlus,
+                14.0,
+                rgb(self.tokens.ui.text),
+                IconButtonOptions {
+                    radius: ButtonRadius::Md,
+                    hover_background: Some(rgb(self.tokens.ui.bg_hover)),
+                    idle_opacity: 1.0,
+                    ..IconButtonOptions::compact(24.0)
+                },
+                self.i18n.t("sessionManager.folder_tree.new_group"),
+                "session-new-group",
+                true,
+                cx.listener(|this, _event, _window, cx| {
+                    this.open_session_group_creation(cx);
+                    cx.stop_propagation();
+                }),
+                cx.entity(),
+            ))
+            // When in Tree mode: Expand All & Collapse All
+            .when(is_tree_mode, |toolbar| {
+                toolbar
+                    .child(self.workspace_tooltip_icon_button(
+                        LucideIcon::ChevronDown,
+                        14.0,
+                        rgb(self.tokens.ui.text),
+                        IconButtonOptions {
+                            radius: ButtonRadius::Md,
+                            hover_background: Some(rgb(self.tokens.ui.bg_hover)),
+                            idle_opacity: 1.0,
+                            ..IconButtonOptions::compact(24.0)
+                        },
+                        self.i18n.t("sessionManager.views.expand_all"),
+                        "session-expand-all",
+                        true,
+                        cx.listener(|this, _event, _window, cx| {
+                            let (roots, children) = this.session_group_tree();
+                            let mut groups = HashSet::new();
+                            collect_session_group_paths(&roots, &children, &mut groups);
+                            this.session_manager.update(cx, |manager, cx| {
+                                manager.expanded_groups = groups;
+                                cx.notify();
+                            });
+                            cx.stop_propagation();
+                        }),
+                        cx.entity(),
+                    ))
+                    .child(self.workspace_tooltip_icon_button(
+                        LucideIcon::ChevronRight,
+                        14.0,
+                        rgb(self.tokens.ui.text),
+                        IconButtonOptions {
+                            radius: ButtonRadius::Md,
+                            hover_background: Some(rgb(self.tokens.ui.bg_hover)),
+                            idle_opacity: 1.0,
+                            ..IconButtonOptions::compact(24.0)
+                        },
+                        self.i18n.t("sessionManager.views.collapse_all"),
+                        "session-collapse-all",
+                        true,
+                        cx.listener(|this, _event, _window, cx| {
+                            this.session_manager.update(cx, |manager, cx| {
+                                manager.expanded_groups.clear();
+                                cx.notify();
+                            });
+                            cx.stop_propagation();
+                        }),
+                        cx.entity(),
+                    ))
+            })
+            // Toggle View Mode (Tree <-> List)
+            .child(self.workspace_tooltip_icon_button(
+                if is_tree_mode {
+                    LucideIcon::LayoutList
+                } else {
+                    LucideIcon::ListTree
+                },
+                14.0,
+                rgb(self.tokens.ui.text),
+                IconButtonOptions {
+                    radius: ButtonRadius::Md,
+                    hover_background: Some(rgb(self.tokens.ui.bg_hover)),
+                    idle_opacity: 1.0,
+                    ..IconButtonOptions::compact(24.0)
+                },
+                if is_tree_mode {
+                    self.i18n.t("sessionManager.views.list")
+                } else {
+                    self.i18n.t("sessionManager.views.tree")
+                },
+                "session-toggle-view-mode",
+                true,
+                cx.listener(|this, _event, _window, cx| {
+                    this.session_manager.update(cx, |manager, cx| {
+                        manager.view_mode = match manager.view_mode {
+                            SessionManagerViewMode::Tree => SessionManagerViewMode::List,
+                            _ => SessionManagerViewMode::Tree,
+                        };
+                        cx.notify();
+                    });
+                    cx.stop_propagation();
+                }),
+                cx.entity(),
+            ))
+            // More actions (SSH Config import & Connection Importers)
+            .child(self.render_session_manager_more_menu_trigger(has_background, cx))
+            // Batch Actions (when items are selected)
             .when(selected_count > 0, |toolbar| {
                 toolbar.child(
-                    // Match Tauri's selected-action island: it must not live
-                    // inside the spacer, or GPUI can shrink the spacer to zero
-                    // and let selected buttons paint over later toolbar items.
                     div()
                         .flex_none()
                         .flex()
                         .items_center()
-                        .gap(px(8.0))
+                        .gap(px(4.0))
                         .child(
                             div()
                                 .flex_none()
@@ -97,10 +184,19 @@ impl WorkspaceApp {
                         )
                         .child(select_anchor_probe(
                             SelectAnchorId::SessionManagerBatchMove,
-                            self.render_session_manager_button(
+                            self.workspace_tooltip_icon_button(
                                 LucideIcon::FolderInput,
+                                14.0,
+                                rgb(self.tokens.ui.text),
+                                IconButtonOptions {
+                                    radius: ButtonRadius::Md,
+                                    hover_background: Some(rgb(self.tokens.ui.bg_hover)),
+                                    idle_opacity: 1.0,
+                                    ..IconButtonOptions::compact(24.0)
+                                },
                                 self.i18n.t("sessionManager.batch.move_to_group"),
-                                ButtonVariant::Ghost,
+                                "session-batch-move",
+                                true,
                                 cx.listener(|this, _event, _window, cx| {
                                     this.session_manager.update(cx, |manager, cx| {
                                         manager.show_batch_move = !manager.show_batch_move;
@@ -108,101 +204,70 @@ impl WorkspaceApp {
                                     });
                                     cx.stop_propagation();
                                 }),
-                            )
-                            .flex_none(),
+                                cx.entity(),
+                            ),
                             move |anchor, _window, cx| {
                                 let _ = workspace.update(cx, |this, cx| {
                                     this.update_select_anchor(anchor, cx);
                                 });
                             },
                         ))
-                        .child(
-                            self.render_session_manager_button(
-                                LucideIcon::Trash2,
-                                self.i18n.t("sessionManager.batch.delete"),
-                                ButtonVariant::Ghost,
-                                cx.listener(|this, _event, _window, cx| {
-                                    this.request_delete_selected_connections(cx);
-                                    cx.stop_propagation();
-                                }),
-                            )
-                            .flex_none(),
-                        ),
+                        .child(self.workspace_tooltip_icon_button(
+                            LucideIcon::Trash2,
+                            14.0,
+                            rgb(self.tokens.ui.error),
+                            IconButtonOptions {
+                                radius: ButtonRadius::Md,
+                                hover_background: Some(rgb(self.tokens.ui.bg_hover)),
+                                idle_opacity: 1.0,
+                                ..IconButtonOptions::compact(24.0)
+                            },
+                            self.i18n.t("sessionManager.batch.delete"),
+                            "session-batch-delete",
+                            true,
+                            cx.listener(|this, _event, _window, cx| {
+                                this.request_delete_selected_connections(cx);
+                                cx.stop_propagation();
+                            }),
+                            cx.entity(),
+                        )),
                 )
             })
             .into_any_element()
     }
 
-    pub(super) fn render_session_manager_view_mode_trigger(
+    pub(super) fn render_session_manager_more_menu_trigger(
         &self,
-        has_background: bool,
-        show_label: bool,
+        _has_background: bool,
         cx: &mut Context<Self>,
     ) -> AnyElement {
-        let (current_mode, menu_open) = {
-            let manager = self.session_manager.read(cx);
-            (manager.view_mode, manager.view_mode_menu_open)
-        };
         let workspace = cx.entity();
-        let trigger = self.render_toolbar_button(
-            current_mode.icon(),
-            self.i18n.t(current_mode.label_key()),
-            ButtonVariant::Ghost,
-            has_background,
-            show_label,
-            cx.listener(move |this, _event, _window, cx| {
-                this.toggle_session_view_mode_menu(cx);
-                cx.notify();
-                cx.stop_propagation();
-            }),
-        );
-
-        // Keep the trigger rect warm while closed, matching Radix's immediate
-        // trigger measurement and avoiding pointer-coordinate drift.
-        select_anchor_probe(
-            SelectAnchorId::SessionManagerViewMode,
-            trigger.when(menu_open, |trigger| trigger.underline()),
-            move |anchor, _window, cx| {
-                let _ = workspace.update(cx, |this, cx| {
-                    this.update_select_anchor(anchor, cx);
-                });
+        let trigger = self.workspace_tooltip_icon_button(
+            LucideIcon::MoreVertical,
+            14.0,
+            rgb(self.tokens.ui.text),
+            IconButtonOptions {
+                radius: ButtonRadius::Md,
+                hover_background: Some(rgb(self.tokens.ui.bg_hover)),
+                idle_opacity: 1.0,
+                ..IconButtonOptions::compact(24.0)
             },
-        )
-        .into_any_element()
-    }
-
-    pub(super) fn render_session_manager_sort_trigger(
-        &self,
-        has_background: bool,
-        show_label: bool,
-        cx: &mut Context<Self>,
-    ) -> AnyElement {
-        let (direction, sort_field, menu_open) = {
-            let manager = self.session_manager.read(cx);
-            (
-                manager.sort_direction,
-                manager.sort_field,
-                manager.sort_menu_open,
-            )
-        };
-        let label = self.i18n.t(sort_field.label_key());
-        let workspace = cx.entity();
-        let trigger = self.render_toolbar_button(
-            direction.icon(),
-            label,
-            ButtonVariant::Ghost,
-            has_background,
-            show_label,
+            self.i18n.t("sidebar.panels.more_tools"),
+            "session-more-menu",
+            true,
             cx.listener(move |this, _event, _window, cx| {
-                this.toggle_session_sort_menu(cx);
-                cx.notify();
+                this.session_manager.update(cx, |manager, cx| {
+                    manager.sort_menu_open = !manager.sort_menu_open;
+                    cx.notify();
+                });
                 cx.stop_propagation();
             }),
+            cx.entity(),
         );
 
         select_anchor_probe(
             SelectAnchorId::SessionManagerSort,
-            trigger.when(menu_open, |trigger| trigger.underline()),
+            trigger,
             move |anchor, _window, cx| {
                 let _ = workspace.update(cx, |this, cx| {
                     this.update_select_anchor(anchor, cx);
@@ -214,72 +279,11 @@ impl WorkspaceApp {
 
     pub(super) fn render_session_manager_view_mode_menu(
         &self,
-        window: &Window,
-        has_background: bool,
-        cx: &mut Context<Self>,
+        _window: &Window,
+        _has_background: bool,
+        _cx: &mut Context<Self>,
     ) -> AnyElement {
-        let Some(anchor) = self
-            .select_anchors
-            .get(&SelectAnchorId::SessionManagerViewMode)
-            .copied()
-        else {
-            return div().into_any_element();
-        };
-        let viewport = window.viewport_size();
-        let placement = browser_behavior::clamp_context_menu_position(
-            f32::from(anchor.bounds.right()) - MANAGER_VIEW_MODE_MENU_WIDTH,
-            f32::from(anchor.bounds.bottom()) + 4.0,
-            f32::from(viewport.width),
-            f32::from(viewport.height),
-            MANAGER_VIEW_MODE_MENU_WIDTH,
-            MANAGER_VIEW_MODE_MENU_HEIGHT,
-            8.0,
-        );
-        let modes = [
-            SessionManagerViewMode::Tree,
-            SessionManagerViewMode::Grid,
-            SessionManagerViewMode::List,
-        ];
-        let mut menu = context_menu_event_boundary(
-            dropdown_menu_content(&self.tokens).w(px(MANAGER_VIEW_MODE_MENU_WIDTH)),
-        );
-        let current_mode = self.session_manager.read(cx).view_mode;
-        for mode in modes {
-            let active = current_mode == mode;
-            let item = dropdown_menu_item(
-                &self.tokens,
-                self.i18n.t(mode.label_key()),
-                DropdownMenuItemKind::Radio(active),
-                false,
-                false,
-            );
-            menu = menu.child(self.render_session_manager_menu_action(
-                item,
-                false,
-                false,
-                has_background,
-                move |this, _event, _window, cx| {
-                    this.session_manager.update(cx, |manager, cx| {
-                        manager.view_mode = mode;
-                        cx.notify();
-                    });
-                    this.close_session_row_menus(cx);
-                    cx.stop_propagation();
-                },
-                cx,
-            ));
-        }
-        // The trigger probe reports window coordinates. Mount this like the
-        // settings/AI popovers instead of as a surface-local absolute child.
-        deferred(
-            anchored()
-                .anchor(Corner::TopLeft)
-                .position(gpui::point(px(placement.x), px(placement.y)))
-                .position_mode(AnchoredPositionMode::Window)
-                .child(overlay_content_boundary(menu)),
-        )
-        .with_priority(oxideterm_gpui_ui::modal::TAURI_POPOVER_LAYER_PRIORITY)
-        .into_any_element()
+        div().into_any_element()
     }
 
     pub(super) fn render_session_manager_sort_menu(
@@ -296,63 +300,66 @@ impl WorkspaceApp {
             return div().into_any_element();
         };
         let viewport = window.viewport_size();
+        let menu_width = 180.0;
+        let menu_height = 80.0;
         let placement = browser_behavior::clamp_context_menu_position(
-            f32::from(anchor.bounds.right()) - MANAGER_SORT_MENU_WIDTH,
+            f32::from(anchor.bounds.right()) - menu_width,
             f32::from(anchor.bounds.bottom()) + 4.0,
             f32::from(viewport.width),
             f32::from(viewport.height),
-            MANAGER_SORT_MENU_WIDTH,
-            MANAGER_SORT_MENU_HEIGHT,
+            menu_width,
+            menu_height,
             8.0,
         );
-        let fields = [
-            SessionSortField::Name,
-            SessionSortField::Host,
-            SessionSortField::Port,
-            SessionSortField::Username,
-            SessionSortField::AuthType,
-            SessionSortField::Group,
-            SessionSortField::LastUsed,
-        ];
         let mut menu = context_menu_event_boundary(
-            dropdown_menu_content(&self.tokens).w(px(MANAGER_SORT_MENU_WIDTH)),
+            dropdown_menu_content(&self.tokens).w(px(menu_width)),
         );
-        let (current_field, current_direction) = {
-            let manager = self.session_manager.read(cx);
-            (manager.sort_field, manager.sort_direction)
-        };
-        for field in fields {
-            let active = current_field == field;
-            let mut label = self.i18n.t(field.label_key());
-            if active {
-                label.push_str(match current_direction {
-                    SortDirection::Asc => " ↑",
-                    SortDirection::Desc => " ↓",
-                });
-            }
-            let item = dropdown_menu_item(
-                &self.tokens,
-                label,
-                DropdownMenuItemKind::Radio(active),
-                false,
-                false,
-            );
-            menu = menu.child(self.render_session_manager_menu_action(
-                item,
-                false,
-                false,
-                has_background,
-                move |this, _event, _window, cx| {
-                    this.set_session_sort_field(field, cx);
-                    this.close_session_row_menus(cx);
+        let ssh_config_item = dropdown_menu_item(
+            &self.tokens,
+            self.i18n.t("settings_view.connections.ssh_config.title"),
+            DropdownMenuItemKind::Plain,
+            false,
+            false,
+        );
+        menu = menu.child(self.render_session_manager_menu_action(
+            ssh_config_item,
+            false,
+            false,
+            has_background,
+            |this, _event, _window, cx| {
+                this.session_manager.update(cx, |m, cx| {
+                    m.sort_menu_open = false;
                     cx.notify();
-                    cx.stop_propagation();
-                },
-                cx,
-            ));
-        }
-        // The sort trigger is inside the tab content, while the popup floats
-        // at window level just like Radix DropdownMenuContent in Tauri.
+                });
+                this.close_session_row_menus(cx);
+                this.open_settings_ssh_config_import_dialog(cx);
+                cx.stop_propagation();
+            },
+            cx,
+        ));
+        let importers_item = dropdown_menu_item(
+            &self.tokens,
+            self.i18n.t("settings_view.connections.importers.title"),
+            DropdownMenuItemKind::Plain,
+            false,
+            false,
+        );
+        menu = menu.child(self.render_session_manager_menu_action(
+            importers_item,
+            false,
+            false,
+            has_background,
+            |this, _event, window, cx| {
+                this.session_manager.update(cx, |m, cx| {
+                    m.sort_menu_open = false;
+                    cx.notify();
+                });
+                this.close_session_row_menus(cx);
+                this.open_connection_importers_settings(window, cx);
+                cx.stop_propagation();
+            },
+            cx,
+        ));
         deferred(
             anchored()
                 .anchor(Corner::TopLeft)

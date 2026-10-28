@@ -288,6 +288,7 @@ impl WorkspaceApp {
         });
     }
 
+    #[allow(dead_code)]
     pub(super) fn toggle_session_view_mode_menu(&mut self, cx: &mut Context<Self>) {
         self.session_manager.update(cx, |session_manager, cx| {
             let was_open = session_manager.view_mode_menu_open;
@@ -301,6 +302,7 @@ impl WorkspaceApp {
         });
     }
 
+    #[allow(dead_code)]
     pub(super) fn toggle_session_sort_menu(&mut self, cx: &mut Context<Self>) {
         self.session_manager.update(cx, |session_manager, cx| {
             let was_open = session_manager.sort_menu_open;
@@ -314,6 +316,7 @@ impl WorkspaceApp {
         });
     }
 
+    #[allow(dead_code)]
     pub(super) fn set_session_sort_field(
         &mut self,
         field: SessionSortField,

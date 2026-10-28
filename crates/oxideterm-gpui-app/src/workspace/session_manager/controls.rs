@@ -1,6 +1,7 @@
 use super::*;
 
 impl WorkspaceApp {
+    #[allow(dead_code)]
     pub(super) fn render_session_manager_button(
         &self,
         icon: LucideIcon,
@@ -26,6 +27,7 @@ impl WorkspaceApp {
         )
     }
 
+    #[allow(dead_code)]
     pub(super) fn render_toolbar_button(
         &self,
         icon: LucideIcon,

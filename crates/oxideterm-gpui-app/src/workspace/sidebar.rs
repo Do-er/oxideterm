@@ -54,6 +54,7 @@ pub(super) enum SidebarSection {
 #[derive(Clone, Copy, Debug, Eq, PartialEq)]
 pub(super) enum ContextSidebarPanel {
     Sessions,
+    Connections,
     Assistant,
     HostTools,
     PluginPanel,

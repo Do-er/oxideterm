@@ -1,3 +1,5 @@
+#![allow(dead_code)]
+
 use std::{
     collections::{HashMap, HashSet, VecDeque, hash_map::DefaultHasher},
     hash::{Hash, Hasher},
@@ -91,8 +93,8 @@ const MANAGER_RECENT_ICON_GLYPH_SIZE: f32 = 14.0;
 const MANAGER_GRID_CARD_MIN_WIDTH: f32 = 260.0;
 const MANAGER_GRID_CARD_BASIS: f32 = 320.0;
 const MANAGER_GRID_ESTIMATED_ROW_HEIGHT: f32 = 84.0;
-const MANAGER_LIST_ESTIMATED_ROW_HEIGHT: f32 = 57.0;
-const MANAGER_TREE_ESTIMATED_ROW_HEIGHT: f32 = 52.0;
+const MANAGER_LIST_ESTIMATED_ROW_HEIGHT: f32 = 36.0;
+const MANAGER_TREE_ESTIMATED_ROW_HEIGHT: f32 = 36.0;
 const MANAGER_MAIN_VIEW_OVERSCAN: usize = 6;
 const MANAGER_ROW_ACTION_MENU_WIDTH: f32 = 176.0;
 const MANAGER_ROW_ACTION_MENU_CONNECTION_HEIGHT: f32 = 120.0;
@@ -484,8 +486,8 @@ impl Default for SessionManagerState {
             selected_group: None,
             // Group management is contextual in the tree, so make that capability discoverable.
             view_mode: SessionManagerViewMode::Tree,
-            sort_field: SessionSortField::LastUsed,
-            sort_direction: SortDirection::Desc,
+            sort_field: SessionSortField::Name,
+            sort_direction: SortDirection::Asc,
             search_query: String::new(),
             selected_items: HashSet::new(),
             view_mode_menu_open: false,

@@ -210,6 +210,34 @@ impl WorkspaceApp {
             .into_any_element()
     }
 
+    fn render_connections_context_tool(&self, cx: &mut Context<Self>) -> AnyElement {
+        let active = self.context_sidebar_visible()
+            && self.active_context_sidebar_panel == ContextSidebarPanel::Connections;
+        div()
+            .flex_none()
+            .mb(px(self.tokens.metrics.activity_icon_gap))
+            .child(self.workspace_tooltip_icon_button(
+                LucideIcon::Server,
+                self.tokens.metrics.activity_icon_glyph_size,
+                rgb(if active {
+                    self.tokens.ui.accent
+                } else {
+                    self.tokens.ui.text
+                }),
+                self.context_tool_button_options(active),
+                self.i18n.t("sidebar.panels.session_manager"),
+                "context-connections",
+                true,
+                cx.listener(|this, _, _, cx| {
+                    this.refresh_session_manager_ssh_config_hosts(cx);
+                    let _ = this.toggle_context_sidebar_panel(ContextSidebarPanel::Connections, cx);
+                    cx.stop_propagation();
+                }),
+                cx.entity(),
+            ))
+            .into_any_element()
+    }
+
     pub(in crate::workspace) fn render_context_tool_buttons(
         &self,
         window: &Window,
@@ -225,7 +253,8 @@ impl WorkspaceApp {
             .flex_col()
             .items_center()
             .pt(px(PRIMARY_SIDEBAR_CONTENT_TOP_INSET))
-            .child(self.render_sessions_context_tool(cx));
+            .child(self.render_sessions_context_tool(cx))
+            .child(self.render_connections_context_tool(cx));
         if ai_enabled {
             buttons = buttons.child(self.render_activity_icon(
                 SidebarSection::Assistant,

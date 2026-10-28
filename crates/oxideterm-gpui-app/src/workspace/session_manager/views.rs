@@ -658,12 +658,10 @@ impl WorkspaceApp {
     pub(super) fn sort_session_manager_display_items(
         &self,
         items: &mut [SessionManagerDisplayItem],
-        cx: &App,
+        _cx: &App,
     ) {
-        let manager = self.session_manager.read(cx);
-        // Sort once at the display-model boundary so grid/list/tree cannot
-        // drift apart and reintroduce view-specific ordering bugs.
-        sort_session_manager_items(items, manager.sort_field, manager.sort_direction);
+        // Fixed sort by name ascending for consistent, clean ordering.
+        sort_session_manager_items(items, SessionSortField::Name, SortDirection::Asc);
     }
 
     fn session_manager_grid_columns(&self, window: &Window, cx: &App) -> (usize, usize) {
@@ -1141,7 +1139,6 @@ impl WorkspaceApp {
                     ),
                 )
             })
-            .child(self.render_session_manager_item_icon(item, theme.text))
             .child(
                 div()
                     .min_w(px(0.0))
@@ -1202,33 +1199,25 @@ impl WorkspaceApp {
             } else {
                 rgb(theme.bg)
             })
-            .child(self.render_session_manager_view_actions(false, has_background, cx))
             .child(
                 div()
                     .border_b_1()
                     .border_color(theme_border(theme.border, has_background))
                     .bg(theme_secondary_bg(theme.bg_secondary, has_background))
-                    .px_3()
+                    .px_2()
                     .py_1()
                     .flex()
                     .items_center()
-                    .gap(px(self.tokens.spacing.three))
+                    .gap(px(self.tokens.spacing.two))
                     .text_size(px(MANAGER_TABLE_HEADER_TEXT_SIZE))
                     .font_weight(gpui::FontWeight::SEMIBOLD)
                     .text_color(rgb(theme.text_muted))
                     .child(div().w(px(MANAGER_SELECTION_COLUMN_WIDTH)).flex_none())
-                    .child(div().w(px(MANAGER_ROW_ICON_SIZE)).flex_none())
                     .child(
                         div()
                             .min_w(px(0.0))
                             .flex_1()
                             .child(self.i18n.t("sessionManager.table.name")),
-                    )
-                    .child(
-                        div()
-                            .w(px(MANAGER_LIST_LAST_USED_WIDTH))
-                            .flex_none()
-                            .child(self.i18n.t("sessionManager.table.last_used")),
                     )
                     .child(
                         div()
@@ -1287,7 +1276,6 @@ impl WorkspaceApp {
             } else {
                 rgb(theme.bg)
             })
-            .child(self.render_session_manager_view_actions(true, has_background, cx))
             .child(
                 div()
                     .id("session-manager-tree-root-drop-target")
@@ -1550,9 +1538,9 @@ impl WorkspaceApp {
             .min_w(px(0.0))
             .border_b_1()
             .border_color(self.workspace_chrome_divider())
-            .px_3()
-            .py_2()
-            .pl(px(depth as f32 * 24.0 + 12.0))
+            .px_2()
+            .py_1()
+            .pl(px(depth as f32 * 14.0 + 8.0))
             .flex()
             .items_center()
             .gap(px(self.tokens.spacing.two))
@@ -1677,7 +1665,6 @@ impl WorkspaceApp {
         let open_target = item.open_target();
         let selection_target = item.selection_target();
         let checkbox_target = selection_target.clone();
-        let last_used = item.last_used();
         let subtitle = if matches!(item, SessionManagerDisplayItem::SshConfig(_)) {
             format!(
                 "{} · {}",
@@ -1790,12 +1777,12 @@ impl WorkspaceApp {
             .min_w(px(0.0))
             .border_b_1()
             .border_color(self.workspace_chrome_divider())
-            .px_3()
-            .py_2()
-            .pl(px(depth as f32 * 24.0 + 12.0))
+            .px_2()
+            .py_1()
+            .pl(px(depth as f32 * 14.0 + 8.0))
             .flex()
             .items_center()
-            .gap(px(self.tokens.spacing.three))
+            .gap(px(self.tokens.spacing.two))
             .relative()
             .when(is_selected, |row| {
                 row.bg(rgba((theme.accent << 8) | 0x12)).child(
@@ -1831,7 +1818,6 @@ impl WorkspaceApp {
             )
             .when_some(drag_handle, |row, handle| row.child(handle))
             .child(selection)
-            .child(self.render_session_manager_item_icon(item, theme.text))
             .child(
                 div()
                     .min_w(px(0.0))
@@ -1856,17 +1842,10 @@ impl WorkspaceApp {
                             .child(subtitle),
                     ),
             )
-            .child(
-                div()
-                    .w(px(MANAGER_LIST_LAST_USED_WIDTH))
-                    .flex_none()
-                    .text_size(px(MANAGER_ROW_META_TEXT_SIZE))
-                    .text_color(rgb(theme.text_muted))
-                    .child(format_last_used(last_used.as_deref(), &self.i18n)),
-            )
             .child(self.render_session_manager_display_item_actions(item, has_background, cx))
     }
 
+    #[allow(dead_code)]
     pub(super) fn render_session_manager_item_icon(
         &self,
         item: &SessionManagerDisplayItem,

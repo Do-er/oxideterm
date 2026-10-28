@@ -161,7 +161,6 @@ impl ClientTitlebarIcon {
 #[derive(Clone, Copy, Debug, Eq, PartialEq)]
 enum TitlebarEntry {
     Files,
-    Connections,
     Runtime,
     Knowledge,
     Notifications,
@@ -170,9 +169,8 @@ enum TitlebarEntry {
 
 impl TitlebarEntry {
     // Left-to-right order of the title-bar feature entries.
-    const ALL: [Self; 6] = [
+    const ALL: [Self; 5] = [
         Self::Files,
-        Self::Connections,
         Self::Runtime,
         Self::Knowledge,
         Self::Notifications,
@@ -182,7 +180,6 @@ impl TitlebarEntry {
     fn element_id(self) -> &'static str {
         match self {
             Self::Files => "titlebar-feature-files",
-            Self::Connections => "titlebar-feature-connections",
             Self::Runtime => "titlebar-feature-runtime",
             Self::Knowledge => "titlebar-feature-knowledge",
             Self::Notifications => "titlebar-feature-notifications",
@@ -193,7 +190,6 @@ impl TitlebarEntry {
     fn wrapper_id(self) -> &'static str {
         match self {
             Self::Files => "titlebar-feature-files-button",
-            Self::Connections => "titlebar-feature-connections-button",
             Self::Runtime => "titlebar-feature-runtime-button",
             Self::Knowledge => "titlebar-feature-knowledge-button",
             Self::Notifications => "titlebar-feature-notifications-button",
@@ -204,7 +200,6 @@ impl TitlebarEntry {
     fn icon(self) -> LucideIcon {
         match self {
             Self::Files => LucideIcon::FolderOpen,
-            Self::Connections => LucideIcon::LayoutList,
             Self::Runtime => LucideIcon::Gauge,
             Self::Knowledge => LucideIcon::BookOpen,
             Self::Notifications => LucideIcon::Bell,
@@ -215,7 +210,6 @@ impl TitlebarEntry {
     fn tooltip_key(self) -> &'static str {
         match self {
             Self::Files => "sidebar.panels.files",
-            Self::Connections => "sidebar.panels.session_manager",
             Self::Runtime => "sidebar.panels.runtime",
             Self::Knowledge => "sidebar.panels.knowledge",
             Self::Notifications => "sidebar.panels.notifications",
@@ -230,7 +224,6 @@ impl TitlebarEntry {
         matches!(
             (self, active_tab_kind),
             (Self::Files, Some(TabKind::FileManager))
-                | (Self::Connections, Some(TabKind::SessionManager))
                 | (Self::Runtime, Some(TabKind::Runtime))
                 | (Self::Knowledge, Some(TabKind::Knowledge))
                 | (Self::Notifications, Some(TabKind::NotificationCenter))
@@ -248,7 +241,6 @@ impl TitlebarEntry {
     ) {
         match self {
             Self::Files => workspace.open_file_manager_tab(window, cx),
-            Self::Connections => workspace.open_session_manager_tab(window, cx),
             Self::Runtime => workspace.open_connection_runtime_tab(
                 ConnectionRuntimeSection::Overview,
                 window,

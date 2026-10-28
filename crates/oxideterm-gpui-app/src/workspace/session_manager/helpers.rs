@@ -152,6 +152,7 @@ pub(super) fn theme_border_half(color: u32, has_background: bool) -> Rgba {
     color_for_background_or_alpha(color, has_background, BG_ACTIVE_BORDER_HALF_ALPHA, 0x80)
 }
 
+#[allow(dead_code)]
 pub(super) fn parse_hex_color(value: &str) -> Option<u32> {
     let hex = value.trim().strip_prefix('#')?;
     let expanded;

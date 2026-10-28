@@ -72,6 +72,7 @@ pub(in crate::workspace) fn context_sidebar_panel_visible(
     match active_panel {
         ContextSidebarPanel::Assistant => ai_enabled,
         ContextSidebarPanel::Sessions
+        | ContextSidebarPanel::Connections
         | ContextSidebarPanel::HostTools
         | ContextSidebarPanel::PluginPanel => true,
     }
@@ -478,6 +479,9 @@ impl WorkspaceApp {
         self.sync_host_tools_lifecycle(panel == ContextSidebarPanel::HostTools, cx);
         if panel == ContextSidebarPanel::Sessions {
             self.activate_embedded_sftp_sidebar_if_visible(cx);
+        }
+        if panel == ContextSidebarPanel::Connections {
+            self.refresh_session_manager_ssh_config_hosts(cx);
         }
         self.clear_ai_sidebar_keyboard_focus(cx);
         self.persist_sidebar_settings_store(cx);
