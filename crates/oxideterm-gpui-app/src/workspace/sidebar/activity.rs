@@ -5,6 +5,16 @@ use std::{
     hash::{Hash, Hasher},
 };
 
+fn context_sidebar_panel_for_activity_section(
+    section: SidebarSection,
+) -> Option<ContextSidebarPanel> {
+    match section {
+        SidebarSection::Assistant => Some(ContextSidebarPanel::Assistant),
+        SidebarSection::HostTools => Some(ContextSidebarPanel::HostTools),
+        _ => None,
+    }
+}
+
 impl WorkspaceApp {
 
     pub(in crate::workspace) fn render_context_activity_bar(
@@ -52,7 +62,7 @@ impl WorkspaceApp {
                                     LucideIcon::PanelRight
                                 },
                                 self.tokens.metrics.sidebar_collapse_icon_size,
-                                rgb(theme.text_muted),
+                                rgb(theme.text),
                             ),
                             oxideterm_gpui_ui::button::IconButtonOptions {
                                 radius: oxideterm_gpui_ui::button::ButtonRadius::Md,
@@ -237,6 +247,12 @@ impl WorkspaceApp {
                 }
             }))
             .on_hover(cx.listener(move |this, hovered: &bool, _window, cx| {
+                let panel = if *hovered {
+                    context_sidebar_panel_for_activity_section(section)
+                } else {
+                    None
+                };
+                this.set_context_sidebar_activity_hovered(panel, cx);
                 if !*hovered {
                     this.clear_workspace_tooltip(&tooltip_id, cx);
                 }
@@ -262,10 +278,10 @@ impl WorkspaceApp {
                             let _ = this.create_local_terminal_tab(window, cx);
                         }
                     } else if section == SidebarSection::Assistant {
-                        let _ = this.toggle_ai_sidebar(cx);
+                        let _ = this.open_context_sidebar_panel(ContextSidebarPanel::Assistant, cx);
                     } else if section == SidebarSection::HostTools {
                         let _ =
-                            this.toggle_context_sidebar_panel(ContextSidebarPanel::HostTools, cx);
+                            this.open_context_sidebar_panel(ContextSidebarPanel::HostTools, cx);
                     } else {
                         this.active_surface = ActiveSurface::Terminal;
                         this.toggle_sidebar_section(section, cx);
@@ -367,6 +383,10 @@ impl WorkspaceApp {
                 }
             }))
             .on_hover(cx.listener(move |this, hovered: &bool, _window, cx| {
+                this.set_context_sidebar_activity_hovered(
+                    (*hovered).then_some(ContextSidebarPanel::PluginPanel),
+                    cx,
+                );
                 if !*hovered {
                     this.clear_workspace_tooltip(&tooltip_id, cx);
                 }
@@ -374,16 +394,6 @@ impl WorkspaceApp {
             .on_mouse_down(
                 MouseButton::Left,
                 cx.listener(move |this, _event, _window, cx| {
-                    let requested_panel_is_visible = this.plugin_sidebar_panel_visible(
-                        &selection.plugin_id,
-                        &selection.panel_id,
-                        cx,
-                    );
-                    if requested_panel_is_visible {
-                        this.collapse_context_sidebar(cx);
-                        cx.stop_propagation();
-                        return;
-                    }
                     // Choosing a plugin panel switches only the context drawer
                     // content; Plugin Manager remains a separate workspace tab.
                     // Selecting through the entity also drops the previous

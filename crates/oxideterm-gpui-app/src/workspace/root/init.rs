@@ -694,6 +694,9 @@ impl WorkspaceApp {
                     initial_context_sidebar_width
                 },
             ),
+            context_sidebar_pinned: false,
+            context_sidebar_activity_hover_panel: None,
+            context_sidebar_drawer_hovered: false,
             ai_entity,
             acp_entity,
             mosh_plugin_sessions: Arc::new(oxideterm_mosh::MoshPluginSessions::default()),

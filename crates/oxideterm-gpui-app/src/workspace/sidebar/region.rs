@@ -139,6 +139,7 @@ impl WorkspaceApp {
             },
         };
         context_sidebar_region_chrome()
+            .id("context-sidebar-region")
             .child(
                 div()
                     .size_full()
@@ -233,6 +234,11 @@ impl WorkspaceApp {
                             }),
                     ),
             )
+            .on_hover(cx.listener(
+                |this, hovered: &bool, _window, cx| {
+                    this.set_context_sidebar_drawer_hovered(*hovered, cx);
+                },
+            ))
             .into_any_element()
     }
 

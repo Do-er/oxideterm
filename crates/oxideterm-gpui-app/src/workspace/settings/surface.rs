@@ -1391,6 +1391,7 @@ impl WorkspaceApp {
             && self.active_context_sidebar_panel == ContextSidebarPanel::Assistant
         {
             self.active_context_sidebar_panel = ContextSidebarPanel::Sessions;
+            self.context_sidebar_pinned = false;
             self.settings_store
                 .settings_mut()
                 .sidebar_ui

@@ -425,12 +425,15 @@ impl WorkspaceApp {
         panel: ContextSidebarPanel,
         cx: &mut Context<Self>,
     ) -> bool {
-        // Clicking the currently visible context panel mirrors an ordinary toggle.
-        if should_collapse_context_sidebar_panel(
-            self.context_sidebar_visible(),
-            self.active_context_sidebar_panel,
-            panel,
-        ) {
+        // The pinned drawer mirrors an ordinary toggle; unpinned hover previews
+        // are opened without collapsing on re-click.
+        if self.context_sidebar_pinned
+            && should_collapse_context_sidebar_panel(
+                self.context_sidebar_visible(),
+                self.active_context_sidebar_panel,
+                panel,
+            )
+        {
             self.collapse_context_sidebar(cx);
             return true;
         }
@@ -443,12 +446,6 @@ impl WorkspaceApp {
         cx: &mut Context<Self>,
     ) -> bool {
         if panel == ContextSidebarPanel::Assistant && !self.settings_store.settings().ai.enabled {
-            self.push_ai_settings_toast(
-                self.i18n.t("ai.sidebar.not_enabled_hint"),
-                TerminalNoticeVariant::Warning,
-                cx,
-            );
-            cx.notify();
             return false;
         }
         if panel == ContextSidebarPanel::HostTools {
@@ -464,6 +461,7 @@ impl WorkspaceApp {
         }
 
         self.active_context_sidebar_panel = panel;
+        self.context_sidebar_pinned = true;
         if panel != ContextSidebarPanel::Sessions {
             // Leaving the owning surface ends only its pointer gesture; the
             // embedded SFTP consumer and node-owned connection stay alive.
@@ -501,6 +499,7 @@ impl WorkspaceApp {
     }
 
     pub(in crate::workspace) fn collapse_context_sidebar(&mut self, cx: &mut Context<Self>) {
+        self.context_sidebar_pinned = false;
         self.finish_embedded_sftp_sidebar_resize(cx);
         self.settings_store
             .settings_mut()
@@ -515,6 +514,62 @@ impl WorkspaceApp {
         self.clear_ai_sidebar_keyboard_focus(cx);
         self.close_ai_sidebar_popovers(cx);
         self.persist_sidebar_settings_store(cx);
+        cx.notify();
+    }
+
+    pub(in crate::workspace) fn set_context_sidebar_activity_hovered(
+        &mut self,
+        panel: Option<ContextSidebarPanel>,
+        cx: &mut Context<Self>,
+    ) {
+        if self.context_sidebar_activity_hover_panel == panel {
+            return;
+        }
+        self.context_sidebar_activity_hover_panel = panel;
+        self.apply_context_sidebar_hover_update(cx);
+    }
+
+    pub(in crate::workspace) fn set_context_sidebar_drawer_hovered(
+        &mut self,
+        hovered: bool,
+        cx: &mut Context<Self>,
+    ) {
+        if self.context_sidebar_drawer_hovered == hovered {
+            return;
+        }
+        self.context_sidebar_drawer_hovered = hovered;
+        self.apply_context_sidebar_hover_update(cx);
+    }
+
+    fn context_sidebar_hover_active(&self) -> bool {
+        self.context_sidebar_activity_hover_panel.is_some() || self.context_sidebar_drawer_hovered
+    }
+
+    fn apply_context_sidebar_hover_update(&mut self, cx: &mut Context<Self>) {
+        if self.context_sidebar_pinned {
+            return;
+        }
+        let visible = self.context_sidebar_visible();
+        if self.context_sidebar_hover_active() {
+            if let Some(panel) = self.context_sidebar_activity_hover_panel {
+                if !visible || self.active_context_sidebar_panel != panel {
+                    self.active_context_sidebar_panel = panel;
+                    self.set_context_sidebar_transient_visible(true, cx);
+                }
+            } else if !visible {
+                self.set_context_sidebar_transient_visible(true, cx);
+            }
+        } else if visible {
+            self.set_context_sidebar_transient_visible(false, cx);
+        }
+    }
+
+    fn set_context_sidebar_transient_visible(&mut self, visible: bool, cx: &mut Context<Self>) {
+        self.settings_store
+            .settings_mut()
+            .sidebar_ui
+            .ai_sidebar_collapsed = !visible;
+        self.set_context_sidebar_rendered_with_motion(visible, cx);
         cx.notify();
     }
 

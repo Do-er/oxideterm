@@ -288,10 +288,6 @@ impl WorkspaceApp {
     fn activate_context_tool(&mut self, tool: ContextSidebarTool, cx: &mut Context<Self>) {
         self.context_tools_menu = None;
         self.clear_all_workspace_tooltips(cx);
-        if self.context_tool_active(tool, cx) {
-            self.collapse_context_sidebar(cx);
-            return;
-        }
         self.host_tools.update(cx, |host_tools, cx| {
             host_tools.select_sidebar_tool(tool, cx)
         });
@@ -318,6 +314,7 @@ impl WorkspaceApp {
     fn render_sessions_context_tool(&self, cx: &mut Context<Self>) -> AnyElement {
         let active = self.active_sessions_sidebar_visible();
         div()
+            .id("context-sessions-activity")
             .flex_none()
             .mb(px(self.tokens.metrics.activity_icon_gap))
             .child(self.workspace_tooltip_icon_button(
@@ -333,10 +330,18 @@ impl WorkspaceApp {
                 "context-sessions",
                 true,
                 cx.listener(|this, _, _, cx| {
-                    let _ = this.toggle_context_sidebar_panel(ContextSidebarPanel::Sessions, cx);
+                    let _ = this.open_context_sidebar_panel(ContextSidebarPanel::Sessions, cx);
                     cx.stop_propagation();
                 }),
                 cx.entity(),
+            ))
+            .on_hover(cx.listener(
+                |this, hovered: &bool, _window, cx| {
+                    this.set_context_sidebar_activity_hovered(
+                        (*hovered).then_some(ContextSidebarPanel::Sessions),
+                        cx,
+                    );
+                },
             ))
             .into_any_element()
     }
@@ -345,6 +350,7 @@ impl WorkspaceApp {
         let active = self.context_sidebar_visible()
             && self.active_context_sidebar_panel == ContextSidebarPanel::Connections;
         div()
+            .id("context-connections-activity")
             .flex_none()
             .mb(px(self.tokens.metrics.activity_icon_gap))
             .child(self.workspace_tooltip_icon_button(
@@ -361,10 +367,18 @@ impl WorkspaceApp {
                 true,
                 cx.listener(|this, _, _, cx| {
                     this.refresh_session_manager_ssh_config_hosts(cx);
-                    let _ = this.toggle_context_sidebar_panel(ContextSidebarPanel::Connections, cx);
+                    let _ = this.open_context_sidebar_panel(ContextSidebarPanel::Connections, cx);
                     cx.stop_propagation();
                 }),
                 cx.entity(),
+            ))
+            .on_hover(cx.listener(
+                |this, hovered: &bool, _window, cx| {
+                    this.set_context_sidebar_activity_hovered(
+                        (*hovered).then_some(ContextSidebarPanel::Connections),
+                        cx,
+                    );
+                },
             ))
             .into_any_element()
     }
@@ -405,6 +419,7 @@ impl WorkspaceApp {
             let active = self.context_tool_active(tool, cx);
             buttons = buttons.child(
                 div()
+                    .id(format!("context-tool-activity-{index}"))
                     .flex_none()
                     .mb(px(self.tokens.metrics.activity_icon_gap))
                     .child(self.workspace_tooltip_icon_button(
@@ -424,6 +439,14 @@ impl WorkspaceApp {
                             cx.stop_propagation();
                         }),
                         cx.entity(),
+                    ))
+                    .on_hover(cx.listener(
+                        |this, hovered: &bool, _window, cx| {
+                            this.set_context_sidebar_activity_hovered(
+                                (*hovered).then_some(ContextSidebarPanel::HostTools),
+                                cx,
+                            );
+                        },
                     )),
             );
         }
