@@ -2300,7 +2300,7 @@ impl Element for TerminalElement {
                     .iter()
                     .filter(|image| image.image.snapshot.z_index < 0)
                 {
-                    paint_terminal_image(image, origin, &self.metrics, window);
+                    paint_terminal_image(image, origin, &self.metrics, window, cx);
                 }
                 for rect in &layout.selection_matches {
                     paint_terminal_rect(rect, origin, &self.metrics, window);
@@ -2362,7 +2362,7 @@ impl Element for TerminalElement {
                     .iter()
                     .filter(|image| image.image.snapshot.z_index >= 0)
                 {
-                    paint_terminal_image(image, origin, &self.metrics, window);
+                    paint_terminal_image(image, origin, &self.metrics, window, cx);
                 }
                 for rect in &layout.highlight_underlines {
                     paint_terminal_underline(rect, origin, &self.metrics, window);
