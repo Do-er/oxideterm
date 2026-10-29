@@ -1236,9 +1236,10 @@ under OxideTerm's code license. Logos and names remain the trademarks of their
 respective owners. Their inclusion does not imply sponsorship or endorsement.
 
 The SVGs listed below were retrieved on 2026-09-23. The Ubuntu and Arch Linux
-SVGs have only their root fill set to the colors recorded by Simple Icons; the
-other SVGs are unmodified. Display scaling preserves their original aspect
-ratios and colors. Unknown distributions use
+SVGs have only their root fill set to the colors recorded by Simple Icons. The
+remaining SVGs keep their original geometry apart from the canvas and crop
+changes recorded in their own entries. Display scaling preserves their original
+aspect ratios and colors. Unknown distributions use
 OxideTerm's generic icon instead of a related distribution's logo.
 
 ## Ubuntu
@@ -1337,8 +1338,10 @@ OxideTerm.
 - Usage guidance: https://github.com/rocky-linux/brand-kit#trademark-usage-policy
 - License: **CC BY-SA 4.0 International**, https://creativecommons.org/licenses/by-sa/4.0/
 - Complete license supplied as `CC-BY-SA-4.0.txt`.
+- Change: root canvas reduced from `4096×4096` to the `192×192` `viewBox` scale; only
+  the declared canvas changed, no path geometry.
 - Bundled file: `crates/oxideterm-gpui-app/resources/distro-icons/rocky.svg`.
-- SHA-256: `ae166824dca5ec506404d89b79683f2285572fe7ae735856f56e887748dbcbca`.
+- SHA-256: `c9c0520d5858d3c252aeaea8aac5a6db1d706edf6e6975d5baba3af025ec4f6a`.
 
 ## Linux Mint
 
@@ -1356,6 +1359,22 @@ OxideTerm.
   OxideTerm is not affiliated with or endorsed by Linux Mint.
 - Bundled file: `crates/oxideterm-gpui-app/resources/distro-icons/linuxmint.svg`.
 - SHA-256: `dee702dc5e28aafa4e6c033a6f7381b178036c460c7cfe9dc32c7fde0ccf0387`.
+
+## OpenBMC
+
+**OpenBMC mark**, OpenBMC project contributors. OpenBMC is an open source project
+hosted by the Linux Foundation. Displayed only to identify an OpenBMC (BMC) system;
+OxideTerm is not affiliated with or endorsed by the OpenBMC project.
+
+- Project: https://github.com/openbmc/openbmc
+- Brand guidance: https://github.com/openbmc/docs
+- Source of this copy: the OpenBMC lockup supplied by the OxideTerm maintainers
+  for this conversion. Its license is not asserted by this notice; confirm the
+  project's brand terms before redistributing the artwork outside OxideTerm.
+- Change: the "openbmc" wordmark below the mark was removed, and the `viewBox`
+  was cropped to the mark's bounding box.
+- Bundled file: `crates/oxideterm-gpui-app/resources/distro-icons/openbmc.svg`.
+- SHA-256: `b39393511408eef518f9e9817017384794fdf28016de56379cf7544e27ed3899`.
 
 ## License texts
 

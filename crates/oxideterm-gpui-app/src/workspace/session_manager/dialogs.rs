@@ -600,7 +600,7 @@ impl WorkspaceApp {
             .cursor_pointer()
             .text_size(px(self.tokens.metrics.ui_text_sm))
             .hover(move |row| row.bg(rgb(theme.bg_hover)))
-            .child(icon.render(14.0, rgb(theme.text_muted)))
+            .child(icon.render(14.0, rgb(theme.text_muted), cx))
             .child(self.render_display_text_with_role(
                 SelectableTextRole::NonSelectable,
                 "batch-move-item",

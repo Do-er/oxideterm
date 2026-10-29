@@ -1791,7 +1791,7 @@ impl WorkspaceApp {
                 )
             } else {
                 self.node_session_icon(&node_id)
-                    .render(SESSION_TREE_ICON_SIZE, muted_text)
+                    .render(SESSION_TREE_ICON_SIZE, muted_text, cx)
             },
         ))
         .child(
@@ -2020,7 +2020,7 @@ impl WorkspaceApp {
                     )
                     .pl(px(6.0))
                 })
-                .child(icon.render(SESSION_TREE_CHILD_ICON_SIZE, text_color))
+                .child(icon.render(SESSION_TREE_CHILD_ICON_SIZE, text_color, cx))
                 .child(
                     div()
                         .ml(px(6.0))

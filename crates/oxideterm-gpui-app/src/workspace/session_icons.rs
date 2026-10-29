@@ -1,6 +1,20 @@
+use std::collections::HashMap;
+use std::sync::{Arc, Mutex, OnceLock};
+
 use super::WorkspaceApp;
 use crate::assets::{DISTRO_ICONS, DistroIcon, LucideIcon};
-use gpui::{AnyElement, Context, IntoElement, Rgba, Styled, StyledImage, img, px};
+use gpui::{
+    AnyElement, App, Context, DevicePixels, IntoElement, RenderImage, Rgba, Styled, StyledImage,
+    SvgSize, img, px, size,
+};
+
+/// Edge length, in device pixels, that bundled brand artwork is rasterized at.
+///
+/// The largest slot drawing one of these icons is 20 logical px, so 96 px still
+/// covers a 4x display. Keep this bounded and independent of the canvas each SVG
+/// file declares: every cached bitmap costs `BRAND_ICON_RASTER_PX² × 4` bytes plus
+/// a sprite-atlas texture of the same size, and both live for the whole process.
+const BRAND_ICON_RASTER_PX: i32 = 96;
 
 #[derive(Clone, Copy, Debug, Eq, PartialEq)]
 pub(super) enum SessionIcon {
@@ -15,16 +29,53 @@ impl From<LucideIcon> for SessionIcon {
 }
 
 impl SessionIcon {
-    pub(super) fn render(self, size: f32, color: Rgba) -> AnyElement {
+    /// Renders the icon at `size` logical px.
+    ///
+    /// Brand artwork keeps its own colors, so it cannot use the monochrome
+    /// `svg()` mask path. It must not be routed back through `img(icon.path)`
+    /// either: the resource-image path rasterizes a bundled SVG at the canvas
+    /// its file declares, doubles it with GPUI's smooth-SVG scale factor, then
+    /// pins that bitmap plus a same-size sprite-atlas texture for the lifetime
+    /// of the process. `distro-icons/rocky.svg` once declared a 4096 px canvas
+    /// for 192 units of artwork, so a single 14 px auto-icon row cost ~800 MB of
+    /// resident memory that no panel collapse could release. Rasterizing once at
+    /// [`BRAND_ICON_RASTER_PX`] and letting the layout scale the result down keeps
+    /// the cost independent of how any SVG file is authored.
+    pub(super) fn render(self, size: f32, color: Rgba, cx: &App) -> AnyElement {
         match self {
             Self::Lucide(icon) => WorkspaceApp::render_lucide_icon(icon, size, color),
-            // Use the color-preserving image renderer; a theme mask would alter the brand artwork.
-            Self::Distro(icon) => img(icon.path)
-                .size(px(size))
-                .object_fit(gpui::ObjectFit::Contain)
-                .into_any_element(),
+            Self::Distro(icon) => match brand_icon_image(icon, cx) {
+                Some(image) => img(image)
+                    .size(px(size))
+                    .object_fit(gpui::ObjectFit::Contain)
+                    .into_any_element(),
+                // Bundled artwork that fails to parse still needs a visible mark.
+                None => WorkspaceApp::render_lucide_icon(LucideIcon::Server, size, color),
+            },
         }
     }
+}
+
+fn brand_icon_image(icon: &'static DistroIcon, cx: &App) -> Option<Arc<RenderImage>> {
+    fn cache() -> &'static Mutex<HashMap<&'static str, Arc<RenderImage>>> {
+        static CACHE: OnceLock<Mutex<HashMap<&'static str, Arc<RenderImage>>>> = OnceLock::new();
+        CACHE.get_or_init(|| Mutex::new(HashMap::new()))
+    }
+
+    if let Some(image) = cache().lock().ok()?.get(icon.id).cloned() {
+        return Some(image);
+    }
+
+    // Bundled artwork never changes, so one raster per icon id is enough and the
+    // cache cannot grow beyond `DISTRO_ICONS.len()` entries.
+    let renderer = cx.svg_renderer();
+    let parsed = renderer.parse_svg(icon.bytes).ok()?;
+    let edge = DevicePixels(BRAND_ICON_RASTER_PX);
+    let image = renderer
+        .render_parsed(&parsed, SvgSize::Size(size(edge, edge)))
+        .ok()?;
+    cache().lock().ok()?.insert(icon.id, image.clone());
+    Some(image)
 }
 
 const AUTO_ICON_PLACEHOLDER_ID: &str = "rocky";
@@ -41,47 +92,63 @@ pub(super) fn resolved_session_icon(
         return session_icon_from_id(Some(AUTO_ICON_PLACEHOLDER_ID))
             .unwrap_or(LucideIcon::Server.into());
     };
-    // Match the distribution's name, not ID_LIKE or an incidental substring in a derivative name.
-    DISTRO_ICONS
-        .iter()
-        .find(|icon| {
-            let mut words = system_name.split_whitespace();
-            if words
-                .next()
-                .is_some_and(|word| word.eq_ignore_ascii_case(icon.id))
-            {
-                return true;
-            }
-            let mut words = system_name.split_whitespace();
-            icon.name.split_whitespace().all(|part| {
-                words
-                    .next()
-                    .is_some_and(|word| word.eq_ignore_ascii_case(part))
-            })
-        })
+    detect_distro_icon(system_name)
         .map(SessionIcon::Distro)
         .unwrap_or(LucideIcon::Server.into())
 }
 
-pub(super) fn detect_distro_icon_id_from_name(system_name: &str) -> Option<&'static str> {
+/// Resolves which bundled distribution icon describes a detected OS name.
+///
+/// The name arrives as `/etc/os-release` `PRETTY_NAME` (for example
+/// `Phosphor OpenBMC (Phosphor OpenBMC Project Reference Distro) 1.10.31.37`)
+/// or, when that field is missing, as the bare `ID` (`openbmc-phosphor`). A
+/// distribution can therefore appear anywhere in that text, not only as its
+/// first word, while a derivative must still not inherit an icon just because
+/// its name contains the base name (`raspbian` is not `debian`). Whole-token
+/// comparison satisfies both: an icon id may match any single token, and an
+/// icon's display name matches one contiguous run of tokens.
+///
+/// Real `os-release` values name their own distribution first, so the earliest
+/// match wins: `Linux Mint (based on Debian)` stays Linux Mint even though it
+/// names Debian later in the same string.
+fn detect_distro_icon(system_name: &str) -> Option<&'static DistroIcon> {
+    let tokens = os_name_tokens(system_name);
     DISTRO_ICONS
         .iter()
-        .find(|icon| {
-            let mut words = system_name.split_whitespace();
-            if words
-                .next()
-                .is_some_and(|word| word.eq_ignore_ascii_case(icon.id))
-            {
-                return true;
-            }
-            let mut words = system_name.split_whitespace();
-            icon.name.split_whitespace().all(|part| {
-                words
-                    .next()
-                    .is_some_and(|word| word.eq_ignore_ascii_case(part))
-            })
-        })
-        .map(|icon| icon.id)
+        .filter_map(|icon| distro_match_position(&tokens, icon).map(|position| (position, icon)))
+        .min_by_key(|(position, _)| *position)
+        .map(|(_, icon)| icon)
+}
+
+/// Position of the first token window that identifies `icon`, if any.
+fn distro_match_position(tokens: &[String], icon: &DistroIcon) -> Option<usize> {
+    let id_position = tokens.iter().position(|token| token == icon.id);
+    let name_tokens = os_name_tokens(icon.name);
+    let name_position = if name_tokens.is_empty() {
+        None
+    } else {
+        tokens
+            .windows(name_tokens.len())
+            .position(|window| window == name_tokens.as_slice())
+    };
+    match (id_position, name_position) {
+        (Some(id), Some(name)) => Some(id.min(name)),
+        (position, None) | (None, position) => position,
+    }
+}
+
+/// Lowercased alphanumeric tokens, so `openbmc-phosphor`, `Phosphor OpenBMC`
+/// and `Rocky Linux 9.4` compare by words instead of by raw text or substring.
+fn os_name_tokens(value: &str) -> Vec<String> {
+    value
+        .split(|c: char| !c.is_ascii_alphanumeric())
+        .filter(|token| !token.is_empty())
+        .map(str::to_ascii_lowercase)
+        .collect()
+}
+
+pub(super) fn detect_distro_icon_id_from_name(system_name: &str) -> Option<&'static str> {
+    detect_distro_icon(system_name).map(|icon| icon.id)
 }
 
 pub(super) fn is_distro_icon_id(id: &str) -> bool {
@@ -580,7 +647,7 @@ mod tests {
     use super::*;
 
     #[test]
-    fn distro_resolution_preserves_manual_icons_and_does_not_guess_derivatives() {
+    fn distro_resolution_matches_whole_tokens_and_keeps_manual_icons() {
         for (name, id) in [
             ("Ubuntu 24.04 LTS", "ubuntu"),
             ("Arch Linux", "archlinux"),
@@ -592,6 +659,17 @@ mod tests {
             ("Linux Mint 22.2", "linuxmint"),
             ("Linux Mint (based on Debian)", "linuxmint"),
             ("linuxmint", "linuxmint"),
+            // BMC images name their vendor first, so the distribution is not the
+            // leading word; the id token still identifies it.
+            (
+                "Phosphor OpenBMC (Phosphor OpenBMC Project Reference Distro) 1.10.31.37",
+                "openbmc",
+            ),
+            ("openbmc-phosphor", "openbmc"),
+            // A derivative that names its base later in the text resolves to the
+            // base distribution instead of the generic server glyph.
+            ("LMDE (based on Debian)", "debian"),
+            ("Ubuntu-like Linux", "ubuntu"),
         ] {
             let SessionIcon::Distro(icon) = resolved_session_icon(None, Some(name)) else {
                 panic!("missing distribution icon for {name}");
@@ -608,11 +686,15 @@ mod tests {
             panic!("manual distribution icon was not preserved");
         };
         assert_eq!(manual.id, "gentoo");
+        // Partial words never identify a distribution: `raspbian` is not
+        // `debian`, and `mintish` is not `mint`.
         for name in [
-            "Ubuntu-like Linux",
+            "Raspbian GNU/Linux 12 (bookworm)",
             "Archcraft Linux",
             "Linux Mintish",
-            "LMDE (based on Debian)",
+            "OpenWrt 23.05",
+            "Pop!_OS 22.04 LTS",
+            "Darwin",
             "unknown",
             "",
         ] {

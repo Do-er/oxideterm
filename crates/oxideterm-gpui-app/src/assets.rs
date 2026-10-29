@@ -472,6 +472,12 @@ pub(crate) const DISTRO_ICONS: &[DistroIcon] = &[
         path: "distro-icons/linuxmint.svg",
         bytes: include_bytes!("../resources/distro-icons/linuxmint.svg"),
     },
+    DistroIcon {
+        id: "openbmc",
+        name: "OpenBMC",
+        path: "distro-icons/openbmc.svg",
+        bytes: include_bytes!("../resources/distro-icons/openbmc.svg"),
+    },
 ];
 
 pub(crate) struct NativeAssets;

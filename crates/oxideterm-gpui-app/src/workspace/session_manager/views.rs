@@ -1024,7 +1024,7 @@ impl WorkspaceApp {
                     .bg(rgba((theme.accent << 8) | 0x1a))
                     .child(
                         item.icon()
-                            .render(MANAGER_RECENT_ICON_GLYPH_SIZE, rgb(theme.accent)),
+                            .render(MANAGER_RECENT_ICON_GLYPH_SIZE, rgb(theme.accent), cx),
                     ),
             )
             .child(
@@ -1756,7 +1756,7 @@ impl WorkspaceApp {
             .when(_allow_drag && depth > 0, |row| {
                 row.child(div().w(px(16.0)).flex_none())
             })
-            .child(self.render_session_manager_row_icon(item))
+            .child(self.render_session_manager_row_icon(item, cx))
             .child(
                 div()
                     .min_w(px(0.0))
@@ -1786,6 +1786,7 @@ impl WorkspaceApp {
     pub(super) fn render_session_manager_row_icon(
         &self,
         item: &SessionManagerDisplayItem,
+        cx: &App,
     ) -> Div {
         let theme = self.tokens.ui;
         let icon = match item {
@@ -1806,7 +1807,7 @@ impl WorkspaceApp {
             .flex()
             .items_center()
             .justify_center()
-            .child(icon.render(16.0, rgb(theme.text_muted)))
+            .child(icon.render(16.0, rgb(theme.text_muted), cx))
     }
 
     #[allow(dead_code)]
@@ -1814,6 +1815,7 @@ impl WorkspaceApp {
         &self,
         item: &SessionManagerDisplayItem,
         text: u32,
+        cx: &App,
     ) -> Div {
         let (default_background, default_foreground) = match item {
             SessionManagerDisplayItem::Connection(_)
@@ -1849,7 +1851,7 @@ impl WorkspaceApp {
             .items_center()
             .justify_center()
             .bg(bg)
-            .child(item.icon().render(20.0, fg))
+            .child(item.icon().render(20.0, fg, cx))
             .when(
                 matches!(item, SessionManagerDisplayItem::Connection(_)),
                 |icon| icon.border_1().border_color(rgba((text << 8) | 0x1a)),

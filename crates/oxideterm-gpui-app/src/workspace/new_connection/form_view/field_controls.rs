@@ -2546,6 +2546,7 @@ impl WorkspaceApp {
                         } else {
                             rgb(theme.text_muted)
                         },
+                        cx,
                     ))
                     .on_mouse_down(
                         MouseButton::Left,
@@ -2588,7 +2589,7 @@ impl WorkspaceApp {
                             .flex()
                             .items_center()
                             .justify_center()
-                            .child(active_icon.render(18.0, rgb(theme.accent))),
+                            .child(active_icon.render(18.0, rgb(theme.accent), cx)),
                     ),
             )
             .child(tabs);
