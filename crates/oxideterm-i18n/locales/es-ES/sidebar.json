@@ -20,7 +20,8 @@
       "search": "Buscar ámbitos de pestañas…",
       "categories": "Categorías",
       "connections": "Conexiones",
-      "hint": "↑↓ Seleccionar · Enter Cambiar · Esc Cancelar"
+      "hint": "↑↓ Seleccionar · Enter Cambiar · Esc Cancelar",
+      "clean_tabs": "Limpiar pestañas"
     },
     "search": {
       "title": "Buscar sesiones",

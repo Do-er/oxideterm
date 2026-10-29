@@ -20,7 +20,8 @@
       "search": "Rechercher un périmètre d’onglets…",
       "categories": "Catégories",
       "connections": "Connexions",
-      "hint": "↑↓ Sélectionner · Entrée Appliquer · Échap Annuler"
+      "hint": "↑↓ Sélectionner · Entrée Appliquer · Échap Annuler",
+      "clean_tabs": "Nettoyer les onglets"
     },
     "search": {
       "title": "Rechercher des sessions",

@@ -1246,9 +1246,13 @@ impl TerminalPane {
     }
 
     fn scrollbar_geometry(&self) -> Option<ScrollbarGeometry> {
+        let viewport_height = self
+            .bounds
+            .map(|bounds| bounds.size.height)
+            .unwrap_or_else(|| px(self.snapshot.rows as f32 * self.metrics.line_height_f32()));
         terminal_scrollbar_for_viewport_display_offset(
             self.displayed_snapshot(),
-            &self.metrics,
+            f32::from(viewport_height),
             self.snapshot.rows,
             self.smooth_scroll_display_offset(),
         )
@@ -1264,7 +1268,7 @@ impl TerminalPane {
                 y: origin.y + px(TERMINAL_CONTENT_PADDING),
                 top: px(scrollbar.top),
                 height: px(scrollbar.height),
-                track_height: px(self.snapshot.rows as f32 * self.metrics.line_height_f32()),
+                track_height: viewport_height,
             }
         })
     }

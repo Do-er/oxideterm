@@ -15,7 +15,6 @@ use super::{PaletteExecution, PaletteItem};
 #[derive(Clone, Copy, Eq, PartialEq)]
 pub(in crate::workspace) enum PaletteContent {
     Commands,
-    TabScopes,
     QuickBarCategories,
     BackgroundTasks,
 }
@@ -86,15 +85,6 @@ impl CommandPaletteEntity {
 
     pub(in crate::workspace) fn is_open(&self) -> bool {
         self.open
-    }
-
-    pub(super) fn is_tab_scope_picker(&self) -> bool {
-        self.content == PaletteContent::TabScopes
-    }
-
-    pub(super) fn open_tab_scopes(&mut self, cx: &mut Context<Self>) {
-        self.open(false, HashSet::new(), cx);
-        self.content = PaletteContent::TabScopes;
     }
 
     pub(super) fn is_background_task_picker(&self) -> bool {

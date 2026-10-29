@@ -20,7 +20,8 @@
       "search": "搜索标签范围…",
       "categories": "分类",
       "connections": "连接",
-      "hint": "↑↓ 选择 · Enter 切换 · Esc 取消"
+      "hint": "↑↓ 选择 · Enter 切换 · Esc 取消",
+      "clean_tabs": "清理标签"
     },
     "search": {
       "title": "搜索会话",

@@ -11,16 +11,15 @@ use crate::terminal_view::element::{TerminalHorizontalScrollbar, TerminalRect, T
 
 pub(crate) fn terminal_scrollbar_for_viewport_display_offset(
     snapshot: &TerminalSnapshot,
-    metrics: &TerminalMetrics,
+    viewport_height: f32,
     viewport_rows: usize,
     display_offset_rows: f32,
 ) -> Option<TerminalScrollbar> {
     let history = snapshot.scrollback_lines;
-    if history == 0 {
+    if history == 0 || viewport_height <= 0.0 {
         return None;
     }
 
-    let viewport_height = viewport_rows as f32 * metrics.line_height_f32();
     let total_lines = viewport_rows + history;
     let thumb_height = (viewport_height * viewport_rows as f32 / total_lines as f32)
         .max(SCROLLBAR_MIN_THUMB)

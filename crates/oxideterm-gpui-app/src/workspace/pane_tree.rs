@@ -823,6 +823,16 @@ impl WorkspaceApp {
             surface.update(cx, |surface, cx| surface.request_shell_return(cx));
             return;
         }
+        self.force_close_terminal_pane_in_tab(tab_id, active_pane_id, window, cx);
+    }
+
+    pub(in crate::workspace) fn force_close_terminal_pane_in_tab(
+        &mut self,
+        tab_id: TabId,
+        active_pane_id: PaneId,
+        window: &mut Window,
+        cx: &mut Context<Self>,
+    ) {
         let Some(root) = self
             .tab_by_id(tab_id, cx)
             .and_then(|tab| tab.root_pane.as_ref())
@@ -833,7 +843,7 @@ impl WorkspaceApp {
             return;
         };
         if root.pane_count() == 1 {
-            self.close_tab_by_id(tab_id, window, cx);
+            self.force_close_tab_by_id(tab_id, window, cx);
             return;
         }
         let session_id = Some(session_id);

@@ -20,7 +20,8 @@
       "search": "搜尋分頁範圍…",
       "categories": "分類",
       "connections": "連線",
-      "hint": "↑↓ 選擇 · Enter 切換 · Esc 取消"
+      "hint": "↑↓ 選擇 · Enter 切換 · Esc 取消",
+      "clean_tabs": "清理分頁"
     },
     "search": {
       "title": "搜尋工作階段",

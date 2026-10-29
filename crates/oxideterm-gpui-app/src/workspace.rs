@@ -693,6 +693,9 @@ struct WorkspaceWindowTabState {
     scrollbar_drag: Option<TabbarScrollbarDragState>,
     scrollbar_hovered: bool,
     right_click_generation: u64,
+    cleanup_trigger_hovered: bool,
+    cleanup_menu_hovered: bool,
+    cleanup_menu_open: bool,
 }
 
 #[derive(Clone, Copy, Debug)]
@@ -738,6 +741,9 @@ impl WorkspaceWindowTabState {
             scrollbar_drag: None,
             scrollbar_hovered: false,
             right_click_generation: 0,
+            cleanup_trigger_hovered: false,
+            cleanup_menu_hovered: false,
+            cleanup_menu_open: false,
         }
     }
 }

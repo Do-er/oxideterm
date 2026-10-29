@@ -20,7 +20,8 @@
       "search": "Search tab scopes…",
       "categories": "Categories",
       "connections": "Connections",
-      "hint": "↑↓ Select · Enter Apply · Esc Cancel"
+      "hint": "↑↓ Select · Enter Apply · Esc Cancel",
+      "clean_tabs": "Clean tabs"
     },
     "search": {
       "title": "Search sessions",

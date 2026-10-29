@@ -15,7 +15,7 @@ mod scope;
 pub(super) mod split_drop;
 mod state;
 
-pub(in crate::workspace) use affinity::{TabAffinity, TabContent, TabScope};
+pub(in crate::workspace) use affinity::{TabAffinity, TabCleanupTarget, TabContent};
 pub(in crate::workspace) use helpers::effective_shortcut_label;
 use layout::TabStripItemKind;
 

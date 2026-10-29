@@ -20,7 +20,8 @@
       "search": "Buscar escopos de abas…",
       "categories": "Categorias",
       "connections": "Conexões",
-      "hint": "↑↓ Selecionar · Enter Aplicar · Esc Cancelar"
+      "hint": "↑↓ Selecionar · Enter Aplicar · Esc Cancelar",
+      "clean_tabs": "Limpar abas"
     },
     "search": {
       "title": "Pesquisar sessões",

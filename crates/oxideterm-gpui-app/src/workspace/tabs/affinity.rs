@@ -12,11 +12,15 @@ pub(in crate::workspace) enum TabAffinity {
     Plugin(String),
 }
 
-#[derive(Clone, Debug, Default, Eq, Hash, PartialEq)]
-pub(in crate::workspace) enum TabScope {
-    #[default]
+#[derive(Clone, Copy, Debug, Eq, Hash, PartialEq)]
+pub(in crate::workspace) enum TabCleanupTarget {
+    Global,
+    LocalTerminal,
     All,
-    Affinity(TabAffinity),
+}
+
+impl TabCleanupTarget {
+    pub(in crate::workspace) const ALL: [Self; 3] = [Self::Global, Self::LocalTerminal, Self::All];
 }
 
 /// Terminal pages retain session IDs when merging removes their original tab descriptors.
@@ -46,7 +50,7 @@ impl WorkspaceApp {
         }
     }
 
-    fn page_affinities(&self, tab_id: TabId, cx: &App) -> Vec<TabAffinity> {
+    pub(super) fn page_affinities(&self, tab_id: TabId, cx: &App) -> Vec<TabAffinity> {
         let Some(tab) = self.tab_by_id(tab_id, cx) else {
             return Vec::new();
         };
@@ -93,7 +97,11 @@ impl WorkspaceApp {
         }
     }
 
-    fn terminal_affinities(&self, session_id: TerminalSessionId, cx: &App) -> Vec<TabAffinity> {
+    pub(super) fn terminal_affinities(
+        &self,
+        session_id: TerminalSessionId,
+        cx: &App,
+    ) -> Vec<TabAffinity> {
         let host = self.tab_host.read(cx);
         let terminal = host
             .terminal_location(session_id)

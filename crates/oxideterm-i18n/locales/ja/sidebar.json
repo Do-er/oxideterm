@@ -20,7 +20,8 @@
       "search": "タブの範囲を検索…",
       "categories": "カテゴリ",
       "connections": "接続",
-      "hint": "↑↓ 選択 · Enter 切り替え · Esc キャンセル"
+      "hint": "↑↓ 選択 · Enter 切り替え · Esc キャンセル",
+      "clean_tabs": "タブを整理"
     },
     "search": {
       "title": "セッションを検索",

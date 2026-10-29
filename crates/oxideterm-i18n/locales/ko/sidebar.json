@@ -20,7 +20,8 @@
       "search": "탭 범위 검색…",
       "categories": "분류",
       "connections": "연결",
-      "hint": "↑↓ 선택 · Enter 전환 · Esc 취소"
+      "hint": "↑↓ 선택 · Enter 전환 · Esc 취소",
+      "clean_tabs": "탭 정리"
     },
     "search": {
       "title": "세션 검색",

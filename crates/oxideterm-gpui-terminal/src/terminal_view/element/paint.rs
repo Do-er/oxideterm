@@ -1109,18 +1109,14 @@ pub(crate) fn paint_scrollbar(
     scrollbar: TerminalScrollbar,
     origin: gpui::Point<Pixels>,
     viewport_width: Pixels,
-    rows: usize,
-    metrics: &TerminalMetrics,
+    viewport_height: Pixels,
     window: &mut Window,
 ) {
     let x = terminal_scrollbar_x_for_viewport(viewport_width);
     let radius = px(SCROLLBAR_WIDTH * 0.5);
     let track = Bounds::new(
         origin + point(x, px(0.0)),
-        size(
-            px(SCROLLBAR_WIDTH),
-            px(rows as f32 * metrics.line_height_f32()),
-        ),
+        size(px(SCROLLBAR_WIDTH), viewport_height.max(px(0.0))),
     );
     window.paint_quad(fill(track, rgba(0xffffff20)).corner_radii(radius));
 

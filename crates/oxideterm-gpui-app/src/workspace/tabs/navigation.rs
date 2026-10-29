@@ -1007,6 +1007,25 @@ impl WorkspaceApp {
         self.finish_tab_removal(transition, exiting_visual, Some(window), cx);
     }
 
+    pub(in crate::workspace) fn force_close_tab_by_id(
+        &mut self,
+        tab_id: TabId,
+        window: &mut Window,
+        cx: &mut Context<Self>,
+    ) {
+        let Some(index) = self.tabs(cx).iter().position(|tab| tab.id == tab_id) else {
+            return;
+        };
+        let exiting_visual = self.tab_exit_visual(index, window, cx);
+        let Some(transition) = self
+            .tab_host
+            .update(cx, |tab_host, _cx| tab_host.remove_tab_at(index))
+        else {
+            return;
+        };
+        self.finish_tab_removal(transition, exiting_visual, Some(window), cx);
+    }
+
     pub(super) fn finish_tab_removal(
         &mut self,
         transition: TabRemovalTransition,

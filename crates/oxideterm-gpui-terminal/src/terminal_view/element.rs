@@ -727,11 +727,15 @@ impl TerminalElement {
 
     #[allow(dead_code)]
     pub(crate) fn layout(&self) -> TerminalElementLayout {
-        self.layout_for_rows(0..self.painted_row_limit(), None)
+        self.layout_for_rows(0..self.painted_row_limit(), None, None)
     }
 
     pub(crate) fn layout_for_bounds(&self, bounds: Bounds<Pixels>) -> TerminalElementLayout {
-        self.layout_for_rows(self.visible_rows_for_bounds(bounds), None)
+        self.layout_for_rows(
+            self.visible_rows_for_bounds(bounds),
+            Some(f32::from(bounds.size.height)),
+            None,
+        )
     }
 
     fn painted_row_limit(&self) -> usize {
@@ -756,6 +760,7 @@ impl TerminalElement {
     fn layout_for_rows(
         &self,
         visible_rows: Range<usize>,
+        viewport_height: Option<f32>,
         mut cache: Option<&mut TerminalLayoutCache>,
     ) -> TerminalElementLayout {
         let mut backgrounds = Vec::new();
@@ -837,9 +842,11 @@ impl TerminalElement {
         let mut timestamp_runs = Vec::new();
         let mut cached_rows = Vec::new();
         let mut cursor = None;
+        let viewport_height = viewport_height
+            .unwrap_or_else(|| self.viewport_rows as f32 * self.metrics.line_height_f32());
         let scrollbar = terminal_scrollbar_for_viewport_display_offset(
             &self.snapshot,
-            &self.metrics,
+            viewport_height,
             self.viewport_rows,
             self.scrollbar_display_offset,
         );
@@ -974,7 +981,11 @@ impl TerminalElement {
         };
         let visible_rows = self.visible_rows_for_bounds(bounds);
         let mut cache = cache.lock();
-        Arc::new(self.layout_for_rows(visible_rows, Some(&mut cache)))
+        Arc::new(self.layout_for_rows(
+            visible_rows,
+            Some(f32::from(bounds.size.height)),
+            Some(&mut cache),
+        ))
     }
 
     fn cached_highlight_layout_for_rows(
@@ -2406,8 +2417,7 @@ impl Element for TerminalElement {
                 scrollbar,
                 viewport_origin,
                 grid_viewport_width,
-                self.viewport_rows,
-                &self.metrics,
+                bounds.size.height,
                 window,
             );
         }

@@ -1,5 +1,4 @@
 use super::*;
-use oxideterm_gpui_ui::button::ButtonVariant;
 
 const TITLEBAR_CONTROL_ICON_SIZE: f32 = 12.0;
 const TITLEBAR_CONTROL_WIDTH: f32 = 46.0;
@@ -491,21 +490,12 @@ impl WorkspaceApp {
         } else {
             0.0
         };
-        let scope_filtered = *self.tab_host.read(cx).scope() != tabs::TabScope::All;
-        let show_all_label = self.i18n.t("sidebar.tab_scope.show_all");
-        let show_all_width = if scope_filtered {
-            self.tab_text_width(&show_all_label, self.tokens.metrics.ui_text_sm, window)
-                + self.tokens.metrics.ui_control_padding_x * 2.0
-        } else {
-            0.0
-        };
         // Feature entries share the left side with the platform caption
         // controls, so their width must join the left minimum. Otherwise the
         // centered scope filter can be squeezed or overlapped on narrow windows.
         let feature_entries_width = TitlebarEntry::ALL.len() as f32 * action_button_width;
-        let side_min_width = (left_controls_width + feature_entries_width).max(
-            right_controls_width + action_button_width * 3.0 + background_width + show_all_width,
-        );
+        let side_min_width = (left_controls_width + feature_entries_width)
+            .max(right_controls_width + action_button_width * 3.0 + background_width);
         let scope_available_width = f32::from(window.viewport_size().width)
             - side_min_width * 2.0
             - self.tokens.spacing.two * 2.0;
@@ -592,40 +582,6 @@ impl WorkspaceApp {
                     .h_full()
                     .flex()
                     .items_center()
-                    .when(scope_filtered, |side| {
-                        let workspace = cx.entity().downgrade();
-                        side.child(
-                            oxideterm_gpui_ui::button::button_with(
-                                &self.tokens,
-                                show_all_label.clone(),
-                                oxideterm_gpui_ui::button::ButtonOptions {
-                                    variant: ButtonVariant::Ghost,
-                                    size: oxideterm_gpui_ui::button::ButtonSize::Sm,
-                                    radius: ButtonRadius::Md,
-                                    disabled: false,
-                                },
-                            )
-                            .id("titlebar-show-all-tabs")
-                            .w(px(show_all_width))
-                            .h(px(action_button_size))
-                            .flex_none()
-                            .text_size(px(self.tokens.metrics.ui_text_sm))
-                            .role(gpui::Role::Button)
-                            .aria_label(show_all_label.clone())
-                            .on_a11y_action(gpui::AccessibleAction::Click, move |_, window, cx| {
-                                let _ = workspace.update(cx, |this, cx| {
-                                    this.select_tab_scope(tabs::TabScope::All, window, cx);
-                                });
-                            })
-                            .on_mouse_down(
-                                MouseButton::Left,
-                                cx.listener(|this, _, window, cx| {
-                                    this.select_tab_scope(tabs::TabScope::All, window, cx);
-                                    cx.stop_propagation();
-                                }),
-                            ),
-                        )
-                    })
                     .child(self.render_window_drag_region("workspace-titlebar-drag-right", cx))
                     .when(background_count > 0, |side| {
                         side.child(

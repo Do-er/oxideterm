@@ -20,7 +20,8 @@
       "search": "Tab-Bereiche suchen…",
       "categories": "Kategorien",
       "connections": "Verbindungen",
-      "hint": "↑↓ Auswählen · Enter Wechseln · Esc Abbrechen"
+      "hint": "↑↓ Auswählen · Enter Wechseln · Esc Abbrechen",
+      "clean_tabs": "Tabs bereinigen"
     },
     "search": {
       "title": "Sitzungen suchen",

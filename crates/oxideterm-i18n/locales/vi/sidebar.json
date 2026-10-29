@@ -20,7 +20,8 @@
       "search": "Tìm phạm vi thẻ…",
       "categories": "Danh mục",
       "connections": "Kết nối",
-      "hint": "↑↓ Chọn · Enter Chuyển · Esc Hủy"
+      "hint": "↑↓ Chọn · Enter Chuyển · Esc Hủy",
+      "clean_tabs": "Dọn dẹp thẻ"
     },
     "search": {
       "title": "Tìm phiên",

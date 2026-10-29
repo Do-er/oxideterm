@@ -20,7 +20,8 @@
       "search": "Cerca ambiti delle schede…",
       "categories": "Categorie",
       "connections": "Connessioni",
-      "hint": "↑↓ Seleziona · Invio Applica · Esc Annulla"
+      "hint": "↑↓ Seleziona · Invio Applica · Esc Annulla",
+      "clean_tabs": "Pulisci schede"
     },
     "search": {
       "title": "Cerca sessioni",

@@ -233,7 +233,6 @@ impl WorkspaceApp {
         }
         self.register_tab_surface(&tab, cx);
         self.close_tab_context_menu();
-        self.reveal_tab_scope(tab.id, cx);
         self.apply_main_window_active_tab_change(previous, Some(tab.id), cx);
         self.sync_active_tab_surface(cx);
         self.focus_tab_terminal(tab.id, window, cx);
@@ -683,7 +682,6 @@ impl WorkspaceApp {
         if let Some(transition) = transition {
             // Close the source shell directly; re-entering its handle from its own event fails.
             self.apply_tab_mount_cleanup(transition.cleanup, Some(current_window), cx);
-            self.reveal_tab_scope(tab_id, cx);
             self.apply_main_window_active_tab_change(
                 transition.selection.previous,
                 transition.selection.current,

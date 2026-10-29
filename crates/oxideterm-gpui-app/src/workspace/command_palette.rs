@@ -64,7 +64,6 @@ struct PaletteItem {
 #[derive(Clone)]
 enum PaletteAction {
     SelectQuickBarCategory(Option<String>),
-    SelectTabScope(tabs::TabScope),
     BackgroundTask(background_tasks::BackgroundTaskTarget),
     Keybinding(&'static str),
     ActivateTab(TabId),
@@ -177,30 +176,6 @@ impl WorkspaceApp {
             .unwrap_or(0);
         self.command_palette.update(cx, |palette, cx| {
             palette.open_quick_bar_categories(cx);
-            palette.set_selected_index(index, cx);
-        });
-        self.scroll_selected_command_palette_item_into_view(cx);
-        self.clear_ime_selection();
-        self.show_active_input_caret(cx);
-        self.needs_active_pane_focus = false;
-        window.focus(&self.focus_handle, cx);
-        cx.notify();
-    }
-
-    pub(in crate::workspace) fn open_tab_scope_picker(
-        &mut self,
-        window: &mut Window,
-        cx: &mut Context<Self>,
-    ) {
-        self.prepare_modal_interaction_boundary(cx);
-        let scope = self.tab_host.read(cx).scope();
-        let index = self
-            .tab_scope_choices(cx)
-            .iter()
-            .position(|(choice, _, _)| choice == scope)
-            .unwrap_or(0);
-        self.command_palette.update(cx, |palette, cx| {
-            palette.open_tab_scopes(cx);
             palette.set_selected_index(index, cx);
         });
         self.scroll_selected_command_palette_item_into_view(cx);
@@ -559,9 +534,7 @@ impl WorkspaceApp {
     ) {
         if !matches!(
             execution.action,
-            PaletteAction::SelectTabScope(_)
-                | PaletteAction::BackgroundTask(_)
-                | PaletteAction::SelectQuickBarCategory(_)
+            PaletteAction::BackgroundTask(_) | PaletteAction::SelectQuickBarCategory(_)
         ) {
             self.record_command_palette_mru(&execution.id, cx);
         }
@@ -584,7 +557,6 @@ impl WorkspaceApp {
                 );
                 self.needs_active_pane_focus = true;
             }
-            PaletteAction::SelectTabScope(scope) => self.select_tab_scope(scope, window, cx),
             PaletteAction::BackgroundTask(target) => {
                 self.reveal_background_task(target, window, cx)
             }
@@ -1160,47 +1132,6 @@ impl WorkspaceApp {
                 })
                 .collect();
         }
-        if self.command_palette.read(cx).is_tab_scope_picker() {
-            let query = self.command_palette.read(cx).query();
-            return self
-                .tab_scope_choices(cx)
-                .into_iter()
-                .enumerate()
-                .filter_map(|(index, (scope, label, detail))| {
-                    let value = format!("{label} {}", detail.as_deref().unwrap_or_default());
-                    let matched = command_palette_match(&label, &value, query)?;
-                    let icon = match &scope {
-                        tabs::TabScope::All => LucideIcon::Layers,
-                        tabs::TabScope::Affinity(tabs::TabAffinity::Global) => {
-                            LucideIcon::AppWindow
-                        }
-                        tabs::TabScope::Affinity(tabs::TabAffinity::LocalTerminal) => {
-                            LucideIcon::Terminal
-                        }
-                        _ => LucideIcon::Server,
-                    };
-                    Some(RankedItem {
-                        score: matched.score,
-                        highlights: Vec::new(),
-                        item: PaletteItem {
-                            id: format!("tab-scope-{index}"),
-                            label,
-                            detail,
-                            icon,
-                            section: if index < 3 {
-                                PaletteSection::Commands
-                            } else {
-                                PaletteSection::Connections
-                            },
-                            shortcut: None,
-                            value,
-                            action: PaletteAction::SelectTabScope(scope),
-                            disabled: false,
-                        },
-                    })
-                })
-                .collect();
-        }
         let (raw_query, ssh_config_hosts) = {
             let palette = self.command_palette.read(cx);
             (palette.query().to_string(), palette.ssh_config_hosts())
@@ -1657,7 +1588,6 @@ impl WorkspaceApp {
             .clamp(0.0, COMMAND_PALETTE_LIST_MAX_HEIGHT);
         let mode = palette.mode;
         let query_placeholder = self.i18n.t(match palette.content {
-            PaletteContent::TabScopes => "sidebar.tab_scope.search",
             PaletteContent::QuickBarCategories => "terminal.quick_commands.search_groups",
             PaletteContent::BackgroundTasks => "sidebar.background_tasks.search",
             PaletteContent::Commands => command_palette_placeholder_key(mode),
@@ -1843,12 +1773,6 @@ impl WorkspaceApp {
     ) -> AnyElement {
         let key = if self.command_palette.read(cx).is_quick_bar_category_picker() {
             "terminal.quick_commands.groups"
-        } else if self.command_palette.read(cx).is_tab_scope_picker() {
-            if section == PaletteSection::Connections {
-                "sidebar.tab_scope.connections"
-            } else {
-                "sidebar.tab_scope.categories"
-            }
         } else {
             section_label_key(section)
         };
