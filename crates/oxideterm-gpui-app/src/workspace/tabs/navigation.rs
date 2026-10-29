@@ -1073,6 +1073,7 @@ impl WorkspaceApp {
         // only a view over the node-owned ConnectionEntry session.
         self.close_sftp_page(tab.id);
         self.sftp_tab_nodes.remove(&tab.id);
+        self.mosh_tab_hosts.remove(&tab.id);
         if let Some(binding) = self.standalone_sftp_tabs.remove(&tab.id) {
             let endpoint_ids =
                 std::iter::once(binding.primary_endpoint_id).chain(binding.secondary_endpoint_id);

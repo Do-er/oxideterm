@@ -692,6 +692,7 @@ struct WorkspaceWindowTabState {
     scroll_handle: ScrollHandle,
     scrollbar_drag: Option<TabbarScrollbarDragState>,
     scrollbar_hovered: bool,
+    right_click_generation: u64,
 }
 
 #[derive(Clone, Copy, Debug)]
@@ -736,6 +737,7 @@ impl WorkspaceWindowTabState {
             scroll_handle: ScrollHandle::new(),
             scrollbar_drag: None,
             scrollbar_hovered: false,
+            right_click_generation: 0,
         }
     }
 }
@@ -936,6 +938,7 @@ pub(crate) struct WorkspaceApp {
     _file_manager_observation: Subscription,
     _file_manager_subscription: Subscription,
     sftp_tab_nodes: HashMap<TabId, NodeId>,
+    mosh_tab_hosts: HashMap<TabId, String>,
     standalone_sftp_tabs: HashMap<TabId, sftp::StandaloneSftpTabBinding>,
     standalone_sftp_sessions: HashMap<String, sftp::StandaloneSftpRuntime>,
     ftp_sessions: HashMap<String, Arc<sftp::ftp::FtpRuntime>>,

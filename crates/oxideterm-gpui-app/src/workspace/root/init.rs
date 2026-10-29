@@ -839,6 +839,7 @@ impl WorkspaceApp {
             _file_manager_observation: file_manager_observation,
             _file_manager_subscription: file_manager_subscription,
             sftp_tab_nodes: HashMap::new(),
+            mosh_tab_hosts: HashMap::new(),
             standalone_sftp_tabs: HashMap::new(),
             standalone_sftp_sessions: HashMap::new(),
             ftp_sessions: HashMap::new(),

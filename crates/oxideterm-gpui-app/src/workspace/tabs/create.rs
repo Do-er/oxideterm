@@ -733,6 +733,7 @@ impl WorkspaceApp {
         cx: &mut Context<Self>,
     ) -> Result<TerminalSessionId> {
         let tab_id = self.alloc_tab_id(cx);
+        let mosh_host = config.bootstrap.ssh.host.clone();
         let pane_id = self.alloc_pane_id(cx);
         let session_id = self.alloc_session_id(cx);
         // The bootstrap consumer identifier is local runtime metadata, not a remote session name.
@@ -770,6 +771,7 @@ impl WorkspaceApp {
             },
             cx,
         );
+        self.mosh_tab_hosts.insert(tab_id, mosh_host);
         self.bind_terminal_location(tab_id, pane_id, session_id, cx);
         let surface = standalone_connections::StandaloneConnectionSurface::Terminal(session_id);
         self.standalone_connections

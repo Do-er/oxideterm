@@ -207,7 +207,6 @@ impl WorkspaceApp {
                     ) != drag.from_index
             });
             let show_reconnect_progress = reconnect_job.is_some();
-            let tab_tooltip_label = tab_text.clone();
             let tab_tooltip_id = format!("workspace-tab-title-{}", tab_id.0);
             let middle_click_tooltip_id = tab_tooltip_id.clone();
             let close_button_tooltip_id = tab_tooltip_id.clone();
@@ -246,14 +245,26 @@ impl WorkspaceApp {
                 .on_mouse_down(
                     MouseButton::Left,
                     cx.listener(move |this, event: &MouseDownEvent, window, cx| {
-                        this.start_tab_drag_candidate(tab_id, tab_index, event, window, cx);
+                        if event.click_count >= 2 {
+                            this.duplicate_terminal_tab(tab_id, window, cx);
+                        } else {
+                            this.start_tab_drag_candidate(tab_id, tab_index, event, window, cx);
+                        }
                         cx.stop_propagation();
                     }),
                 )
                 .on_mouse_down(
                     MouseButton::Right,
                     cx.listener(move |this, event: &MouseDownEvent, _window, cx| {
-                        this.open_tab_context_menu(tab_id, event, cx);
+                        if event.click_count >= 2 {
+                            this.main_window_tabs.right_click_generation =
+                                this.main_window_tabs.right_click_generation.wrapping_add(1).max(1);
+                            this.open_tab_context_menu(tab_id, event, cx);
+                        } else if let Some(host) = this.tab_host_ip(tab_id, cx) {
+                            let x = f32::from(event.position.x);
+                            let y = f32::from(event.position.y);
+                            this.start_right_click_copy(tab_id, host, x, y, cx);
+                        }
                         cx.stop_propagation();
                     }),
                 )
@@ -265,21 +276,11 @@ impl WorkspaceApp {
                         cx.stop_propagation();
                     }),
                 )
-                .on_mouse_move(cx.listener({
-                    let tooltip_id = tab_tooltip_id.clone();
-                    move |this, event: &MouseMoveEvent, _window, cx| {
-                        this.queue_workspace_tooltip(
-                            tooltip_id.clone(),
-                            tab_tooltip_label.clone(),
-                            f32::from(event.position.x) + 12.0,
-                            f32::from(event.position.y) + 16.0,
-                            cx,
-                        );
-                    }
-                }))
-                .on_hover(cx.listener(move |this, hovered: &bool, _window, cx| {
-                    if !*hovered {
-                        this.clear_workspace_tooltip(&tab_tooltip_id, cx);
+                .on_hover(cx.listener(move |this, hovered: &bool, window, cx| {
+                    if *hovered
+                        && !this.main_window_tabs.drag.as_ref().is_some_and(|drag| drag.active)
+                    {
+                        this.set_active_tab(tab_id, window, cx);
                     }
                 }))
                 .when(show_drop_indicator, |tab| {
@@ -851,6 +852,84 @@ impl WorkspaceApp {
                 .filter(|node_id| self.has_active_reconnect_job(node_id, cx)),
             _ => None,
         }
+    }
+
+    fn tab_host_ip(&self, tab_id: TabId, cx: &App) -> Option<String> {
+        let tab = self.tab_by_id(tab_id, cx)?;
+        match tab.kind {
+            TabKind::SshTerminal => {
+                let session_id = tab
+                    .active_pane_id
+                    .and_then(|pane_id| tab.root_pane.as_ref()?.session_id_for_pane(pane_id))?;
+                let node_id = self.workspace_runtime.read(cx).ssh_terminal_node_id(session_id)?;
+                self.ssh_nodes.get(&node_id).map(|node| node.endpoint.host.clone())
+            }
+            TabKind::Sftp => self
+                .sftp_tab_nodes
+                .get(&tab.id)
+                .and_then(|node_id| self.ssh_nodes.get(node_id))
+                .map(|node| node.endpoint.host.clone()),
+            TabKind::MoshTerminal => self.mosh_tab_hosts.get(&tab.id).cloned(),
+            _ => None,
+        }
+    }
+
+    fn duplicate_terminal_tab(&mut self, tab_id: TabId, window: &mut Window, cx: &mut Context<Self>) {
+        let (is_local, title, ssh_session_id) = {
+            let Some(tab) = self.tab_by_id(tab_id, cx) else {
+                return;
+            };
+            match tab.kind {
+                TabKind::LocalTerminal => (true, tab.title.clone(), None),
+                TabKind::SshTerminal => {
+                    let session_id = tab.active_pane_id.and_then(|pane_id| {
+                        tab.root_pane.as_ref()?.session_id_for_pane(pane_id)
+                    });
+                    (false, tab.title.clone(), session_id)
+                }
+                _ => return,
+            }
+        };
+        if is_local {
+            let _ = self.create_local_terminal_tab(window, cx);
+        } else if let Some(session_id) = ssh_session_id {
+            let Some(node_id) = self.workspace_runtime.read(cx).ssh_terminal_node_id(session_id) else {
+                return;
+            };
+            let _ = self.create_ssh_terminal_tab_for_existing_node(&node_id, None, title, window, cx);
+        }
+    }
+
+    fn start_right_click_copy(
+        &mut self,
+        tab_id: TabId,
+        host: String,
+        x: f32,
+        y: f32,
+        cx: &mut Context<Self>,
+    ) {
+        self.main_window_tabs.right_click_generation =
+            self.main_window_tabs.right_click_generation.wrapping_add(1).max(1);
+        let generation = self.main_window_tabs.right_click_generation;
+        let tooltip_id = format!("tab-copy-{}", tab_id.0);
+        cx.spawn(async move |weak, cx| {
+            Timer::after(Duration::from_millis(260)).await;
+            let _ = weak.update(cx, |this, cx| {
+                if this.main_window_tabs.right_click_generation == generation {
+                    cx.write_to_clipboard(ClipboardItem::new_string(host.clone()));
+                    this.queue_workspace_tooltip(tooltip_id.clone(), host, x + 12.0, y + 16.0, cx);
+                    let clear_id = tooltip_id.clone();
+                    cx.spawn(async move |weak, cx| {
+                        Timer::after(Duration::from_millis(1500)).await;
+                        let _ = weak.update(cx, |this, cx| {
+                            this.clear_workspace_tooltip(&clear_id, cx);
+                        });
+                    })
+                    .detach();
+                }
+            });
+        })
+        .detach();
     }
 
     fn render_tab_reconnect_indicator(
