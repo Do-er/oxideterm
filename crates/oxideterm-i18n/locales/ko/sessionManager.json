@@ -129,7 +129,6 @@
       "default_icon": "기본 아이콘",
       "auto_icon": "자동 감지",
       "custom_icon": "아이콘 지정",
-      "auto_icon_hint": "연결 후 활성 세션에 감지된 시스템의 아이콘이 표시됩니다. 일치하는 아이콘이 없으면 일반 서버 아이콘이 사용됩니다.",
       "color": "색상",
       "icon_color": "아이콘 색상",
       "icon_background_color": "아이콘 배경색",
@@ -137,8 +136,7 @@
       "cancel": "취소",
       "save": "저장",
       "saving": "저장 중...",
-      "passphrase_hint": "키 경로가 변경되지 않은 경우 비워 두면 저장된 패스프레이즈를 유지합니다.",
-      "brand_icon_hint": "배포판 로고는 원래 색상과 비율을 유지합니다."
+      "passphrase_hint": "키 경로가 변경되지 않은 경우 비워 두면 저장된 패스프레이즈를 유지합니다."
     },
     "serial_profiles": {
       "title": "Serial Profiles",

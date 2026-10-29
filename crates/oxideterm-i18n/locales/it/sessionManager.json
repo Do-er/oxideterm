@@ -129,7 +129,6 @@
       "default_icon": "Icona predefinita",
       "auto_icon": "Rileva automaticamente",
       "custom_icon": "Scegli icona",
-      "auto_icon_hint": "Dopo la connessione, le sessioni attive mostrano l’icona del sistema rilevato. Se non è disponibile un’icona corrispondente, viene usata un’icona server generica.",
       "color": "Colore",
       "icon_color": "Colore dell’icona",
       "icon_background_color": "Colore di sfondo dell’icona",
@@ -137,8 +136,7 @@
       "cancel": "Annulla",
       "save": "Salva",
       "saving": "Salvataggio...",
-      "passphrase_hint": "Lascia vuoto per mantenere la passphrase salvata se il percorso della chiave non cambia.",
-      "brand_icon_hint": "I loghi delle distribuzioni mantengono i colori e le proporzioni originali."
+      "passphrase_hint": "Lascia vuoto per mantenere la passphrase salvata se il percorso della chiave non cambia."
     },
     "serial_profiles": {
       "title": "Serial Profiles",

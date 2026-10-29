@@ -16,7 +16,6 @@ pub(in crate::workspace) use oxideterm_connections::{
 
 /// Shared geometry keeps textarea rendering and IME hit testing aligned.
 pub(in crate::workspace) const CONNECTION_NOTES_LINE_HEIGHT: f32 = 20.0;
-pub(in crate::workspace) const CONNECTION_NOTES_MIN_HEIGHT: f32 = 84.0;
 pub(in crate::workspace) const CONNECTION_NOTES_VERTICAL_PADDING: f32 = 8.0;
 use oxideterm_remote_desktop::{
     RemoteDesktopProviderCapabilities, RemoteDesktopSessionOptions, RemoteDesktopVncCompression,
@@ -252,7 +251,9 @@ pub(in crate::workspace) enum NewConnectionField {
     StandaloneSftpSecondaryUpstreamProxyPassword,
     PostConnectCommand,
     ProxyCommand,
+    #[allow(dead_code)]
     Color,
+    #[allow(dead_code)]
     IconBackgroundColor,
     JumpHost,
     JumpPort,
@@ -1163,7 +1164,7 @@ impl Default for NewConnectionForm {
             proxy_command_keychain_id: None,
             color: String::new(),
             icon_background_color: String::new(),
-            icon: "rocky".to_string(),
+            icon: String::new(),
             icon_picker_expanded: false,
             basic_section_expanded: None,
             authentication_section_expanded: None,

@@ -129,7 +129,6 @@
       "default_icon": "Default icon",
       "auto_icon": "Auto-detect",
       "custom_icon": "Choose icon",
-      "auto_icon_hint": "After connecting, active sessions use the detected system icon. If no matching icon is available, a generic server icon is used.",
       "color": "Color",
       "icon_color": "Icon color",
       "icon_background_color": "Icon background color",
@@ -137,8 +136,7 @@
       "cancel": "Cancel",
       "save": "Save",
       "saving": "Saving...",
-      "passphrase_hint": "Leave blank to keep the saved passphrase when the key path is unchanged.",
-      "brand_icon_hint": "Distribution logos retain their original colors and proportions."
+      "passphrase_hint": "Leave blank to keep the saved passphrase when the key path is unchanged."
     },
     "serial_profiles": {
       "title": "Serial Profiles",

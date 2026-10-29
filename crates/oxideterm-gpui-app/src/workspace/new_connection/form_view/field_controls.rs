@@ -1,6 +1,6 @@
 use super::super::password_prompt::SavedPasswordLoadError;
 use super::*;
-use gpui::{App, CursorStyle};
+use gpui::App;
 use oxideterm_connections::{ConnectionTerminalSessionLogPolicy, SavedAuth, SshChannelStrategy};
 use oxideterm_remote_desktop::RemoteDesktopRdpNetworkProfile;
 use oxideterm_settings_model::parse_rgb24_hex;
@@ -779,130 +779,20 @@ impl WorkspaceApp {
         form_field(&self.tokens, label, control)
     }
 
-    pub(super) fn render_connection_multiline_field(
-        &self,
-        label: String,
-        value: &str,
-        placeholder: String,
-        field: NewConnectionField,
-        cx: &mut Context<Self>,
-    ) -> AnyElement {
-        let target = WorkspaceImeTarget::NewConnection(field);
-        let focused = self
-            .connection_form_state(cx)
-            .form
-            .as_ref()
-            .is_some_and(|form| form.field_focused && form.focused_field == field);
-        let marked_range = self.ime_marked_virtual_range_for_target(target, cx);
-        let selection = self.ime_selected_range_for_target(target, cx);
-        let showing_placeholder = value.is_empty() && marked_range.is_none();
-        let display = if showing_placeholder {
-            placeholder
-        } else {
-            self.ime_text_with_marked_text_for_target(target, cx)
-                .unwrap_or_else(|| value.to_string())
-        };
-        let theme = self.tokens.ui;
-        let mut textarea = div()
-            .w_full()
-            .min_h(px(CONNECTION_NOTES_MIN_HEIGHT))
-            .px(px(self.tokens.metrics.ui_control_padding_x))
-            .py(px(CONNECTION_NOTES_VERTICAL_PADDING))
-            .flex()
-            .flex_col()
-            .items_start()
-            .rounded(px(self.tokens.radii.md))
-            .border_1()
-            .border_color(if focused {
-                rgb(theme.accent)
-            } else {
-                rgb(theme.border)
-            })
-            .bg(rgba((theme.bg << 8) | 0x80))
-            .cursor(CursorStyle::IBeam)
-            .overflow_hidden()
-            .text_size(px(self.tokens.metrics.ui_text_sm))
-            .line_height(px(CONNECTION_NOTES_LINE_HEIGHT))
-            .text_color(if showing_placeholder {
-                rgb(theme.text_muted)
-            } else {
-                rgb(theme.text)
-            });
-        let lines = settings_multiline_line_ranges(&display);
-        for (index, (line_range, line_text)) in lines.iter().enumerate() {
-            let is_last_line = index + 1 == lines.len();
-            let local_marked_range = marked_range.as_ref().and_then(|marked| {
-                let start = marked.start.max(line_range.start);
-                let end = marked.end.min(line_range.end);
-                (start < end).then_some(start - line_range.start..end - line_range.start)
-            });
-            let (line_selection, line_caret) = if showing_placeholder || marked_range.is_some() {
-                (None, None)
-            } else {
-                settings_multiline_line_selection(selection.as_ref(), line_range)
-            };
-            let segments = if showing_placeholder {
-                div().child(line_text.as_str().to_string())
-            } else if let Some(marked_range) = local_marked_range {
-                text_input_value_segments_with_marked_range(&self.tokens, line_text, marked_range)
-            } else {
-                text_input_value_segments(
-                    &self.tokens,
-                    line_text,
-                    false,
-                    line_selection,
-                    line_caret,
-                    self.input_caret.visible(),
-                )
-            };
-            textarea = textarea.child(
-                div()
-                    .w_full()
-                    .min_w_0()
-                    .h(px(CONNECTION_NOTES_LINE_HEIGHT))
-                    .min_h(px(CONNECTION_NOTES_LINE_HEIGHT))
-                    .flex()
-                    .items_center()
-                    .when(focused && showing_placeholder && index == 0, |line| {
-                        line.child(text_caret(&self.tokens, self.input_caret.visible()))
-                    })
-                    .child(segments)
-                    .when(
-                        focused
-                            && is_last_line
-                            && !showing_placeholder
-                            && selection.is_none()
-                            && marked_range.is_none(),
-                        |line| line.child(text_caret(&self.tokens, self.input_caret.visible())),
-                    ),
-            );
-        }
-        form_field(
-            &self.tokens,
-            label,
-            self.finish_connection_input(textarea, field, cx),
-        )
-    }
 
     pub(super) fn render_connection_notes_fields(
         &self,
         notes: &str,
         cx: &mut Context<Self>,
     ) -> AnyElement {
-        // Notes are ordinary metadata; the warning keeps credentials in protected fields.
-        div()
-            .flex()
-            .flex_col()
-            .gap(px(self.tokens.spacing.two))
-            .child(self.render_connection_multiline_field(
-                self.i18n.t("ssh.form.notes"),
-                notes,
-                self.i18n.t("ssh.form.notes_placeholder"),
-                NewConnectionField::Notes,
-                cx,
-            ))
-            .child(self.render_connection_hint(self.i18n.t("ssh.form.notes_hint")))
-            .into_any_element()
+        self.render_connection_field(
+            self.i18n.t("ssh.form.notes"),
+            notes,
+            self.i18n.t("ssh.form.notes_placeholder"),
+            NewConnectionField::Notes,
+            false,
+            cx,
+        )
     }
 
     pub(super) fn render_connection_secret_field(
@@ -1870,91 +1760,30 @@ impl WorkspaceApp {
         cx: &mut Context<Self>,
     ) -> AnyElement {
         let active_family = auth_family_from_tab(active_tab);
-        let label = match context {
-            AuthSelectorContext::EditProperties => {
-                self.i18n.t("sessionManager.edit_properties.auth_type")
-            }
-            AuthSelectorContext::DrillDown => self.i18n.t("ssh.drill_down.auth_method"),
-            AuthSelectorContext::Jump => self.i18n.t("ssh.form.proxy_jump_auth"),
-            AuthSelectorContext::Standard
-            | AuthSelectorContext::StandaloneSftpSecondary
-            | AuthSelectorContext::Prompt => self.i18n.t("ssh.form.authentication"),
-        };
         let choices = Self::auth_family_choices(context);
-        let active_index = choices
-            .iter()
-            .position(|(family, _)| *family == active_family)
-            .unwrap_or(0);
-        let control_id = Self::auth_selector_motion_id(context);
-        let previous_index = self
-            .segmented_control_user_previous_index(control_id, active_index)
-            .unwrap_or(active_index);
-        let transition_generation = self
-            .segmented_control_user_transition(control_id, active_index)
-            .map(|(generation, _)| generation);
-        let mut items = Vec::with_capacity(choices.len());
-        for (choice_index, (family, label_key)) in choices.iter().enumerate() {
-            let family = *family;
-            let item = segmented_tab(
-                &self.tokens,
-                self.i18n.t(label_key),
-                family == active_family,
-            )
-            // The moving surface owns the selected background; the trigger keeps
-            // the exact legacy typography, spacing, and inactive appearance.
-            .bg(rgba(0x00000000))
-            .min_h(px(self.tokens.metrics.ui_tabs_list_height))
-            .whitespace_normal()
-            .text_align(gpui::TextAlign::Center)
-            .line_height(px(self.tokens.metrics.ui_text_sm + 2.0))
-            .on_mouse_down(
-                MouseButton::Left,
-                cx.listener(move |this, _event, _window, cx| {
-                    this.set_new_connection_auth_family(family, context, jump_form, cx);
-                    if choice_index != active_index {
-                        this.begin_user_segmented_control_transition_from(
-                            control_id,
-                            active_index,
-                            choice_index,
-                            cx,
-                        );
-                    }
-                }),
-            );
-            items.push(item.into_any_element());
-        }
-        let item_width = 1.0 / choices.len().max(1) as f32;
-        let active_left = active_index as f32 * item_width;
-        let previous_left = previous_index as f32 * item_width;
-        let indicator = div()
-            .absolute()
-            .top_0()
-            .bottom_0()
-            .w(gpui::relative(item_width))
-            .rounded(px(self.tokens.radii.xs))
-            .bg(rgb(self.tokens.ui.bg));
-        let indicator = oxideterm_gpui_ui::segmented_control::selection_indicator(
-            &self.tokens,
-            control_id,
-            indicator,
-            previous_left,
-            active_left,
-            transition_generation.is_some(),
-        );
-        let mut inner = div().relative().w_full().flex().flex_row().child(indicator);
-        for item in items {
-            inner = inner.child(item);
-        }
-        // Preserve the original authentication selector shell exactly; only
-        // its selected fill moves between the existing option cells.
-        let row = segmented_tabs(&self.tokens).child(inner);
+        let items = choices
+            .into_iter()
+            .enumerate()
+            .map(|(choice_index, &(family, label_key))| {
+                let is_selected = family == active_family;
+                segmented_tab(&self.tokens, self.i18n.t(label_key), is_selected)
+                    .id(SharedString::from(format!("auth-selector-tab-{choice_index}")))
+                    .on_mouse_down(
+                        MouseButton::Left,
+                        cx.listener(move |this, _event, _window, cx| {
+                            this.set_new_connection_auth_family(family, context, jump_form, cx);
+                        }),
+                    )
+            });
+
+        let row = segmented_tabs(&self.tokens).w_full().children(items);
 
         div()
             .w_full()
             .flex()
             .flex_col()
             .gap(px(self.tokens.spacing.three))
-            .child(form_field(&self.tokens, label, row))
+            .child(row)
             .when(
                 active_family == SshAuthFamily::Key && context != AuthSelectorContext::DrillDown,
                 |content| {
@@ -2244,6 +2073,7 @@ impl WorkspaceApp {
         }
     }
 
+    #[allow(dead_code)]
     fn auth_selector_motion_id(context: AuthSelectorContext) -> &'static str {
         match context {
             AuthSelectorContext::Standard => {
@@ -2521,6 +2351,7 @@ impl WorkspaceApp {
         }
     }
 
+    #[allow(dead_code)]
     pub(super) fn render_edit_color_field(
         &self,
         label: String,
@@ -2584,19 +2415,72 @@ impl WorkspaceApp {
     pub(super) fn render_edit_icon_field(
         &self,
         icon_value: &str,
-        color_value: &str,
-        background_color_value: &str,
+        _color_value: &str,
+        _background_color_value: &str,
         expanded: bool,
         supports_auto_icon: bool,
         cx: &mut Context<Self>,
     ) -> AnyElement {
         let theme = self.tokens.ui;
-        let preview_color = parse_rgb24_hex(color_value).unwrap_or(theme.accent);
-        let preview_background = parse_rgb24_hex(background_color_value)
-            .map(rgb)
-            .unwrap_or_else(|| rgba((preview_color << 8) | 0x22));
-        let active_icon =
-            session_icon_from_id(Some(icon_value)).unwrap_or(LucideIcon::Server.into());
+        let active_icon = if supports_auto_icon {
+            resolved_session_icon(Some(icon_value), None)
+        } else {
+            session_icon_from_id(Some(icon_value)).unwrap_or(LucideIcon::Server.into())
+        };
+
+        let is_custom = !icon_value.trim().is_empty();
+        let is_custom_tab = is_custom || expanded;
+        let is_auto_or_default = !is_custom_tab;
+
+        let tabs = segmented_tabs(&self.tokens)
+            .child(
+                segmented_tab(
+                    &self.tokens,
+                    self.i18n.t(if supports_auto_icon {
+                        "sessionManager.edit_properties.auto_icon"
+                    } else {
+                        "sessionManager.edit_properties.default_icon"
+                    }),
+                    is_auto_or_default,
+                )
+                .on_mouse_down(
+                    MouseButton::Left,
+                    cx.listener(move |this, _event, _window, cx| {
+                        this.update_connection_form_state(cx, |state| {
+                            if let Some(form) = state.form.as_mut() {
+                                form.icon.clear();
+                                form.icon_picker_expanded = false;
+                                clear_connection_selection(form);
+                            }
+                        });
+                        cx.notify();
+                    }),
+                ),
+            )
+            .child(
+                segmented_tab(
+                    &self.tokens,
+                    self.i18n.t("sessionManager.edit_properties.custom_icon"),
+                    is_custom_tab,
+                )
+                .on_mouse_down(
+                    MouseButton::Left,
+                    cx.listener(move |this, _event, _window, cx| {
+                        this.update_connection_form_state(cx, |state| {
+                            if let Some(form) = state.form.as_mut() {
+                                if form.icon.trim().is_empty() {
+                                    form.icon_picker_expanded = !form.icon_picker_expanded;
+                                } else {
+                                    form.icon_picker_expanded = !form.icon_picker_expanded;
+                                }
+                                clear_connection_selection(form);
+                            }
+                        });
+                        cx.notify();
+                    }),
+                ),
+            );
+
         let mut grid = div().flex().flex_wrap().gap(px(self.tokens.spacing.two));
 
         let choices = crate::assets::DISTRO_ICONS
@@ -2681,131 +2565,53 @@ impl WorkspaceApp {
             );
         }
 
-        form_field(
-            &self.tokens,
-            self.i18n.t("sessionManager.edit_properties.icon"),
-            div()
-                .flex()
-                .flex_col()
-                .gap(px(self.tokens.spacing.three))
-                .child(
-                    div()
-                        .flex()
-                        .flex_wrap()
-                        .items_center()
-                        .gap(px(self.tokens.spacing.three))
-                        .child(
-                            div()
-                                .size(px(self.tokens.metrics.form_input_height))
-                                .rounded(px(self.tokens.radii.md))
-                                .border_1()
-                                .border_color(rgb(theme.border))
-                                .bg(preview_background)
-                                .flex()
-                                .items_center()
-                                .justify_center()
-                                .child(active_icon.render(18.0, rgb(preview_color))),
-                        )
-                        .child(
-                            button(
-                                &self.tokens,
-                                if supports_auto_icon {
-                                    self.i18n.t("sessionManager.edit_properties.custom_icon")
-                                } else if expanded {
-                                    self.i18n.t("sessionManager.edit_properties.hide_icons")
-                                } else {
-                                    self.i18n.t("sessionManager.edit_properties.choose_icon")
-                                },
-                                if supports_auto_icon && !icon_value.trim().is_empty() {
-                                    ButtonTone::Primary
-                                } else {
-                                    ButtonTone::Secondary
-                                },
-                            )
-                            .on_mouse_down(
-                                MouseButton::Left,
-                                cx.listener(|this, _event, _window, cx| {
-                                    this.update_connection_form_state(cx, |state| {
-                                        if let Some(form) = state.form.as_mut() {
-                                            form.icon_picker_expanded = !form.icon_picker_expanded;
-                                            clear_connection_selection(form);
-                                        }
-                                    });
-                                    cx.notify();
-                                }),
-                            ),
-                        )
-                        .when(supports_auto_icon || !icon_value.trim().is_empty(), |row| {
-                            row.child(
-                                button(
-                                    &self.tokens,
-                                    self.i18n.t(if supports_auto_icon {
-                                        "sessionManager.edit_properties.auto_icon"
-                                    } else {
-                                        "sessionManager.edit_properties.default_icon"
-                                    }),
-                                    if supports_auto_icon && icon_value.trim().is_empty() {
-                                        ButtonTone::Primary
-                                    } else {
-                                        ButtonTone::Secondary
-                                    },
-                                )
-                                .on_mouse_down(
-                                    MouseButton::Left,
-                                    cx.listener(move |this, _event, _window, cx| {
-                                        this.update_connection_form_state(cx, |state| {
-                                            if let Some(form) = state.form.as_mut() {
-                                                form.icon.clear();
-                                                if supports_auto_icon {
-                                                    form.icon_picker_expanded = false;
-                                                }
-                                                clear_connection_selection(form);
-                                            }
-                                        });
-                                        cx.notify();
-                                    }),
-                                ),
-                            )
-                        }),
-                )
-                .when(
-                    supports_auto_icon && icon_value.trim().is_empty(),
-                    |content| {
-                        content.child(self.render_connection_hint(
-                            self.i18n.t("sessionManager.edit_properties.auto_icon_hint"),
-                        ))
-                    },
-                )
-                .when(
-                    matches!(
-                        active_icon,
-                        crate::workspace::session_icons::SessionIcon::Distro(_)
-                    ),
-                    |content| {
-                        content.child(
-                            self.render_connection_hint(
-                                self.i18n
-                                    .t("sessionManager.edit_properties.brand_icon_hint"),
-                            ),
-                        )
-                    },
-                )
-                .when(expanded, |content| {
-                    content.child(
+        let header = div()
+            .w_full()
+            .flex()
+            .items_center()
+            .justify_between()
+            .child(
+                div()
+                    .flex()
+                    .items_center()
+                    .gap(px(self.tokens.spacing.two))
+                    .child(
                         div()
-                            .id("edit-connection-icon-grid")
-                            .max_h(px(180.0))
-                            .selectable_overflow_y_scroll(
-                                &self.selectable_text_scroll_handle("edit-connection-icon-grid"),
-                            )
-                            // The icon grid is a nested scroll surface inside
-                            // the edit dialog. Wheel input over it should not
-                            // also move the outer form body.
-                            .on_scroll_wheel(|_, _, cx| cx.stop_propagation())
-                            .child(grid),
+                            .text_size(px(self.tokens.metrics.ui_text_sm))
+                            .font_weight(gpui::FontWeight::SEMIBOLD)
+                            .text_color(rgb(theme.text_heading))
+                            .child(self.i18n.t("sessionManager.edit_properties.icon")),
                     )
-                }),
-        )
+                    .child(
+                        div()
+                            .size(px(20.0))
+                            .flex()
+                            .items_center()
+                            .justify_center()
+                            .child(active_icon.render(18.0, rgb(theme.accent))),
+                    ),
+            )
+            .child(tabs);
+
+        div()
+            .w_full()
+            .flex()
+            .flex_col()
+            .gap(px(self.tokens.spacing.two))
+            .child(header)
+            .when(expanded, |content| {
+                content.child(
+                    div()
+                        .id("edit-connection-icon-grid")
+                        .max_h(px(180.0))
+                        .selectable_overflow_y_scroll(
+                            &self.selectable_text_scroll_handle("edit-connection-icon-grid"),
+                        )
+                        .on_scroll_wheel(|_, _, cx| cx.stop_propagation())
+                        .child(grid),
+                )
+            })
+            .into_any_element()
     }
 
     pub(super) fn render_connection_appearance_fields(
@@ -2817,59 +2623,14 @@ impl WorkspaceApp {
         supports_auto_icon: bool,
         cx: &mut Context<Self>,
     ) -> AnyElement {
-        div()
-            .pt(px(self.tokens.spacing.two))
-            .border_t_1()
-            .border_color(rgb(self.tokens.ui.border))
-            .flex()
-            .flex_col()
-            .gap(px(self.tokens.metrics.modal_section_gap))
-            .child(
-                div()
-                    .text_size(px(self.tokens.metrics.ui_text_sm))
-                    .font_weight(gpui::FontWeight::SEMIBOLD)
-                    .text_color(rgb(self.tokens.ui.text_heading))
-                    .child(self.i18n.t("ssh.form.appearance")),
-            )
-            .child(self.render_edit_icon_field(
-                icon,
-                color,
-                background_color,
-                icon_picker_expanded,
-                supports_auto_icon,
-                cx,
-            ))
-            .child(
-                div()
-                    .flex()
-                    .flex_row()
-                    .flex_wrap()
-                    .gap(px(self.tokens.spacing.three))
-                    .child(
-                        div()
-                            .flex_1()
-                            .min_w(px(CONNECTION_ICON_COLOR_CONTROL_MIN_WIDTH))
-                            .child(self.render_edit_color_field(
-                                self.i18n.t("sessionManager.edit_properties.icon_color"),
-                                color,
-                                NewConnectionField::Color,
-                                cx,
-                            )),
-                    )
-                    .child(
-                        div()
-                            .flex_1()
-                            .min_w(px(CONNECTION_ICON_COLOR_CONTROL_MIN_WIDTH))
-                            .child(self.render_edit_color_field(
-                                self.i18n
-                                    .t("sessionManager.edit_properties.icon_background_color"),
-                                background_color,
-                                NewConnectionField::IconBackgroundColor,
-                                cx,
-                            )),
-                    ),
-            )
-            .into_any_element()
+        self.render_edit_icon_field(
+            icon,
+            color,
+            background_color,
+            icon_picker_expanded,
+            supports_auto_icon,
+            cx,
+        )
     }
 
     pub(in crate::workspace) fn render_transport_selector(

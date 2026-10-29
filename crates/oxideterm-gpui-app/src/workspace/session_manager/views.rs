@@ -482,8 +482,7 @@ impl SessionManagerDisplayItem {
             Self::Tunnel(_) => LucideIcon::Network.into(),
             Self::Plugin(_) => LucideIcon::Puzzle.into(),
             Self::Connection(connection) => {
-                session_icons::session_icon_from_id(connection.icon.as_deref())
-                    .unwrap_or(LucideIcon::Server.into())
+                session_icons::resolved_session_icon(connection.icon.as_deref(), None)
             }
             Self::SshConfig(_) => LucideIcon::FileTerminal.into(),
             Self::Serial(profile) => session_icons::session_icon_from_id(profile.icon.as_deref())

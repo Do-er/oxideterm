@@ -70,7 +70,6 @@
       "group": "群組",
       "notes": "備註",
       "notes_placeholder": "新增此連線的選填說明",
-      "notes_hint": "請勿在備註中儲存密碼、私密金鑰或其他憑證。",
       "ungrouped": "未分組",
       "create_groups_hint": "在設定中建立群組",
       "terminal_options": "終端機行為",

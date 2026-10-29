@@ -129,7 +129,6 @@
       "default_icon": "Ícone padrão",
       "auto_icon": "Detectar automaticamente",
       "custom_icon": "Escolher ícone",
-      "auto_icon_hint": "Após a conexão, as sessões ativas exibem o ícone do sistema detectado. Se não houver um ícone correspondente, será usado um ícone de servidor genérico.",
       "color": "Cor",
       "icon_color": "Cor do ícone",
       "icon_background_color": "Cor de fundo do ícone",
@@ -137,8 +136,7 @@
       "cancel": "Cancelar",
       "save": "Salvar",
       "saving": "Salvando...",
-      "passphrase_hint": "Deixe em branco para manter a frase secreta salva quando o caminho da chave não mudar.",
-      "brand_icon_hint": "Os logotipos das distribuições mantêm suas cores e proporções originais."
+      "passphrase_hint": "Deixe em branco para manter a frase secreta salva quando o caminho da chave não mudar."
     },
     "serial_profiles": {
       "title": "Serial Profiles",

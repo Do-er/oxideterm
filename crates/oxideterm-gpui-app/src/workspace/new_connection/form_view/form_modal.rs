@@ -837,243 +837,14 @@ impl WorkspaceApp {
                                                                                 false,
                                                                                 cx,
                                                                             );
-                                                                            let mut auth = div()
-                                                                                .pt(px(self.tokens.spacing.two))
-                                                                                .border_t_1()
+
+                                                                            let destination_card = div()
+                                                                                .w_full()
+                                                                                .rounded(px(self.tokens.radii.lg))
+                                                                                .border_1()
                                                                                 .border_color(rgb(self.tokens.ui.border))
-                                                                                .flex()
-                                                                                .flex_col()
-                                                                                .gap(px(self.tokens.metrics.modal_section_gap))
-                                                                                .child(
-                                                                                    div()
-                                                                                        .text_size(px(self.tokens.metrics.ui_text_sm))
-                                                                                        .font_weight(gpui::FontWeight::SEMIBOLD)
-                                                                                        .text_color(rgb(self.tokens.ui.text_heading))
-                                                                                        .child(self.i18n.t("ssh.form.authentication")),
-                                                                                )
-                                                                                .child(self.render_connection_checkbox(
-                                                                                    self.i18n.t("ssh.form.kerberos_preferred"),
-                                                                                    form.gssapi_enabled,
-                                                                                    |form| form.gssapi_enabled = !form.gssapi_enabled,
-                                                                                    cx,
-                                                                                ))
-                                                                                .when(form.gssapi_enabled, |content| {
-                                                                                    content
-                                                                                        .child(self.render_connection_hint(
-                                                                                            self.i18n.t("ssh.form.gssapi_desc"),
-                                                                                        ))
-                                                                                        .child(self.render_connection_field(
-                                                                                            self.i18n.t("ssh.form.gssapi_server_identity"),
-                                                                                            &form.gssapi_server_identity,
-                                                                                            self.i18n.t("ssh.form.gssapi_server_identity_placeholder"),
-                                                                                            NewConnectionField::GssapiServerIdentity,
-                                                                                            false,
-                                                                                            cx,
-                                                                                        ))
-                                                                                        .child(self.render_connection_hint(
-                                                                                            self.i18n.t("ssh.form.gssapi_server_identity_hint"),
-                                                                                        ))
-                                                                                        .child(self.render_kerberos_credentials_status(
-                                                                                            form.gssapi_credentials_available,
-                                                                                        ))
-                                                                                        .child(
-                                                                                            self.render_connection_checkbox_with_warning(
-                                                                                                "kerberos-delegation-help",
-                                                                                                "kerberos-delegation-tooltip",
-                                                                                                "ssh.form.gssapi_delegate_credentials",
-                                                                                                "ssh.form.gssapi_delegation_warning",
-                                                                                                form.gssapi_delegate_credentials,
-                                                                                                |form| {
-                                                                                                    form.gssapi_delegate_credentials =
-                                                                                                        !form.gssapi_delegate_credentials;
-                                                                                                },
-                                                                                                cx,
-                                                                                            ),
-                                                                                        )
-                                                                                        .child(
-                                                                                            div()
-                                                                                                .text_size(px(self.tokens.metrics.ui_text_sm))
-                                                                                                .font_weight(gpui::FontWeight::MEDIUM)
-                                                                                                .text_color(rgb(self.tokens.ui.text))
-                                                                                                .child(self.i18n.t("ssh.form.fallback_authentication")),
-                                                                                        )
-                                                                                })
-                                                                                .child(selector)
-                                                                                .child(self.render_connection_totp_select(false, cx));
-
-                                                                            if form.auth_tab == SshAuthTab::Password {
-                                                                                if edit_properties_mode && form.saved_password_keychain_id.is_some() {
-                                                                                    let pw_child = if form.password_loaded {
-                                                                                        self.render_connection_secret_field(
-                                                                                            self.i18n.t("sessionManager.edit_properties.saved_password"),
-                                                                                            String::new(),
-                                                                                            NewConnectionField::Password,
-                                                                                            cx,
-                                                                                        )
-                                                                                    } else {
-                                                                                        self.render_edit_saved_password_field(cx)
-                                                                                    };
-                                                                                    auth = auth
-                                                                                        .child(pw_child)
-                                                                                        .child(self.render_connection_hint(
-                                                                                            self.i18n.t("sessionManager.edit_properties.password_hint"),
-                                                                                        ));
-                                                                                } else if edit_properties_mode {
-                                                                                    auth = auth.child(self.render_connection_secret_field(
-                                                                                        self.i18n.t("ssh.form.password"),
-                                                                                        String::new(),
-                                                                                        NewConnectionField::Password,
-                                                                                        cx,
-                                                                                    ));
-                                                                                } else if mosh_edit_mode || standalone_sftp_edit_mode {
-                                                                                    auth = auth.child(self.render_connection_secret_field(
-                                                                                        self.i18n.t("ssh.form.password"),
-                                                                                        String::new(),
-                                                                                        NewConnectionField::Password,
-                                                                                        cx,
-                                                                                    ));
-                                                                                    if form.saved_password_keychain_id.is_some() {
-                                                                                        auth = auth.child(self.render_connection_hint(
-                                                                                            self.i18n.t("sessionManager.edit_properties.password_hint"),
-                                                                                        ));
-                                                                                    }
-                                                                                } else {
-                                                                                    auth = auth
-                                                                                        .child(self.render_connection_secret_field(
-                                                                                            self.i18n.t("ssh.form.password"),
-                                                                                            String::new(),
-                                                                                            NewConnectionField::Password,
-                                                                                            cx,
-                                                                                        ))
-                                                                                        .child(self.render_connection_checkbox(
-                                                                                            self.i18n.t("ssh.form.save_password"),
-                                                                                            form.save_password,
-                                                                                            |form| form.save_password = !form.save_password,
-                                                                                            cx,
-                                                                                        ));
-                                                                                }
-                                                                                auth = auth.child(self.render_connection_checkbox(
-                                                                                    self.i18n.t("ssh.form.use_empty_password"),
-                                                                                    form.empty_password,
-                                                                                    |form| {
-                                                                                        form.empty_password = !form.empty_password;
-                                                                                        form.field_focused = false;
-                                                                                        form.saved_password_keychain_id = None;
-                                                                                        form.password_from_store = false;
-                                                                                        form.password_loaded = true;
-                                                                                        if form.empty_password { form.password.zeroize(); }
-                                                                                    },
-                                                                                    cx,
-                                                                                ));
-                                                                            } else if form.auth_tab == SshAuthTab::DefaultKey
-                                                                                && !edit_properties_mode
-                                                                                && !mosh_edit_mode
-                                                                                && !standalone_sftp_edit_mode
-                                                                            {
-                                                                                auth = auth
-                                                                                    .child(self.render_connection_hint(self.i18n.t("ssh.form.default_key_desc")))
-                                                                                    .child(self.render_connection_secret_field(
-                                                                                        self.i18n.t("ssh.form.passphrase"),
-                                                                                        self.i18n.t("ssh.form.passphrase_placeholder"),
-                                                                                        NewConnectionField::Passphrase,
-                                                                                        cx,
-                                                                                    ));
-                                                                            } else if form.auth_tab == SshAuthTab::SshKey
-                                                                                || ((edit_properties_mode || mosh_edit_mode || standalone_sftp_edit_mode)
-                                                                                    && form.auth_tab == SshAuthTab::DefaultKey)
-                                                                            {
-                                                                                let key_label = if edit_properties_mode || mosh_edit_mode || standalone_sftp_edit_mode {
-                                                                                    self.i18n.t("sessionManager.edit_properties.key_path")
-                                                                                } else {
-                                                                                    self.i18n.t("ssh.form.key_file")
-                                                                                };
-                                                                                auth = auth
-                                                                                    .child(self.render_connection_field_with_browse(
-                                                                                        key_label,
-                                                                                        &form.key_path,
-                                                                                        "~/.ssh/id_ed25519".to_string(),
-                                                                                        NewConnectionField::KeyPath,
-                                                                                        cx,
-                                                                                    ))
-                                                                                    .child(self.render_connection_secret_field(
-                                                                                        self.i18n.t("ssh.form.passphrase"),
-                                                                                        self.i18n.t("ssh.form.passphrase_placeholder"),
-                                                                                        NewConnectionField::Passphrase,
-                                                                                        cx,
-                                                                                    ));
-                                                                                if edit_properties_mode || mosh_edit_mode || standalone_sftp_edit_mode {
-                                                                                    auth = auth.child(self.render_connection_hint(
-                                                                                        self.i18n.t("sessionManager.edit_properties.passphrase_hint"),
-                                                                                    ));
-                                                                                }
-                                                                            } else if form.auth_tab == SshAuthTab::ManagedKey {
-                                                                                auth = auth
-                                                                                    .child(self.render_managed_key_select(
-                                                                                        self.i18n.t("ssh.form.managed_key"),
-                                                                                        &form.managed_key_id,
-                                                                                        false,
-                                                                                        cx,
-                                                                                    ))
-                                                                                    .child(self.render_connection_secret_field(
-                                                                                        self.i18n.t("ssh.form.passphrase"),
-                                                                                        self.i18n.t("ssh.form.passphrase_placeholder"),
-                                                                                        NewConnectionField::Passphrase,
-                                                                                        cx,
-                                                                                    ))
-                                                                                    .child(self.render_connection_hint(self.i18n.t("ssh.form.managed_key_hint")));
-                                                                            } else if form.auth_tab == SshAuthTab::Certificate {
-                                                                                auth = auth
-                                                                                    .child(self.render_connection_hint(self.i18n.t("ssh.form.certificate_note")))
-                                                                                    .child(self.render_connection_field_with_browse(
-                                                                                        self.i18n.t("ssh.form.private_key"),
-                                                                                        &form.key_path,
-                                                                                        "~/.ssh/id_ed25519".to_string(),
-                                                                                        NewConnectionField::KeyPath,
-                                                                                        cx,
-                                                                                    ))
-                                                                                    .child(self.render_connection_field_with_browse(
-                                                                                        self.i18n.t("ssh.form.certificate"),
-                                                                                        &form.cert_path,
-                                                                                        "~/.ssh/id_ed25519-cert.pub".to_string(),
-                                                                                        NewConnectionField::CertPath,
-                                                                                        cx,
-                                                                                    ))
-                                                                                    .child(self.render_connection_secret_field(
-                                                                                        self.i18n.t("ssh.form.passphrase"),
-                                                                                        self.i18n.t("ssh.form.passphrase_placeholder"),
-                                                                                        NewConnectionField::Passphrase,
-                                                                                        cx,
-                                                                                    ));
-                                                                                if edit_properties_mode || mosh_edit_mode || standalone_sftp_edit_mode {
-                                                                                    auth = auth.child(self.render_connection_hint(
-                                                                                        self.i18n.t("sessionManager.edit_properties.passphrase_hint"),
-                                                                                    ));
-                                                                                }
-                                                                            } else if form.auth_tab == SshAuthTab::Agent {
-                                                                                auth = auth
-                                                                                    .child(self.render_connection_hint(self.i18n.t("ssh.form.agent_desc")))
-                                                                                    .child(self.render_connection_field(
-                                                                                        self.i18n.t("ssh.form.agent_endpoint"),
-                                                                                        &form.identity_agent,
-                                                                                        self.i18n.t("ssh.form.agent_endpoint_placeholder"),
-                                                                                        NewConnectionField::IdentityAgent,
-                                                                                        false,
-                                                                                        cx,
-                                                                                    ))
-                                                                                    .child(self.render_connection_hint(self.i18n.t("ssh.form.agent_endpoint_hint")))
-                                                                                    .child(self.render_agent_status(form.agent_available))
-                                                                                    .child(self.render_connection_hint(self.i18n.t("ssh.form.agent_hint")));
-                                                                            } else if form.auth_tab == SshAuthTab::TwoFactor && !edit_properties_mode {
-                                                                                auth = auth
-                                                                                    .child(self.render_connection_hint(self.i18n.t("ssh.form.two_factor_desc")))
-                                                                                    .child(self.render_connection_hint(self.i18n.t("ssh.form.two_factor_hint")))
-                                                                                    .child(self.render_connection_hint_with_color(
-                                                                                        self.i18n.t("ssh.form.two_factor_warning"),
-                                                                                        self.tokens.ui.warning,
-                                                                                    ));
-                                                                            }
-
-                                                                            let destination = div()
+                                                                                .bg(rgb(self.tokens.ui.bg_card))
+                                                                                .p(px(self.tokens.spacing.three))
                                                                                 .flex()
                                                                                 .flex_col()
                                                                                 .gap(px(self.tokens.metrics.modal_section_gap))
@@ -1141,23 +912,287 @@ impl WorkspaceApp {
                                                                                                     false,
                                                                                                     cx,
                                                                                                 )),
+                                                                                        )
+                                                                                        .child(
+                                                                                            div()
+                                                                                                .w(px(140.0))
+                                                                                                .child(self.render_connection_field(
+                                                                                                    self.i18n.t("ssh.form.username"),
+                                                                                                    &form.username,
+                                                                                                    "root".to_string(),
+                                                                                                    NewConnectionField::Username,
+                                                                                                    false,
+                                                                                                    cx,
+                                                                                                )),
                                                                                         ),
+                                                                                );
+
+                                                                            let mut auth_card = div()
+                                                                                .w_full()
+                                                                                .rounded(px(self.tokens.radii.lg))
+                                                                                .border_1()
+                                                                                .border_color(rgb(self.tokens.ui.border))
+                                                                                .bg(rgb(self.tokens.ui.bg_card))
+                                                                                .p(px(self.tokens.spacing.three))
+                                                                                .flex()
+                                                                                .flex_col()
+                                                                                .gap(px(self.tokens.metrics.modal_section_gap))
+                                                                                .child(
+                                                                                    div()
+                                                                                        .flex()
+                                                                                        .items_center()
+                                                                                        .justify_between()
+                                                                                        .child(
+                                                                                            div()
+                                                                                                .text_size(px(self.tokens.metrics.ui_text_sm))
+                                                                                                .font_weight(gpui::FontWeight::SEMIBOLD)
+                                                                                                .text_color(rgb(self.tokens.ui.text_heading))
+                                                                                                .child(self.i18n.t("ssh.form.authentication")),
+                                                                                        )
+                                                                                        .child(self.render_connection_checkbox(
+                                                                                            self.i18n.t("ssh.form.kerberos_preferred"),
+                                                                                            form.gssapi_enabled,
+                                                                                            |form| form.gssapi_enabled = !form.gssapi_enabled,
+                                                                                            cx,
+                                                                                        )),
                                                                                 )
-                                                                                .child(self.render_connection_field(
-                                                                                    self.i18n.t("ssh.form.username"),
-                                                                                    &form.username,
-                                                                                    "root".to_string(),
-                                                                                    NewConnectionField::Username,
-                                                                                    false,
+                                                                                .when(form.gssapi_enabled, |content| {
+                                                                                    content
+                                                                                        .child(self.render_connection_hint(
+                                                                                            self.i18n.t("ssh.form.gssapi_desc"),
+                                                                                        ))
+                                                                                        .child(self.render_connection_field(
+                                                                                            self.i18n.t("ssh.form.gssapi_server_identity"),
+                                                                                            &form.gssapi_server_identity,
+                                                                                            self.i18n.t("ssh.form.gssapi_server_identity_placeholder"),
+                                                                                            NewConnectionField::GssapiServerIdentity,
+                                                                                            false,
+                                                                                            cx,
+                                                                                        ))
+                                                                                        .child(self.render_connection_hint(
+                                                                                            self.i18n.t("ssh.form.gssapi_server_identity_hint"),
+                                                                                        ))
+                                                                                        .child(self.render_kerberos_credentials_status(
+                                                                                            form.gssapi_credentials_available,
+                                                                                        ))
+                                                                                        .child(
+                                                                                            self.render_connection_checkbox_with_warning(
+                                                                                                "kerberos-delegation-help",
+                                                                                                "kerberos-delegation-tooltip",
+                                                                                                "ssh.form.gssapi_delegate_credentials",
+                                                                                                "ssh.form.gssapi_delegation_warning",
+                                                                                                form.gssapi_delegate_credentials,
+                                                                                                |form| {
+                                                                                                    form.gssapi_delegate_credentials =
+                                                                                                        !form.gssapi_delegate_credentials;
+                                                                                                },
+                                                                                                cx,
+                                                                                            ),
+                                                                                        )
+                                                                                        .child(
+                                                                                            div()
+                                                                                                .text_size(px(self.tokens.metrics.ui_text_sm))
+                                                                                                .font_weight(gpui::FontWeight::MEDIUM)
+                                                                                                .text_color(rgb(self.tokens.ui.text))
+                                                                                                .child(self.i18n.t("ssh.form.fallback_authentication")),
+                                                                                        )
+                                                                                })
+                                                                                .child(selector);
+
+                                                                            if form.auth_tab == SshAuthTab::Password {
+                                                                                let pw_child = if edit_properties_mode && form.saved_password_keychain_id.is_some() {
+                                                                                    if form.password_loaded {
+                                                                                        self.render_connection_secret_field(
+                                                                                            self.i18n.t("sessionManager.edit_properties.saved_password"),
+                                                                                            String::new(),
+                                                                                            NewConnectionField::Password,
+                                                                                            cx,
+                                                                                        )
+                                                                                    } else {
+                                                                                        self.render_edit_saved_password_field(cx)
+                                                                                    }
+                                                                                } else {
+                                                                                    self.render_connection_secret_field(
+                                                                                        self.i18n.t("ssh.form.password"),
+                                                                                        String::new(),
+                                                                                        NewConnectionField::Password,
+                                                                                        cx,
+                                                                                    )
+                                                                                };
+                                                                                auth_card = auth_card.child(pw_child);
+                                                                                if (edit_properties_mode || mosh_edit_mode || standalone_sftp_edit_mode)
+                                                                                    && form.saved_password_keychain_id.is_some()
+                                                                                {
+                                                                                    auth_card = auth_card.child(self.render_connection_hint(
+                                                                                        self.i18n.t("sessionManager.edit_properties.password_hint"),
+                                                                                    ));
+                                                                                }
+                                                                                let save_pw_checkbox = self.render_connection_checkbox(
+                                                                                    self.i18n.t("ssh.form.save_password"),
+                                                                                    form.save_password,
+                                                                                    |form| form.save_password = !form.save_password,
                                                                                     cx,
-                                                                                ));
+                                                                                );
+                                                                                let empty_pw_checkbox = self.render_connection_checkbox(
+                                                                                    self.i18n.t("ssh.form.use_empty_password"),
+                                                                                    form.empty_password,
+                                                                                    |form| {
+                                                                                        form.empty_password = !form.empty_password;
+                                                                                        form.field_focused = false;
+                                                                                        form.saved_password_keychain_id = None;
+                                                                                        form.password_from_store = false;
+                                                                                        form.password_loaded = true;
+                                                                                        if form.empty_password { form.password.zeroize(); }
+                                                                                    },
+                                                                                    cx,
+                                                                                );
+                                                                                auth_card = auth_card.child(
+                                                                                    div()
+                                                                                        .flex()
+                                                                                        .flex_row()
+                                                                                        .items_center()
+                                                                                        .gap(px(self.tokens.spacing.three))
+                                                                                        .child(save_pw_checkbox)
+                                                                                        .child(empty_pw_checkbox),
+                                                                                );
+                                                                            } else if form.auth_tab == SshAuthTab::DefaultKey
+                                                                                && !edit_properties_mode
+                                                                                && !mosh_edit_mode
+                                                                                && !standalone_sftp_edit_mode
+                                                                            {
+                                                                                auth_card = auth_card
+                                                                                    .child(self.render_connection_hint(self.i18n.t("ssh.form.default_key_desc")))
+                                                                                    .child(self.render_connection_secret_field(
+                                                                                        self.i18n.t("ssh.form.passphrase"),
+                                                                                        self.i18n.t("ssh.form.passphrase_placeholder"),
+                                                                                        NewConnectionField::Passphrase,
+                                                                                        cx,
+                                                                                    ));
+                                                                            } else if form.auth_tab == SshAuthTab::SshKey
+                                                                                || ((edit_properties_mode || mosh_edit_mode || standalone_sftp_edit_mode)
+                                                                                    && form.auth_tab == SshAuthTab::DefaultKey)
+                                                                            {
+                                                                                let key_label = if edit_properties_mode || mosh_edit_mode || standalone_sftp_edit_mode {
+                                                                                    self.i18n.t("sessionManager.edit_properties.key_path")
+                                                                                } else {
+                                                                                    self.i18n.t("ssh.form.key_file")
+                                                                                };
+                                                                                auth_card = auth_card
+                                                                                    .child(self.render_connection_field_with_browse(
+                                                                                        key_label,
+                                                                                        &form.key_path,
+                                                                                        "~/.ssh/id_ed25519".to_string(),
+                                                                                        NewConnectionField::KeyPath,
+                                                                                        cx,
+                                                                                    ))
+                                                                                    .child(self.render_connection_secret_field(
+                                                                                        self.i18n.t("ssh.form.passphrase"),
+                                                                                        self.i18n.t("ssh.form.passphrase_placeholder"),
+                                                                                        NewConnectionField::Passphrase,
+                                                                                        cx,
+                                                                                    ));
+                                                                                if edit_properties_mode || mosh_edit_mode || standalone_sftp_edit_mode {
+                                                                                    auth_card = auth_card.child(self.render_connection_hint(
+                                                                                        self.i18n.t("sessionManager.edit_properties.passphrase_hint"),
+                                                                                    ));
+                                                                                }
+                                                                            } else if form.auth_tab == SshAuthTab::ManagedKey {
+                                                                                auth_card = auth_card
+                                                                                    .child(self.render_managed_key_select(
+                                                                                        self.i18n.t("ssh.form.managed_key"),
+                                                                                        &form.managed_key_id,
+                                                                                        false,
+                                                                                        cx,
+                                                                                    ))
+                                                                                    .child(self.render_connection_secret_field(
+                                                                                        self.i18n.t("ssh.form.passphrase"),
+                                                                                        self.i18n.t("ssh.form.passphrase_placeholder"),
+                                                                                        NewConnectionField::Passphrase,
+                                                                                        cx,
+                                                                                    ))
+                                                                                    .child(self.render_connection_hint(self.i18n.t("ssh.form.managed_key_hint")));
+                                                                            } else if form.auth_tab == SshAuthTab::Certificate {
+                                                                                auth_card = auth_card
+                                                                                    .child(self.render_connection_hint(self.i18n.t("ssh.form.certificate_note")))
+                                                                                    .child(self.render_connection_field_with_browse(
+                                                                                        self.i18n.t("ssh.form.private_key"),
+                                                                                        &form.key_path,
+                                                                                        "~/.ssh/id_ed25519".to_string(),
+                                                                                        NewConnectionField::KeyPath,
+                                                                                        cx,
+                                                                                    ))
+                                                                                    .child(self.render_connection_field_with_browse(
+                                                                                        self.i18n.t("ssh.form.certificate"),
+                                                                                        &form.cert_path,
+                                                                                        "~/.ssh/id_ed25519-cert.pub".to_string(),
+                                                                                        NewConnectionField::CertPath,
+                                                                                        cx,
+                                                                                    ))
+                                                                                    .child(self.render_connection_secret_field(
+                                                                                        self.i18n.t("ssh.form.passphrase"),
+                                                                                        self.i18n.t("ssh.form.passphrase_placeholder"),
+                                                                                        NewConnectionField::Passphrase,
+                                                                                        cx,
+                                                                                    ));
+                                                                                if edit_properties_mode || mosh_edit_mode || standalone_sftp_edit_mode {
+                                                                                    auth_card = auth_card.child(self.render_connection_hint(
+                                                                                        self.i18n.t("sessionManager.edit_properties.passphrase_hint"),
+                                                                                    ));
+                                                                                }
+                                                                            } else if form.auth_tab == SshAuthTab::Agent {
+                                                                                auth_card = auth_card
+                                                                                    .child(self.render_connection_hint(self.i18n.t("ssh.form.agent_desc")))
+                                                                                    .child(self.render_connection_field(
+                                                                                        self.i18n.t("ssh.form.agent_endpoint"),
+                                                                                        &form.identity_agent,
+                                                                                        self.i18n.t("ssh.form.agent_endpoint_placeholder"),
+                                                                                        NewConnectionField::IdentityAgent,
+                                                                                        false,
+                                                                                        cx,
+                                                                                    ))
+                                                                                    .child(self.render_connection_hint(self.i18n.t("ssh.form.agent_endpoint_hint")))
+                                                                                    .child(self.render_agent_status(form.agent_available))
+                                                                                    .child(self.render_connection_hint(self.i18n.t("ssh.form.agent_hint")));
+                                                                            } else if form.auth_tab == SshAuthTab::TwoFactor && !edit_properties_mode {
+                                                                                auth_card = auth_card
+                                                                                    .child(self.render_connection_hint(self.i18n.t("ssh.form.two_factor_desc")))
+                                                                                    .child(self.render_connection_hint(self.i18n.t("ssh.form.two_factor_hint")))
+                                                                                    .child(self.render_connection_hint_with_color(
+                                                                                        self.i18n.t("ssh.form.two_factor_warning"),
+                                                                                        self.tokens.ui.warning,
+                                                                                    ));
+                                                                            }
+
+                                                                            auth_card = auth_card.child(self.render_connection_totp_select(false, cx));
+
+                                                                            let appearance_notes_card = div()
+                                                                                .w_full()
+                                                                                .rounded(px(self.tokens.radii.lg))
+                                                                                .border_1()
+                                                                                .border_color(rgb(self.tokens.ui.border))
+                                                                                .bg(rgb(self.tokens.ui.bg_card))
+                                                                                .p(px(self.tokens.spacing.two))
+                                                                                .flex()
+                                                                                .flex_col()
+                                                                                .gap(px(self.tokens.spacing.three))
+                                                                                .when(shows_icon_field, |card| {
+                                                                                    card.child(self.render_connection_appearance_fields(
+                                                                                        &form.icon,
+                                                                                        &form.color,
+                                                                                        &form.icon_background_color,
+                                                                                        form.icon_picker_expanded,
+                                                                                        form.transport == NewConnectionTransport::Ssh,
+                                                                                        cx,
+                                                                                    ))
+                                                                                })
+                                                                                .child(self.render_connection_notes_fields(&form.notes, cx));
 
                                                                             content.child(
                                                                                 div()
                                                                                     .w_full()
                                                                                     .flex()
                                                                                     .flex_col()
-                                                                                    .gap(px(self.tokens.metrics.modal_section_gap))
+                                                                                    .gap(px(self.tokens.spacing.three))
                                                                                     .when(standalone_sftp_mode, |content| {
                                                                                         content.child(
                                                                                             div()
@@ -1175,19 +1210,9 @@ impl WorkspaceApp {
                                                                                                 .child(self.i18n.t("sftp.standalone.usage_notice")),
                                                                                         )
                                                                                     })
-                                                                                    .child(destination)
-                                                                                    .child(auth)
-                                                                                    .when(shows_icon_field, |content| {
-                                                                                        content.child(self.render_connection_appearance_fields(
-                                                                                            &form.icon,
-                                                                                            &form.color,
-                                                                                            &form.icon_background_color,
-                                                                                            form.icon_picker_expanded,
-                                                                                            form.transport == NewConnectionTransport::Ssh,
-                                                                                            cx,
-                                                                                        ))
-                                                                                    })
-                                                                                    .child(self.render_connection_notes_fields(&form.notes, cx)),
+                                                                                    .child(destination_card)
+                                                                                    .child(auth_card)
+                                                                                    .child(appearance_notes_card),
                                                                             )
                                                                         }
                                                                         ConnectionFormTab::Network => {

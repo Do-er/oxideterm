@@ -8,8 +8,7 @@ use zeroize::Zeroize;
 use super::{
     ConnectionFormState,
     form_state::{
-        CONNECTION_NOTES_LINE_HEIGHT, CONNECTION_NOTES_MIN_HEIGHT,
-        CONNECTION_NOTES_VERTICAL_PADDING, ConnectionFormTab, ConnectionRouteTarget, NewConnectionField,
+        ConnectionFormTab, ConnectionRouteTarget, NewConnectionField,
         NewConnectionForm, NewConnectionFormMode, NewConnectionProxyHop, NewConnectionSelect,
         NewConnectionSubmitAction, NewConnectionTransport, NewConnectionUpstreamProxyAuth,
         NewConnectionUpstreamProxyPolicy, RDP_DEFAULT_PORT_TEXT, RemoteDesktopSessionFeature,
@@ -35,7 +34,7 @@ use crate::workspace::WorkspaceApp;
 use crate::workspace::{
     browser_behavior,
     ime::{WorkspaceImeTarget, keystroke_uses_text_edit_modifier},
-    session_icons::{SESSION_ICON_CHOICES, session_icon_from_id},
+    session_icons::{SESSION_ICON_CHOICES, resolved_session_icon, session_icon_from_id},
 };
 use gpui::Div;
 use oxideterm_connections::{
@@ -61,15 +60,11 @@ use oxideterm_gpui_ui::{
         select_overlay_popup_with_max_height, select_trigger_with_focus_visible,
     },
     status_pill,
-    text_input::{
-        text_caret, text_input_value_segments, text_input_value_segments_with_marked_range,
-    },
 };
 use oxideterm_remote_desktop::{
     RemoteDesktopVncCompression, RemoteDesktopVncImageQuality, RemoteDesktopVncSecurityPolicy,
     RemoteDesktopVncSessionMode,
 };
-use oxideterm_settings_model::{settings_multiline_line_ranges, settings_multiline_line_selection};
 // Keep the modal, proxy-chain, and field-control implementations in explicit
 // submodules so their dependencies and visibility remain locally auditable.
 mod field_controls;
@@ -104,7 +99,6 @@ const SSH_ALGORITHM_CATEGORY_COLUMN_WIDTH: f32 = 208.0;
 const SSH_ALGORITHM_DETAIL_COLUMN_WIDTH: f32 = 420.0;
 const NEW_CONNECTION_MODAL_VIEWPORT_MARGIN: f32 = 32.0;
 const CONNECTION_TERMINAL_CONTROL_MIN_WIDTH: f32 = 220.0;
-const CONNECTION_ICON_COLOR_CONTROL_MIN_WIDTH: f32 = 220.0;
 
 // Persistence enums stay independent from the settings crate while sharing user-facing labels.
 fn connection_terminal_encoding_label(encoding: ConnectionTerminalEncoding) -> &'static str {

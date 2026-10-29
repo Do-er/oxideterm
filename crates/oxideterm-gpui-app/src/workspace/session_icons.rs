@@ -27,6 +27,8 @@ impl SessionIcon {
     }
 }
 
+const AUTO_ICON_PLACEHOLDER_ID: &str = "rocky";
+
 pub(super) fn resolved_session_icon(
     manual: Option<&str>,
     system_name: Option<&str>,
@@ -34,10 +36,12 @@ pub(super) fn resolved_session_icon(
     if let Some(manual) = manual.map(str::trim).filter(|id| !id.is_empty()) {
         return session_icon_from_id(Some(manual)).unwrap_or(LucideIcon::Server.into());
     }
-    // Match the distribution's name, not ID_LIKE or an incidental substring in a derivative name.
+    // Auto-detected icons show the placeholder distribution until the remote OS is known.
     let Some(system_name) = system_name else {
-        return LucideIcon::Server.into();
+        return session_icon_from_id(Some(AUTO_ICON_PLACEHOLDER_ID))
+            .unwrap_or(LucideIcon::Server.into());
     };
+    // Match the distribution's name, not ID_LIKE or an incidental substring in a derivative name.
     DISTRO_ICONS
         .iter()
         .find(|icon| {
