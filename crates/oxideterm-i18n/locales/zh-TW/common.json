@@ -1468,11 +1468,11 @@
     "unlock_pending": "正在解鎖可攜資料..."
   },
   "local_session": {
+    "name": "名稱",
     "directory": "啟動目錄",
     "inherit_directory": "留空使用設定中的預設目錄",
     "inherit_shell": "使用設定中的預設 Shell",
     "shell_unavailable": "此裝置沒有此工作階段儲存的 Shell，請編輯並選擇已安裝的 Shell。",
-    "directory_unavailable": "啟動目錄不存在，請編輯工作階段並選擇有效目錄。",
-    "name_required": "請輸入名稱以儲存本機工作階段。"
+    "directory_unavailable": "啟動目錄不存在，請編輯工作階段並選擇有效目錄。"
   }
 }

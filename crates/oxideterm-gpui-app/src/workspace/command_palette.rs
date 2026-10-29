@@ -1166,7 +1166,16 @@ impl WorkspaceApp {
 
         let command_items = self.command_palette_command_items();
         let session_items = self.command_palette_session_items(cx);
-        let mut connection_items = Self::command_palette_connection_items(&self.connection_store);
+        let local_terminal_labels = self
+            .connection_store
+            .local_terminal_profiles()
+            .iter()
+            .map(|profile| (profile.id.clone(), self.local_profile_display_name(profile)))
+            .collect::<HashMap<_, _>>();
+        let mut connection_items = Self::command_palette_connection_items(
+            &self.connection_store,
+            &local_terminal_labels,
+        );
         connection_items.extend(self.command_palette_ssh_config_items(&ssh_config_hosts));
         let plugin_items = self.command_palette_plugin_items(cx);
         let help_items = self.command_palette_help_items();
@@ -1342,7 +1351,10 @@ impl WorkspaceApp {
             .collect()
     }
 
-    fn command_palette_connection_items(store: &ConnectionStore) -> Vec<PaletteItem> {
+    fn command_palette_connection_items(
+        store: &ConnectionStore,
+        local_terminal_labels: &HashMap<String, String>,
+    ) -> Vec<PaletteItem> {
         store
             .connection_infos()
             .into_iter()
@@ -1377,14 +1389,18 @@ impl WorkspaceApp {
                 let shell = profile.shell_id.as_deref().unwrap_or_default();
                 let cwd = profile.cwd.as_deref().unwrap_or_default();
                 let group = profile.group.as_deref().unwrap_or_default();
+                let label = local_terminal_labels
+                    .get(&profile.id)
+                    .cloned()
+                    .unwrap_or_else(|| profile.name.clone());
                 PaletteItem {
                     id: format!("local-profile:{}", profile.id),
-                    label: profile.name.clone(),
+                    label: label.clone(),
                     section: PaletteSection::Connections,
                     icon: LucideIcon::Terminal,
                     detail: Some(format!("{shell} {cwd} {group}").trim().to_string()),
                     shortcut: None,
-                    value: format!("{} {shell} {cwd} {group}", profile.name),
+                    value: format!("{label} {shell} {cwd} {group}"),
                     action: PaletteAction::OpenSavedLocalTerminal(profile.id.clone()),
                     disabled: false,
                 }
@@ -3212,7 +3228,7 @@ mod panel_layout_tests {
         }
         for (query, expected) in [("wsl", vec!["wsl", "PowerShell"]), ("ubuntu", vec!["wsl"])] {
             let results = rank_palette_section(
-                WorkspaceApp::command_palette_connection_items(&store),
+                WorkspaceApp::command_palette_connection_items(&store, &HashMap::new()),
                 query,
             );
             assert_eq!(

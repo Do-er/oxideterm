@@ -527,7 +527,7 @@ impl WorkspaceApp {
             } else {
                 self.connection_store
                     .get(&matched.connection_id)
-                    .map(|connection| connection.name.clone())
+                    .map(|connection| connection.display_name().into_owned())
                     .unwrap_or_default()
             };
             let credential = self

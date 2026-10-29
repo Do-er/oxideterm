@@ -42,8 +42,6 @@
       "ssh_options_hint": "Configura el establecimiento de conexión, los reenvíos y la compatibilidad.",
       "appearance": "Apariencia",
       "appearance_hint": "Personaliza cómo se muestra esta conexión guardada.",
-      "name": "Nombre (opcional)",
-      "name_placeholder": "Mi servidor",
       "host": "Host de destino *",
       "host_placeholder": "192.168.1.100",
       "port": "Puerto",

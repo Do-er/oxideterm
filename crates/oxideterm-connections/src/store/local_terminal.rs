@@ -7,10 +7,8 @@ impl ConnectionStore {
         &mut self,
         request: SaveLocalTerminalProfileRequest,
     ) -> Result<LocalTerminalProfile> {
+        // An empty name is valid: the label falls back to the selected shell.
         let name = request.name.trim().to_owned();
-        if name.is_empty() {
-            bail!("local terminal profile name is required");
-        }
         let group = normalize_optional_group_name(request.group.as_deref())?;
         let now = Utc::now();
         let id = request.id.unwrap_or_else(|| Uuid::new_v4().to_string());
@@ -128,7 +126,7 @@ impl ConnectionStore {
             result.applied += 1;
         }
         for mut profile in profiles {
-            if profile.id.trim().is_empty() || profile.name.trim().is_empty() {
+            if profile.id.trim().is_empty() {
                 bail!("invalid local terminal profile");
             }
             profile.group = normalize_optional_group_name(profile.group.as_deref())?;
@@ -155,13 +153,17 @@ impl ConnectionStore {
                 result.skipped += 1;
                 continue;
             }
+            // Name-based conflict detection only applies to named profiles; unnamed
+            // ones all share an empty name but are distinct assets.
+            let incoming_name = profile.name.trim();
             if existing.is_none()
                 && strategy == SavedConnectionsConflictStrategy::Skip
+                && !incoming_name.is_empty()
                 && self
                     .data
                     .local_terminal_profiles
                     .iter()
-                    .any(|p| p.name == profile.name)
+                    .any(|p| p.name.trim() == incoming_name)
             {
                 result.conflicts += 1;
                 result.skipped += 1;

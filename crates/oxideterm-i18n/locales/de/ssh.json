@@ -42,8 +42,6 @@
       "ssh_options_hint": "Konfiguriert Verbindungsaufbau, Weiterleitungen und Kompatibilität.",
       "appearance": "Darstellung",
       "appearance_hint": "Passt die Darstellung dieser gespeicherten Verbindung an.",
-      "name": "Name (optional)",
-      "name_placeholder": "Mein Server",
       "host": "Zielhost *",
       "host_placeholder": "192.168.1.100",
       "port": "Port",

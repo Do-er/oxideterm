@@ -1,9 +1,10 @@
 use super::*;
+use std::borrow::Cow;
 
 #[derive(Clone)]
 pub(super) struct OxideExportConnectionRow {
     id: String,
-    name: String,
+    label: String,
     meta: String,
     created_at_millis: i64,
 }
@@ -17,7 +18,7 @@ impl From<&SavedConnection> for OxideExportConnectionRow {
             .unwrap_or_default();
         Self {
             id: connection.id.clone(),
-            name: connection.name.clone(),
+            label: connection.display_name().into_owned(),
             meta: format!(
                 "{}@{}:{}{group}",
                 connection.username, connection.host, connection.port
@@ -31,7 +32,7 @@ impl From<&oxideterm_connections::PluginConnectionProfile> for OxideExportConnec
     fn from(profile: &oxideterm_connections::PluginConnectionProfile) -> Self {
         Self {
             id: profile.id.clone(),
-            name: profile.name.clone(),
+            label: profile.name.clone(),
             meta: format!(
                 "{} · {}{}",
                 profile.plugin_id,
@@ -66,15 +67,20 @@ pub(super) fn oxide_export_forward_group_rows(
 ) -> Arc<[OxideExportForwardGroupRow]> {
     let connection_names = connections
         .iter()
-        .map(|connection| (connection.id.as_str(), connection.name.as_str()))
+        .map(|connection| (connection.id.as_str(), connection.display_name()))
         .collect::<HashMap<_, _>>();
     let mut groups: HashMap<String, Vec<OxideExportForwardRow>> = HashMap::new();
     for forward in forwards {
         let owner = forward
             .owner_connection_id
             .as_deref()
-            .map(|id| connection_names.get(id).copied().unwrap_or(id))
-            .unwrap_or("-");
+            .map(|id| {
+                connection_names
+                    .get(id)
+                    .cloned()
+                    .unwrap_or_else(|| Cow::Borrowed(id))
+            })
+            .unwrap_or_else(|| Cow::Borrowed("-"));
         groups
             .entry(owner.to_string())
             .or_default()
@@ -161,7 +167,7 @@ impl OxideExportConnectionRowRenderer {
                                     .text_size(px(self.tokens.metrics.ui_text_sm))
                                     .font_weight(gpui::FontWeight::MEDIUM)
                                     .text_color(rgb(theme.text))
-                                    .child(row.name)
+                                    .child(row.label)
                                     .when(is_new_since_last_export, |item| {
                                         item.child(
                                             div()
@@ -300,7 +306,7 @@ pub(super) fn oxide_export_connection_signature(connection: &OxideExportConnecti
     // Export rows are keyed by saved connection id. Other visible fields affect
     // labels/badges and should remeasure the dialog row after edits/imports.
     connection.id.hash(&mut hasher);
-    connection.name.hash(&mut hasher);
+    connection.label.hash(&mut hasher);
     connection.meta.hash(&mut hasher);
     connection.created_at_millis.hash(&mut hasher);
     hasher.finish()

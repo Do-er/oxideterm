@@ -920,7 +920,8 @@ impl ConnectionInfo {
 
     pub fn search_text(&self) -> String {
         // Palette filtering consumes one normalized haystack while the other
-        // surfaces use matches_search_query directly.
+        // surfaces use matches_search_query directly. `name` is already resolved
+        // to the endpoint label for unnamed connections.
         format!(
             "{}\n{}\n{}\n{}\n{}\n{}",
             self.name,
@@ -983,7 +984,9 @@ impl From<&SavedConnection> for ConnectionInfo {
         Self {
             totp_credential_id: conn.options.totp_credential_id.clone(),
             id: conn.id.clone(),
-            name: conn.name.clone(),
+            // Public snapshots expose the resolved label so consumers never
+            // receive an empty name for an unnamed asset.
+            name: conn.display_name().into_owned(),
             group: conn.group.clone(),
             notes: conn.notes.clone(),
             host: conn.host.clone(),
@@ -1706,9 +1709,6 @@ impl SerialProfile {
         if self.id.trim().is_empty() {
             bail!("Serial profile id is required");
         }
-        if self.name.trim().is_empty() {
-            bail!("Serial profile name is required");
-        }
         if self.port_path.trim().is_empty() {
             bail!("Serial port path is required");
         }
@@ -1756,9 +1756,6 @@ impl TelnetProfile {
     pub fn validate(&self) -> Result<()> {
         if self.id.trim().is_empty() {
             bail!("Telnet profile id is required");
-        }
-        if self.name.trim().is_empty() {
-            bail!("Telnet profile name is required");
         }
         if self.host.trim().is_empty() {
             bail!("Telnet host is required");
@@ -1813,9 +1810,6 @@ impl MoshProfile {
     pub fn validate(&self) -> Result<()> {
         if self.id.trim().is_empty() {
             bail!("Mosh profile id is required");
-        }
-        if self.name.trim().is_empty() {
-            bail!("Mosh profile name is required");
         }
         if self.host.trim().is_empty() {
             bail!("Mosh host is required");
@@ -1895,9 +1889,6 @@ impl StandaloneSftpProfile {
     pub fn validate(&self) -> Result<()> {
         if self.id.trim().is_empty() {
             bail!("Standalone SFTP profile id is required");
-        }
-        if self.name.trim().is_empty() {
-            bail!("Standalone SFTP profile name is required");
         }
         if self.host.trim().is_empty() {
             bail!("Standalone SFTP host is required");
@@ -1979,9 +1970,6 @@ impl RemoteDesktopProfile {
 
         if self.id.trim().is_empty() {
             bail!("Remote desktop profile id is required");
-        }
-        if self.name.trim().is_empty() {
-            bail!("Remote desktop profile name is required");
         }
         if self.host.trim().is_empty() {
             bail!("Remote desktop host is required");

@@ -1,4 +1,5 @@
 use super::*;
+use std::borrow::Cow;
 
 impl Render for SessionManagerDrag {
     fn render(&mut self, _window: &mut Window, _cx: &mut Context<Self>) -> impl IntoElement {
@@ -234,19 +235,19 @@ impl SessionManagerDisplayItem {
         }
     }
 
-    pub(super) fn name(&self) -> &str {
+    pub(super) fn name(&self) -> Cow<'_, str> {
         match self {
-            Self::Tunnel(item) => &item.profile.name,
-            Self::Plugin(profile) => &profile.name,
-            Self::Connection(connection) => &connection.name,
-            Self::SshConfig(host) => &host.alias,
-            Self::Serial(profile) => &profile.name,
-            Self::LocalTerminal(profile) => &profile.name,
-            Self::Telnet(profile) => &profile.name,
-            Self::Ftp(profile) => &profile.name,
-            Self::Mosh(profile) => &profile.name,
-            Self::StandaloneSftp(profile) => &profile.name,
-            Self::RemoteDesktop(profile) => &profile.name,
+            Self::Tunnel(item) => Cow::Borrowed(&item.profile.name),
+            Self::Plugin(profile) => Cow::Borrowed(&profile.name),
+            Self::Connection(connection) => Cow::Borrowed(&connection.name),
+            Self::SshConfig(host) => Cow::Borrowed(&host.alias),
+            Self::Serial(profile) => profile.display_name(),
+            Self::LocalTerminal(profile) => Cow::Borrowed(&profile.name),
+            Self::Telnet(profile) => profile.display_name(),
+            Self::Ftp(profile) => profile.display_name(),
+            Self::Mosh(profile) => profile.display_name(),
+            Self::StandaloneSftp(profile) => profile.display_name(),
+            Self::RemoteDesktop(profile) => profile.display_name(),
         }
     }
 
@@ -381,7 +382,11 @@ impl SessionManagerDisplayItem {
                 ),
             },
             Self::Serial(profile) => format!("{} · {}", profile.port_path, profile.baud_rate),
-            Self::LocalTerminal(profile) => profile.cwd.clone().unwrap_or_default(),
+            Self::LocalTerminal(profile) => match profile.cwd.as_deref().map(str::trim) {
+                Some(cwd) if !cwd.is_empty() => cwd.to_string(),
+                // Without a directory the shell is the only distinguishing detail.
+                _ => profile.name.clone(),
+            },
             Self::Telnet(profile) => format!("{}:{}", profile.host, profile.port),
             Self::Ftp(profile) => format!("{}:{}", profile.host, profile.port),
             Self::Mosh(profile) => {
@@ -425,7 +430,7 @@ impl SessionManagerDisplayItem {
             ),
             Self::Serial(profile) => format!(
                 "{}\n{}\n{}\n{}",
-                profile.name,
+                self.name(),
                 profile.port_path,
                 profile.baud_rate,
                 profile.group.as_deref().unwrap_or_default()
@@ -439,28 +444,28 @@ impl SessionManagerDisplayItem {
             ),
             Self::Telnet(profile) => format!(
                 "{}\n{}\n{}\n{}",
-                profile.name,
+                self.name(),
                 profile.host,
                 profile.port,
                 profile.group.as_deref().unwrap_or_default()
             ),
             Self::Ftp(profile) => format!(
                 "{}\n{}\n{}\n{}",
-                profile.name,
+                self.name(),
                 profile.host,
                 profile.port,
                 profile.group.as_deref().unwrap_or_default()
             ),
             Self::Mosh(profile) => format!(
                 "{}\n{}\n{}\n{}\nmosh",
-                profile.name,
+                self.name(),
                 profile.host,
                 profile.username,
                 profile.group.as_deref().unwrap_or_default()
             ),
             Self::StandaloneSftp(profile) => format!(
                 "{}\n{}\n{}\n{}\n{}\nstandalone sftp",
-                profile.name,
+                self.name(),
                 profile.host,
                 profile.username,
                 profile.group.as_deref().unwrap_or_default(),
@@ -468,7 +473,7 @@ impl SessionManagerDisplayItem {
             ),
             Self::RemoteDesktop(profile) => format!(
                 "{}\n{}\n{}\n{}\n{}",
-                profile.name,
+                self.name(),
                 profile.protocol.provider_id(),
                 profile.host,
                 profile.port,
@@ -627,7 +632,11 @@ impl WorkspaceApp {
                     .local_terminal_profiles()
                     .iter()
                     .cloned()
-                    .map(SessionManagerDisplayItem::LocalTerminal),
+                    .map(|mut profile| {
+                        // The row label follows the shell while the name stays empty.
+                        profile.name = self.local_profile_display_name(&profile);
+                        SessionManagerDisplayItem::LocalTerminal(profile)
+                    }),
             )
             .chain(
                 self.connection_store

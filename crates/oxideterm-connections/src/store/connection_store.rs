@@ -304,7 +304,7 @@ impl ConnectionStore {
                     .as_ref()
                     .map(|conn| conn.version)
                     .unwrap_or(CONFIG_VERSION),
-                name: non_empty(request.name.trim(), "Connection name")?.to_string(),
+                name: request.name.trim().to_string(),
                 group: group.clone(),
                 notes,
                 host: non_empty(request.host.trim(), "Host")?.to_string(),
@@ -626,7 +626,8 @@ impl ConnectionStore {
             else {
                 return Ok(false);
             };
-            connection.name = non_empty(name.trim(), "Connection name")?.to_string();
+            // An empty name is valid: the UI derives the label from the endpoint.
+            connection.name = name.trim().to_string();
             connection.updated_at = Some(Utc::now());
             self.normalize();
             self.save()?;
@@ -2458,7 +2459,8 @@ impl ConnectionStore {
         let existing_auth = existing.as_ref().map(|conn| conn.auth.clone());
 
         connection.version = CONFIG_VERSION;
-        connection.name = non_empty(connection.name.trim(), "Connection name")?.to_string();
+        // A missing display name is valid; surfaces derive the endpoint label.
+        connection.name = connection.name.trim().to_string();
         connection.group = group.clone();
         connection.host = non_empty(connection.host.trim(), "Host")?.to_string();
         connection.port = connection.port.max(1);
@@ -3871,7 +3873,8 @@ impl ConnectionStore {
         let existing_auth = existing.as_ref().map(|conn| conn.auth.clone());
 
         connection.version = CONFIG_VERSION;
-        connection.name = non_empty(connection.name.trim(), "Connection name")?.to_string();
+        // A missing display name is valid; surfaces derive the endpoint label.
+        connection.name = connection.name.trim().to_string();
         connection.group = group.clone();
         connection.host = non_empty(connection.host.trim(), "Host")?.to_string();
         connection.port = connection.port.max(1);

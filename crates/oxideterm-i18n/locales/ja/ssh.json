@@ -42,8 +42,6 @@
       "ssh_options_hint": "接続確立、転送、互換性を設定します。",
       "appearance": "外観",
       "appearance_hint": "保存済み接続の表示をカスタマイズします。",
-      "name": "名前（任意）",
-      "name_placeholder": "マイサーバー",
       "host": "対象ホスト *",
       "host_placeholder": "192.168.1.100",
       "port": "ポート",

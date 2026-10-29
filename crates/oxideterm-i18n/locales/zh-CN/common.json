@@ -1468,11 +1468,11 @@
     "unlock_pending": "正在解锁便携数据..."
   },
   "local_session": {
+    "name": "名称",
     "directory": "启动目录",
     "inherit_directory": "留空使用设置中的默认目录",
     "inherit_shell": "使用设置中的默认 Shell",
     "shell_unavailable": "本机没有此会话保存的 Shell，请编辑会话并选择已安装的 Shell。",
-    "directory_unavailable": "启动目录不存在，请编辑会话并选择有效目录。",
-    "name_required": "请输入名称以保存本地会话。"
+    "directory_unavailable": "启动目录不存在，请编辑会话并选择有效目录。"
   }
 }

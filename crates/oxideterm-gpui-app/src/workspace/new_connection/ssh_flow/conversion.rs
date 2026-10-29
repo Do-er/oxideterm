@@ -202,10 +202,11 @@ pub(in crate::workspace) fn form_from_runtime_config(
 ) -> NewConnectionForm {
     let auth_fields = runtime_auth_form_fields(config.auth);
     let mut form = NewConnectionForm::default();
+    // An unnamed draft stays unnamed; the display label follows the endpoint.
     form.name = title
         .filter(|title| !title.trim().is_empty())
         .map(str::to_string)
-        .unwrap_or_else(|| format!("{}@{}", config.username, config.host));
+        .unwrap_or_default();
     form.host = config.host.clone();
     form.port = config.port.to_string();
     form.username = config.username.clone();
@@ -705,24 +706,6 @@ mod runtime_save_tests {
     }
 }
 
-pub(super) fn serial_profile_name_or_port(name: &str, port_path: &str) -> String {
-    let name = name.trim();
-    if name.is_empty() {
-        port_path.to_string()
-    } else {
-        name.to_string()
-    }
-}
-
-pub(super) fn telnet_profile_name_or_endpoint(name: &str, host: &str, port: u16) -> String {
-    let name = name.trim();
-    if name.is_empty() {
-        format!("{}:{}", host.trim(), port)
-    } else {
-        name.to_string()
-    }
-}
-
 pub(super) fn remote_desktop_protocol_for_transport(
     transport: NewConnectionTransport,
 ) -> Option<RemoteDesktopProtocol> {
@@ -733,30 +716,12 @@ pub(super) fn remote_desktop_protocol_for_transport(
     }
 }
 
-pub(super) fn remote_desktop_profile_label(
-    name: &str,
-    protocol: RemoteDesktopProtocol,
-    host: &str,
-    port: u16,
-) -> String {
+pub(super) fn remote_desktop_profile_label(name: &str, host: &str) -> String {
     let name = name.trim();
     if name.is_empty() {
-        format!(
-            "{}://{}:{port}",
-            protocol.provider_id(),
-            remote_desktop_label_host(host)
-        )
+        oxideterm_connections::endpoint_host_label(host).into_owned()
     } else {
         name.to_string()
-    }
-}
-
-pub(super) fn remote_desktop_label_host(host: &str) -> String {
-    if host.contains(':') && !host.starts_with('[') {
-        // Keep IPv6 endpoint labels parseable when shown in tab titles.
-        format!("[{host}]")
-    } else {
-        host.to_string()
     }
 }
 

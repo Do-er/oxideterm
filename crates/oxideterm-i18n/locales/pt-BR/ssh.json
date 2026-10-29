@@ -42,8 +42,6 @@
       "ssh_options_hint": "Configura o estabelecimento da conexão, encaminhamentos e compatibilidade.",
       "appearance": "Aparência",
       "appearance_hint": "Personaliza como esta conexão salva é exibida.",
-      "name": "Nome (opcional)",
-      "name_placeholder": "Meu servidor",
       "host": "Host de destino *",
       "host_placeholder": "192.168.1.100",
       "port": "Porta",

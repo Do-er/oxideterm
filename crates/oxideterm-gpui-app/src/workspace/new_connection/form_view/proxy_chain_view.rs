@@ -1512,7 +1512,7 @@ impl WorkspaceApp {
                             saved_connection_name: self
                                 .connection_store
                                 .get(&hop.saved_connection_id)
-                                .map(|connection| connection.name.clone()),
+                                .map(|connection| connection.display_name().into_owned()),
                             host: hop.host.clone(),
                             port: hop.port.clone(),
                             username: hop.username.clone(),

@@ -1468,11 +1468,11 @@
     "unlock_pending": "Đang mở khóa dữ liệu portable..."
   },
   "local_session": {
+    "name": "Tên",
     "directory": "Thư mục khởi động",
     "inherit_directory": "Dùng thư mục mặc định trong Cài đặt",
     "inherit_shell": "Dùng shell mặc định trong Cài đặt",
     "shell_unavailable": "Shell đã lưu không có trên thiết bị này. Hãy sửa phiên và chọn shell đã cài đặt.",
-    "directory_unavailable": "Thư mục khởi động không tồn tại. Hãy sửa phiên và chọn thư mục có sẵn.",
-    "name_required": "Nhập tên để lưu phiên cục bộ này."
+    "directory_unavailable": "Thư mục khởi động không tồn tại. Hãy sửa phiên và chọn thư mục có sẵn."
   }
 }

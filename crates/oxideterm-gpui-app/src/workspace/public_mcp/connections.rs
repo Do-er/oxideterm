@@ -1105,7 +1105,7 @@ pub(super) fn ssh_connection_projection(
         "connection_ref": connection_ref,
         "revision": revision,
         "type": "ssh",
-        "name": connection.name,
+        "name": connection.display_name(),
         "group": connection.group,
         "notes": connection.notes,
         "host": connection.host,

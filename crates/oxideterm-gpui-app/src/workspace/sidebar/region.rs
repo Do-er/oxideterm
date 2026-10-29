@@ -1045,13 +1045,13 @@ mod sidebar_resize_region_tests {
     struct SidebarSurfaceView(Entity<WorkspaceApp>);
 
     impl Render for SidebarSurfaceView {
-        fn render(&mut self, _: &mut Window, cx: &mut Context<Self>) -> impl IntoElement {
+        fn render(&mut self, window: &mut Window, cx: &mut Context<Self>) -> impl IntoElement {
             self.0.update(cx, |workspace, cx| {
                 div()
                     .size_full()
                     .flex()
-                    .child(workspace.render_activity_bar(cx))
-                    .child(workspace.render_sidebar_region(cx))
+                    .child(workspace.render_context_activity_bar(window, cx))
+                    .child(workspace.render_context_right_sidebar_region(window, cx))
             })
         }
     }

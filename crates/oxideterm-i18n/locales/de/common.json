@@ -1468,11 +1468,11 @@
     "unlock_pending": "Portable Daten werden entsperrt..."
   },
   "local_session": {
+    "name": "Name",
     "directory": "Startverzeichnis",
     "inherit_directory": "Standardverzeichnis aus den Einstellungen verwenden",
     "inherit_shell": "Standard-Shell aus den Einstellungen verwenden",
     "shell_unavailable": "Die gespeicherte Shell ist auf diesem Gerät nicht verfügbar. Bearbeiten Sie die Sitzung und wählen Sie eine installierte Shell.",
-    "directory_unavailable": "Das Startverzeichnis ist nicht verfügbar. Wählen Sie in der Sitzung ein vorhandenes Verzeichnis.",
-    "name_required": "Geben Sie einen Namen zum Speichern der lokalen Sitzung ein."
+    "directory_unavailable": "Das Startverzeichnis ist nicht verfügbar. Wählen Sie in der Sitzung ein vorhandenes Verzeichnis."
   }
 }

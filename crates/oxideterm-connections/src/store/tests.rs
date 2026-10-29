@@ -3290,6 +3290,48 @@ mod tests {
     }
 
     #[test]
+    fn unnamed_connection_saves_empty_and_displays_endpoint() {
+        let mut store = load_empty_store("unnamed-connection-display");
+        let mut unnamed = request("conn-1", SavedAuth::Agent);
+        unnamed.name = "   ".to_string();
+        let info = store.upsert(unnamed).unwrap();
+
+        // Public snapshots expose the resolved label; storage keeps the name empty.
+        assert_eq!(info.name, "192.168.1.2");
+        assert_eq!(store.get("conn-1").unwrap().name, "");
+        let reloaded = ConnectionStore::load(store.path().to_path_buf()).unwrap();
+        assert_eq!(reloaded.get("conn-1").unwrap().name, "");
+        assert_eq!(reloaded.get("conn-1").unwrap().display_name(), "192.168.1.2");
+    }
+
+    #[test]
+    fn saved_connection_sync_keeps_unnamed_connections_apart() {
+        let mut source = load_empty_store("sync-unnamed-source");
+        let mut remote = request("remote-id", SavedAuth::Agent);
+        remote.name = String::new();
+        remote.host = "remote.example.test".to_string();
+        source.upsert(remote).unwrap();
+        let snapshot = source.export_saved_connections_snapshot().unwrap();
+
+        let mut target = load_empty_store("sync-unnamed-target");
+        let mut local = request("local-id", SavedAuth::Agent);
+        local.name = String::new();
+        local.host = "local.example.test".to_string();
+        target.upsert(local).unwrap();
+
+        // Two unnamed connections share the empty name but are distinct assets.
+        let outcome = target
+            .apply_saved_connections_snapshot(snapshot, SavedConnectionsConflictStrategy::Skip)
+            .unwrap();
+
+        assert_eq!(outcome.result.applied, 1);
+        assert_eq!(outcome.result.skipped, 0);
+        assert_eq!(outcome.result.conflicts, 0);
+        assert!(target.get("local-id").is_some());
+        assert!(target.get("remote-id").is_some());
+    }
+
+    #[test]
     fn saved_connection_sync_roundtrip_preserves_upstream_proxy_and_all_options() {
         let mut source = load_empty_store("sync-all-fields-source");
         let mut source_request = request("conn-1", SavedAuth::Agent);
@@ -3584,14 +3626,14 @@ mod tests {
     }
 
     #[test]
-    fn telnet_profile_validation_rejects_missing_identity_or_host() {
+    fn telnet_profile_validation_requires_host_and_identity_but_not_a_name() {
         let mut profile = TelnetProfile::new("Router console", "192.168.1.1", 23);
         assert!(profile.validate().is_ok());
 
+        // Names are optional: the display label falls back to the endpoint.
         profile.name.clear();
-        assert!(profile.validate().is_err());
+        assert!(profile.validate().is_ok());
 
-        profile.name = "Router console".to_string();
         profile.host.clear();
         assert!(profile.validate().is_err());
 
@@ -4236,13 +4278,15 @@ mod tests {
         assert!(store.delete_remote_desktop_profile(&profile.id).unwrap());
         assert!(store.keychain.get_optional(&reference).unwrap().is_none());
 
+        // An empty name is accepted now, so the rejection below comes from the port;
+        // the credential must still never reach the keychain for a rejected request.
         let invalid_result =
             store.upsert_remote_desktop_profile(SaveRemoteDesktopProfileRequest {
                 id: Some("remote-invalid".to_string()),
                 name: String::new(),
                 protocol: RemoteDesktopProtocol::Vnc,
                 host: "vnc.example.com".to_string(),
-                port: 5900,
+                port: 0,
                 credential: Some(SecretString::from("rejected-secret")),
                 ..SaveRemoteDesktopProfileRequest::default()
             });
@@ -4571,6 +4615,51 @@ mod tests {
         );
     }
     #[test]
+    fn unnamed_local_profiles_save_empty_and_sync_side_by_side() {
+        let mut source = load_empty_store("local-profile-unnamed-source");
+        let saved = source
+            .upsert_local_terminal_profile(SaveLocalTerminalProfileRequest {
+                id: Some("shell-a".into()),
+                name: "  ".into(),
+                cwd: Some("~/work".into()),
+                ..Default::default()
+            })
+            .unwrap();
+        assert_eq!(saved.name, "");
+        let snapshot = source.export_saved_connections_snapshot().unwrap();
+
+        let mut target = load_empty_store("local-profile-unnamed-target");
+        target
+            .upsert_local_terminal_profile(SaveLocalTerminalProfileRequest {
+                id: Some("shell-b".into()),
+                name: String::new(),
+                cwd: Some("~/other".into()),
+                ..Default::default()
+            })
+            .unwrap();
+
+        // Two unnamed profiles share the empty name but are distinct assets.
+        let outcome = target
+            .apply_saved_connections_snapshot(snapshot, SavedConnectionsConflictStrategy::Skip)
+            .unwrap();
+
+        assert_eq!(outcome.result.applied, 1);
+        assert_eq!(outcome.result.skipped, 0);
+        assert!(
+            target
+                .local_terminal_profiles()
+                .iter()
+                .any(|profile| profile.id == "shell-a" && profile.name.is_empty())
+        );
+        assert!(
+            target
+                .local_terminal_profiles()
+                .iter()
+                .any(|profile| profile.id == "shell-b")
+        );
+    }
+
+    #[test]
     fn local_profiles_persist_sync_and_delete_without_syncing_usage() {
         let mut source = load_empty_store("local-profile-source");
         let mut target = load_empty_store("local-profile-target");
@@ -4611,7 +4700,9 @@ mod tests {
         let before = fs::read(store.path()).unwrap();
         let mut invalid = stale;
         let mut bad = invalid.local_terminal_profiles[0].clone();
-        bad.id = "invalid".into(); bad.name.clear();
+        // An empty name is accepted, so identity is what makes the batch invalid.
+        bad.name.clear();
+        bad.id.clear();
         invalid.local_terminal_profiles.push(bad);
         assert!(store.apply_saved_connections_snapshot(invalid, SavedConnectionsConflictStrategy::Replace).is_err());
         assert_eq!(store.local_terminal_profiles()[0].cwd.as_deref(), Some("~/new"));

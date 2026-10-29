@@ -1468,11 +1468,11 @@
     "unlock_pending": "Déverrouillage des données portables..."
   },
   "local_session": {
+    "name": "Nom",
     "directory": "Répertoire de démarrage",
     "inherit_directory": "Utiliser le répertoire par défaut des paramètres",
     "inherit_shell": "Utiliser le shell par défaut des paramètres",
     "shell_unavailable": "Le shell enregistré est indisponible sur cet appareil. Modifiez la session pour choisir un shell installé.",
-    "directory_unavailable": "Le répertoire de démarrage est indisponible. Modifiez la session pour choisir un répertoire existant.",
-    "name_required": "Saisissez un nom pour enregistrer cette session locale."
+    "directory_unavailable": "Le répertoire de démarrage est indisponible. Modifiez la session pour choisir un répertoire existant."
   }
 }

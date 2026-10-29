@@ -42,8 +42,6 @@
       "ssh_options_hint": "配置连接建立、转发和兼容性。",
       "appearance": "外观",
       "appearance_hint": "自定义此连接在列表中的显示方式。",
-      "name": "名称（可选）",
-      "name_placeholder": "我的服务器",
       "host": "目标主机 *",
       "host_placeholder": "192.168.1.100",
       "port": "端口",

@@ -402,6 +402,25 @@ impl WorkspaceApp {
             .map(|shell| shell.label.clone())
             .unwrap_or_else(|| "Local".to_string())
     }
+
+    /// Resolves the label a saved local profile displays. An unnamed profile
+    /// follows the shell it starts, matching how the tab title is chosen.
+    pub(in crate::workspace) fn local_profile_display_name(
+        &self,
+        profile: &LocalTerminalProfile,
+    ) -> String {
+        let name = profile.name.trim();
+        if !name.is_empty() {
+            return name.to_string();
+        }
+        let shells = self.effective_local_shells_for_settings(self.settings_store.settings());
+        profile
+            .shell_id
+            .as_deref()
+            .and_then(|id| shells.iter().find(|shell| shell.id == id))
+            .map(|shell| shell.label.clone())
+            .unwrap_or_else(|| self.local_terminal_tab_title())
+    }
 }
 
 #[cfg(test)]

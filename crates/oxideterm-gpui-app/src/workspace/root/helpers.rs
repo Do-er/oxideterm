@@ -1175,7 +1175,7 @@ impl WorkspaceApp {
                 .origin
                 .saved_connection_id()
                 .and_then(|id| self.connection_store.get(id))
-                .map(|connection| connection.name.clone())
+                .map(|connection| connection.display_name().into_owned())
                 .unwrap_or_else(|| format!("{}@{}", node.config.username, node.config.host));
             if let Some(saved_connection_id) = node.origin.saved_connection_id() {
                 let rank = restored_saved_node_rank(&node.origin);

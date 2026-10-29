@@ -70,7 +70,6 @@ impl ConnectionStore {
         next.connections = connections;
 
         for profile in &incoming.connections.local_terminal_profiles {
-            non_empty(profile.name.trim(), "Local terminal profile name")?;
             normalize_optional_group_name(profile.group.as_deref())?;
         }
         let local_ids = incoming

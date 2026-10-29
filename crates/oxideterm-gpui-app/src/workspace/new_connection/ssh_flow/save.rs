@@ -1210,7 +1210,6 @@ impl WorkspaceApp {
         drill_down_parent_id: Option<&NodeId>,
         cx: &mut Context<Self>,
     ) -> Option<SavedConnectionRuntimeHandoff> {
-        self.ensure_new_connection_save_name_is_unique(drill_down_parent_id, cx);
         let request = match self.save_request_for_current_form(drill_down_parent_id, cx) {
             Some(Ok(request)) => request,
             Some(Err(error)) => {
@@ -1275,6 +1274,8 @@ impl WorkspaceApp {
             self.report_saved_next_hop_error("modals.new_connection.save_failed", cx);
             return;
         };
+        // Resolve the label before the intent moves options out of the connection.
+        let title = connection.display_name().into_owned();
         let Some(mut config) = ssh_config_from_saved_connection_with_runtime_secrets(
             &self.connection_store,
             self.settings_store.settings(),
@@ -1330,49 +1331,7 @@ impl WorkspaceApp {
                 form.save_connection = false;
             }
         });
-        self.start_new_connection_config_flow(config, connection.name, intent, window, cx);
-    }
-
-    pub(super) fn ensure_new_connection_save_name_is_unique(
-        &mut self,
-        _drill_down_parent_id: Option<&NodeId>,
-        cx: &mut Context<Self>,
-    ) {
-        let occupied_names: Vec<String> = self
-            .connection_store
-            .connections()
-            .iter()
-            .map(|connection| connection.name.clone())
-            .collect();
-        self.update_connection_form_state(cx, |state| {
-            let Some(form) = state.form.as_mut() else {
-                return;
-            };
-            let fallback_name = if form.name.trim().is_empty() {
-                let host = form.host.trim();
-                let username = form.username.trim();
-                if host.is_empty() || username.is_empty() {
-                    return;
-                }
-                format!("{username}@{host}")
-            } else {
-                form.name.trim().to_string()
-            };
-            let name_exists = occupied_names
-                .iter()
-                .any(|name| name.trim().eq_ignore_ascii_case(&fallback_name));
-            let next_name = if name_exists {
-                // New/save-as flows create a fresh connection id, so avoid storing a
-                // second indistinguishable row when the draft name already exists.
-                duplicate_connection_template_name(
-                    &fallback_name,
-                    occupied_names.iter().map(String::as_str),
-                )
-            } else {
-                fallback_name
-            };
-            form.name = next_name;
-        });
+        self.start_new_connection_config_flow(config, title, intent, window, cx);
     }
 
     pub(super) fn save_request_for_current_form(
@@ -1470,7 +1429,7 @@ impl WorkspaceApp {
                     editing_profile_id.is_some() || action != NewConnectionSubmitAction::Connect;
                 let save_request = should_save_profile.then(|| SaveSerialProfileRequest {
                     id: editing_profile_id,
-                    name: serial_profile_name_or_port(&form.serial_profile_name, &port_path),
+                    name: form.serial_profile_name.trim().to_string(),
                     group: serial_profile_group_from_form(&form.group, &this.i18n),
                     notes: saved_profile_notes(&form.notes),
                     icon: asset_icon_from_form(&form.icon),
@@ -1491,7 +1450,12 @@ impl WorkspaceApp {
                 form.error = None;
                 Some((
                     config,
-                    form.serial_profile_name.clone(),
+                    // Tab titles follow the endpoint while the name stays empty.
+                    if form.serial_profile_name.trim().is_empty() {
+                        form.serial_port_path.trim().to_string()
+                    } else {
+                        form.serial_profile_name.trim().to_string()
+                    },
                     form.terminal.clone(),
                     save_request,
                 ))
@@ -1640,7 +1604,7 @@ impl WorkspaceApp {
                     output_line_ending: Some(form.telnet_output_line_ending),
                     upstream_proxy: Some(upstream_proxy.clone()),
                     id: editing_profile_id,
-                    name: telnet_profile_name_or_endpoint(&form.telnet_profile_name, &host, port),
+                    name: form.telnet_profile_name.trim().to_string(),
                     group: serial_profile_group_from_form(&form.group, &this.i18n),
                     notes: saved_profile_notes(&form.notes),
                     icon: asset_icon_from_form(&form.icon),
@@ -1828,8 +1792,9 @@ impl WorkspaceApp {
                 cx.notify();
                 return None;
             }
+            // The tab title falls back to the endpoint; only an explicit name is stored.
             let title = if form.name.trim().is_empty() {
-                format!("{username}@{host}")
+                oxideterm_connections::endpoint_host_label(&host).into_owned()
             } else {
                 form.name.trim().to_string()
             };
@@ -1948,7 +1913,7 @@ impl WorkspaceApp {
             let auth = saved_mosh_auth_from_form(form);
             let request = SaveMoshProfileRequest {
                 id: form.mosh_profile_id.clone(),
-                name: title,
+                name: form.name.trim().to_string(),
                 group: serial_profile_group_from_form(&form.group, &this.i18n),
                 notes: saved_profile_notes(&form.notes),
                 icon: asset_icon_from_form(&form.icon),
@@ -2040,7 +2005,7 @@ impl WorkspaceApp {
             cx.notify();
             return;
         };
-        let title = profile.name.clone();
+        let title = profile.display_name().into_owned();
         let mut options = mosh_options_from_profile(&profile);
         if let Some(id) = self
             .connection_form_state(cx)
@@ -2091,12 +2056,6 @@ impl WorkspaceApp {
 
         let prepared = self.with_connection_form_mut(cx, |this, form, cx| {
             let form = form?;
-            if form.name.trim().is_empty()
-                && !form.host.trim().is_empty()
-                && !form.username.trim().is_empty()
-            {
-                form.name = format!("{}@{}", form.username.trim(), form.host.trim());
-            }
             let existing_profile = form
                 .standalone_sftp_profile_id
                 .as_deref()
@@ -2259,7 +2218,7 @@ impl WorkspaceApp {
                 ssh_config_from_standalone_sftp_endpoint_with_runtime_secrets(
                     &self.connection_store,
                     self.settings_store.settings(),
-                    &profile.name,
+                    &profile.display_name(),
                     endpoint,
                     secrets,
                     secondary_auth_override,
@@ -2286,7 +2245,7 @@ impl WorkspaceApp {
                 token.clone(),
                 PendingStandaloneSftpPairLaunch {
                     saved_profile_id: profile.id.clone(),
-                    title: profile.name.clone(),
+                    title: profile.display_name().into_owned(),
                     primary_initial_remote_path: profile.initial_remote_path.clone(),
                     secondary_initial_remote_path: profile
                         .secondary_endpoint
@@ -2303,7 +2262,13 @@ impl WorkspaceApp {
             initial_remote_path: profile.initial_remote_path.clone(),
             pair_launch_token,
         };
-        self.start_new_connection_config_flow(config, profile.name, intent, window, cx);
+        self.start_new_connection_config_flow(
+            config,
+            profile.display_name().into_owned(),
+            intent,
+            window,
+            cx,
+        );
     }
 
     pub(super) fn submit_remote_desktop_connection_form(
@@ -2414,7 +2379,9 @@ impl WorkspaceApp {
                 } else {
                     None
                 };
-                let label = remote_desktop_profile_label(&form.name, protocol, &host, port);
+                // Only an explicit name is stored; the label keeps following the endpoint.
+                let name = form.name.trim().to_string();
+                let label = remote_desktop_profile_label(&form.name, &host);
                 let username =
                     Some(form.username.trim().to_string()).filter(|username| !username.is_empty());
                 let password = if !form.password.is_empty() {
@@ -2451,7 +2418,7 @@ impl WorkspaceApp {
                 let read_only = source_profile.is_some_and(|profile| profile.read_only);
                 let save_request = should_save.then(|| SaveRemoteDesktopProfileRequest {
                     id: editing_profile_id,
-                    name: label.clone(),
+                    name: name.clone(),
                     group: serial_profile_group_from_form(&form.group, &this.i18n),
                     notes: saved_profile_notes(&form.notes),
                     icon: asset_icon_from_form(&form.icon),
@@ -2906,7 +2873,7 @@ impl WorkspaceApp {
         let Some(title) = self
             .connection_store
             .get(saved_connection_id)
-            .map(|connection| connection.name.clone())
+            .map(|connection| connection.display_name().into_owned())
         else {
             return false;
         };
@@ -3227,7 +3194,7 @@ impl WorkspaceApp {
                 self.open_standalone_sftp_pair_tab_surface(
                     id.to_string(),
                     secondary_endpoint_id,
-                    profile.name,
+                    profile.display_name().into_owned(),
                     profile.initial_remote_path,
                     profile
                         .secondary_endpoint
@@ -3237,7 +3204,7 @@ impl WorkspaceApp {
             } else {
                 self.open_standalone_sftp_tab_surface(
                     id.to_string(),
-                    profile.name,
+                    profile.display_name().into_owned(),
                     profile.initial_remote_path,
                     cx,
                 );
@@ -3278,7 +3245,7 @@ impl WorkspaceApp {
                 ssh_config_from_standalone_sftp_endpoint_with_runtime_secrets(
                     &self.connection_store,
                     self.settings_store.settings(),
-                    &profile.name,
+                    &profile.display_name(),
                     endpoint,
                     secrets,
                     None,
@@ -3302,7 +3269,7 @@ impl WorkspaceApp {
                 token.clone(),
                 PendingStandaloneSftpPairLaunch {
                     saved_profile_id: profile.id.clone(),
-                    title: profile.name.clone(),
+                    title: profile.display_name().into_owned(),
                     primary_initial_remote_path: profile.initial_remote_path.clone(),
                     secondary_initial_remote_path: profile
                         .secondary_endpoint
@@ -3319,7 +3286,7 @@ impl WorkspaceApp {
         });
         self.start_ssh_preflight(
             config,
-            profile.name,
+            profile.display_name().into_owned(),
             SshConnectionIntent::StandaloneSftp {
                 saved_profile_id: Some(profile.id),
                 initial_remote_path: profile.initial_remote_path,
@@ -3411,7 +3378,7 @@ impl WorkspaceApp {
             });
             return;
         };
-        let title = profile.name.clone();
+        let title = profile.display_name().into_owned();
         let mut options = mosh_options_from_profile(&profile);
         options.runtime_connection_attempt_id = runtime_connection_attempt_id;
         self.session_manager.update(cx, |session_manager, cx| {

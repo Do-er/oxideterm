@@ -194,51 +194,6 @@ pub(super) fn connections_deleted_label(i18n: &I18n, count: usize) -> String {
         .replace("{{count}}", &count.to_string())
 }
 
-pub(in crate::workspace) fn duplicate_connection_template_name<'a>(
-    source_name: &str,
-    existing_names: impl IntoIterator<Item = &'a str>,
-) -> String {
-    let occupied_names = existing_names
-        .into_iter()
-        .map(|name| name.trim().to_lowercase())
-        .collect::<HashSet<_>>();
-    let base_name = duplicate_template_base_name(source_name);
-
-    // Match the Tauri duplicate-template flow: the first candidate is
-    // "<name> Copy", then numbered copies are appended until the draft is unique.
-    for copy_index in 1usize.. {
-        let candidate = if copy_index == 1 {
-            format!("{base_name} Copy")
-        } else {
-            format!("{base_name} Copy {copy_index}")
-        };
-        if !occupied_names.contains(&candidate.to_lowercase()) {
-            return candidate;
-        }
-    }
-    unreachable!("unbounded duplicate-name search must eventually find a free name")
-}
-
-pub(super) fn duplicate_template_base_name(source_name: &str) -> String {
-    let trimmed = source_name.trim();
-    let stripped = if let Some(base_name) = trimmed.strip_suffix(" Copy") {
-        base_name.trim()
-    } else if let Some((base_name, copy_index)) = trimmed.rsplit_once(" Copy ") {
-        if !copy_index.is_empty() && copy_index.chars().all(|ch| ch.is_ascii_digit()) {
-            base_name.trim()
-        } else {
-            trimmed
-        }
-    } else {
-        trimmed
-    };
-    if stripped.is_empty() {
-        "Connection".to_string()
-    } else {
-        stripped.to_string()
-    }
-}
-
 pub(super) fn connections_moved_label(i18n: &I18n, count: usize, group: String) -> String {
     i18n.t("sessionManager.toast.connections_moved")
         .replace("{{count}}", &count.to_string())
@@ -807,12 +762,8 @@ fn connection_draft_from_form_with_proxy_hop_prefix(
 ) -> ConnectionDraft {
     ConnectionDraft {
         totp_credential_id: form.totp_credential_id.clone(),
-        // Both new and edited forms allow an omitted display name; storage requires a label.
-        name: if form.name.trim().is_empty() {
-            format!("{}@{}", form.username.trim(), form.host.trim())
-        } else {
-            form.name.clone()
-        },
+        // An omitted display name stays empty so the label keeps following the endpoint.
+        name: form.name.trim().to_string(),
         host: form.host.clone(),
         port: form.port.clone(),
         username: form.username.clone(),

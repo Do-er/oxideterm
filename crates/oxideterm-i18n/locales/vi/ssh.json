@@ -42,8 +42,6 @@
       "ssh_options_hint": "Cấu hình thiết lập kết nối, chuyển tiếp và khả năng tương thích.",
       "appearance": "Giao diện",
       "appearance_hint": "Tùy chỉnh cách hiển thị kết nối đã lưu này.",
-      "name": "Tên (tùy chọn)",
-      "name_placeholder": "Máy chủ của tôi",
       "host": "Máy chủ đích *",
       "host_placeholder": "192.168.1.100",
       "port": "Cổng",

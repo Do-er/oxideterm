@@ -36,7 +36,7 @@ impl WorkspaceApp {
                             security,
                         )
                     });
-                profile.name = form.name.clone();
+                profile.name = form.name.trim().to_string();
                 profile.host = form.host.trim().into();
                 profile.username = form.username.trim().into();
                 profile.security = security;
@@ -222,7 +222,7 @@ impl WorkspaceApp {
     ) {
         self.open_standalone_sftp_tab_surface(
             profile.id.clone(),
-            profile.name.clone(),
+            profile.display_name().into_owned(),
             Some(profile.initial_path.clone()),
             cx,
         );

@@ -1053,7 +1053,7 @@ impl WorkspaceApp {
             &self.settings_store.settings().terminal,
         );
         overrides.session_log_context = Some(TerminalSessionLogContext {
-            session: connection.name.clone(),
+            session: connection.display_name().into_owned(),
             host: connection.host.clone(),
             username: connection.username.clone(),
             protocol: "ssh".to_string(),

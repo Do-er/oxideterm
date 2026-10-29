@@ -14,7 +14,7 @@ fn saved_console_history_identity(
                 .find(|p| p.id == connection.id)?;
             (
                 serde_json::json!([connection.kind, profile.id, profile.host, profile.port]),
-                &profile.name,
+                profile.display_name().into_owned(),
             )
         }
         SavedConnectionKind::Mosh => {
@@ -27,7 +27,7 @@ fn saved_console_history_identity(
                     profile.ssh_port,
                     profile.username
                 ]),
-                &profile.name,
+                profile.display_name().into_owned(),
             )
         }
         SavedConnectionKind::Serial => {
@@ -37,12 +37,12 @@ fn saved_console_history_identity(
                 .find(|p| p.id == connection.id)?;
             (
                 serde_json::json!([connection.kind, profile.id, profile.port_path]),
-                &profile.name,
+                profile.display_name().into_owned(),
             )
         }
         SavedConnectionKind::Ssh => return None,
     };
-    Some((scope.to_string(), label.clone()))
+    Some((scope.to_string(), label))
 }
 
 #[derive(Clone, Copy, Debug, Eq, PartialEq)]

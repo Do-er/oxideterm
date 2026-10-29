@@ -697,11 +697,12 @@ impl WorkspaceApp {
                 .remove(&Some(profile.id.clone()))
                 .unwrap_or_default();
             let node_id = super::super::local_sessions::local_profile_node_id(&profile.id);
+            let title = self.local_profile_display_name(&profile);
             rows.push(ActiveSessionSidebarRow {
                 node_id: node_id.clone(),
                 parent_id: None,
                 saved_connection_id: None,
-                title: profile.name.clone(),
+                title: title.clone(),
                 host: format!(
                     "{} {}",
                     profile.cwd.as_deref().unwrap_or_default(),
@@ -711,7 +712,7 @@ impl WorkspaceApp {
                 port: 0,
                 node_view: ActiveSessionNode {
                     id: node_id.0,
-                    title: profile.name.clone(),
+                    title,
                     port: 0,
                     terminal_ids: state.terminal_ids,
                     readiness: state.readiness,

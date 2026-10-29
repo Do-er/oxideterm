@@ -82,9 +82,6 @@ impl WorkspaceApp {
                 .then(|| form.group.trim().to_owned()),
         };
         let result = (|| -> Result<()> {
-            if action != NewConnectionSubmitAction::Connect && request.name.is_empty() {
-                anyhow::bail!(self.i18n.t("local_session.name_required"));
-            }
             // Saving a portable profile does not require its shell or directory to exist here.
             let config = if action == NewConnectionSubmitAction::Save {
                 None
@@ -227,10 +224,11 @@ impl WorkspaceApp {
         else {
             return;
         };
+        let title = self.local_profile_display_name(&profile);
         let result = self
             .local_profile_config(profile.shell_id.as_deref(), profile.cwd.as_deref())
             .and_then(|config| {
-                self.create_local_terminal_tab_with_owned_session(config, profile.name, window, cx)
+                self.create_local_terminal_tab_with_owned_session(config, title, window, cx)
             });
         match result {
             Ok((session_id, _)) => {

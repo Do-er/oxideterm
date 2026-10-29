@@ -1468,11 +1468,11 @@
     "unlock_pending": "Unlocking portable data..."
   },
   "local_session": {
+    "name": "Name",
     "directory": "Startup directory",
     "inherit_directory": "Use the default directory from Settings",
     "inherit_shell": "Use the default shell from Settings",
     "shell_unavailable": "The saved shell is unavailable on this device. Edit the session to choose an installed shell.",
-    "directory_unavailable": "The startup directory is unavailable. Edit the session to choose an existing directory.",
-    "name_required": "Enter a name to save this local session."
+    "directory_unavailable": "The startup directory is unavailable. Edit the session to choose an existing directory."
   }
 }

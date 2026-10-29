@@ -49,7 +49,7 @@ pub(super) fn welcome_recent_connections(
 
     recent.extend(store.connections().iter().filter_map(|connection| {
         Some(WelcomeRecentConnection {
-            name: connection.name.clone(),
+            name: connection.display_name().into_owned(),
             subtitle: format!(
                 "{}@{}:{}",
                 connection.username, connection.host, connection.port
@@ -61,7 +61,7 @@ pub(super) fn welcome_recent_connections(
     }));
     recent.extend(store.serial_profiles().iter().filter_map(|profile| {
         Some(WelcomeRecentConnection {
-            name: profile.name.clone(),
+            name: profile.display_name().into_owned(),
             subtitle: format!("{} · {}", profile.port_path, profile.baud_rate),
             kind: WelcomeRecentKind::Serial,
             target: WelcomeRecentTarget::Serial(profile.id.clone()),
@@ -70,7 +70,7 @@ pub(super) fn welcome_recent_connections(
     }));
     recent.extend(store.telnet_profiles().iter().filter_map(|profile| {
         Some(WelcomeRecentConnection {
-            name: profile.name.clone(),
+            name: profile.display_name().into_owned(),
             subtitle: format!("{}:{}", profile.host, profile.port),
             kind: WelcomeRecentKind::Telnet,
             target: WelcomeRecentTarget::Telnet(profile.id.clone()),
@@ -79,7 +79,7 @@ pub(super) fn welcome_recent_connections(
     }));
     recent.extend(store.mosh_profiles().iter().filter_map(|profile| {
         Some(WelcomeRecentConnection {
-            name: profile.name.clone(),
+            name: profile.display_name().into_owned(),
             subtitle: format!("{}@{}:{}", profile.username, profile.host, profile.ssh_port),
             kind: WelcomeRecentKind::Mosh,
             target: WelcomeRecentTarget::Mosh(profile.id.clone()),
@@ -98,7 +98,7 @@ pub(super) fn welcome_recent_connections(
                     _ => format!("{}:{}", profile.host, profile.port),
                 };
                 Some(WelcomeRecentConnection {
-                    name: profile.name.clone(),
+                    name: profile.display_name().into_owned(),
                     subtitle,
                     kind: match profile.protocol {
                         RemoteDesktopProtocol::Rdp => WelcomeRecentKind::Rdp,

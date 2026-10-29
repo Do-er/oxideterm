@@ -54,9 +54,12 @@ impl WorkspaceApp {
                             .flex_row()
                             .gap(px(self.tokens.metrics.form_host_port_gap))
                             .child(div().flex_1().child(self.render_connection_field(
-                                self.i18n.t("ssh.form.name"),
+                                self.i18n.t("modals.new_connection.name"),
                                 &name,
-                                self.i18n.t("ssh.form.name_placeholder"),
+                                connection_name_placeholder(
+                                    &host,
+                                    self.i18n.t("modals.new_connection.name_placeholder"),
+                                ),
                                 NewConnectionField::Name,
                                 false,
                                 cx,

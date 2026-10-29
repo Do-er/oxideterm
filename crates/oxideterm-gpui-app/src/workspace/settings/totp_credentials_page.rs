@@ -168,7 +168,11 @@ impl WorkspaceApp {
                         div()
                             .flex_1()
                             .min_w_0()
-                            .child(div().truncate().child(connection.name.clone()))
+                            .child(
+                                div()
+                                    .truncate()
+                                    .child(connection.display_name().into_owned()),
+                            )
                             .child(self.settings_privilege_hint(format!(
                                 "{}@{}:{}",
                                 connection.username, connection.host, connection.port

@@ -1057,7 +1057,7 @@ impl WorkspaceApp {
         };
         match self.create_serial_terminal_tab(
             config,
-            &profile.name,
+            &profile.display_name(),
             profile.terminal.clone(),
             window,
             cx,
@@ -1512,14 +1512,9 @@ impl WorkspaceApp {
         };
         let mut form = form_from_saved_connection(&conn, None);
         restore_legacy_jump_host_in_form(&mut form, &conn, &self.connection_store);
-        form.name = duplicate_connection_template_name(
-            &conn.name,
-            self.connection_store
-                .connections()
-                .iter()
-                .map(|connection| connection.name.as_str()),
-        );
-        form.focused_field = NewConnectionField::Name;
+        // The copy starts unnamed so its label keeps following the endpoint.
+        form.name = String::new();
+        form.focused_field = NewConnectionField::Host;
         form.field_focused = true;
 
         self.prepare_modal_interaction_boundary(cx);

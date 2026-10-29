@@ -833,7 +833,10 @@ impl PublicMcpWorkspaceBridge {
             {
                 return format!(
                     "{} ({}@{}:{})",
-                    connection.name, connection.username, connection.host, connection.port
+                    connection.display_name(),
+                    connection.username,
+                    connection.host,
+                    connection.port
                 );
             }
             if let Some(profile_id) = connection_key.strip_prefix(CONNECTION_KEY_SERIAL_PREFIX)
@@ -844,7 +847,9 @@ impl PublicMcpWorkspaceBridge {
             {
                 return format!(
                     "{} ({} @ {})",
-                    profile.name, profile.port_path, profile.baud_rate
+                    profile.display_name(),
+                    profile.port_path,
+                    profile.baud_rate
                 );
             }
             if let Some(profile_id) = connection_key.strip_prefix(CONNECTION_KEY_TELNET_PREFIX)
@@ -853,7 +858,12 @@ impl PublicMcpWorkspaceBridge {
                     .iter()
                     .find(|profile| profile.id == profile_id)
             {
-                return format!("{} ({}:{})", profile.name, profile.host, profile.port);
+                return format!(
+                    "{} ({}:{})",
+                    profile.display_name(),
+                    profile.host,
+                    profile.port
+                );
             }
             if let Some(profile_id) = connection_key.strip_prefix(CONNECTION_KEY_MOSH_PREFIX)
                 && let Some(profile) = store
@@ -863,7 +873,10 @@ impl PublicMcpWorkspaceBridge {
             {
                 return format!(
                     "{} ({}@{}:{})",
-                    profile.name, profile.username, profile.host, profile.ssh_port
+                    profile.display_name(),
+                    profile.username,
+                    profile.host,
+                    profile.ssh_port
                 );
             }
             if let Some(profile_id) = connection_key.strip_prefix(CONNECTION_KEY_DESKTOP_PREFIX)
@@ -874,7 +887,7 @@ impl PublicMcpWorkspaceBridge {
             {
                 return format!(
                     "{} ({}://{}:{})",
-                    profile.name,
+                    profile.display_name(),
                     profile.protocol.provider_id(),
                     profile.host,
                     profile.port
@@ -1825,7 +1838,7 @@ impl WorkspaceApp {
         if includes(CONNECTION_TYPE_SERIAL) {
             for profile in self.connection_store.serial_profiles().to_vec() {
                 if public_profile_matches_query(
-                    &profile.name,
+                    &profile.display_name(),
                     profile.group.as_deref(),
                     &[&profile.port_path, &profile.baud_rate.to_string()],
                     &query,
@@ -1833,7 +1846,7 @@ impl WorkspaceApp {
                     connections.push(self.public_mcp.profile_directory_entry(
                         &request.client_ref,
                         format!("{CONNECTION_KEY_SERIAL_PREFIX}{}", profile.id),
-                        profile.name,
+                        profile.display_name().into_owned(),
                         profile.group,
                         CONNECTION_TYPE_SERIAL,
                         profile.last_used_at.map(|time| time.to_rfc3339()),
@@ -1844,7 +1857,7 @@ impl WorkspaceApp {
         if includes(CONNECTION_TYPE_TELNET) {
             for profile in self.connection_store.telnet_profiles().to_vec() {
                 if public_profile_matches_query(
-                    &profile.name,
+                    &profile.display_name(),
                     profile.group.as_deref(),
                     &[&profile.host, &profile.port.to_string()],
                     &query,
@@ -1852,7 +1865,7 @@ impl WorkspaceApp {
                     connections.push(self.public_mcp.profile_directory_entry(
                         &request.client_ref,
                         format!("{CONNECTION_KEY_TELNET_PREFIX}{}", profile.id),
-                        profile.name,
+                        profile.display_name().into_owned(),
                         profile.group,
                         CONNECTION_TYPE_TELNET,
                         profile.last_used_at.map(|time| time.to_rfc3339()),
@@ -1863,7 +1876,7 @@ impl WorkspaceApp {
         if includes(CONNECTION_TYPE_MOSH) {
             for profile in self.connection_store.mosh_profiles().to_vec() {
                 if public_profile_matches_query(
-                    &profile.name,
+                    &profile.display_name(),
                     profile.group.as_deref(),
                     &[
                         &profile.host,
@@ -1875,7 +1888,7 @@ impl WorkspaceApp {
                     connections.push(self.public_mcp.profile_directory_entry(
                         &request.client_ref,
                         format!("{CONNECTION_KEY_MOSH_PREFIX}{}", profile.id),
-                        profile.name,
+                        profile.display_name().into_owned(),
                         profile.group,
                         CONNECTION_TYPE_MOSH,
                         profile.last_used_at.map(|time| time.to_rfc3339()),
@@ -1887,7 +1900,7 @@ impl WorkspaceApp {
             let connection_type = profile.protocol.provider_id();
             if includes(connection_type)
                 && public_profile_matches_query(
-                    &profile.name,
+                    &profile.display_name(),
                     profile.group.as_deref(),
                     &[&profile.host, &profile.port.to_string()],
                     &query,
@@ -1896,7 +1909,7 @@ impl WorkspaceApp {
                 connections.push(self.public_mcp.profile_directory_entry(
                     &request.client_ref,
                     format!("{CONNECTION_KEY_DESKTOP_PREFIX}{}", profile.id),
-                    profile.name,
+                    profile.display_name().into_owned(),
                     profile.group,
                     connection_type,
                     profile.last_used_at.map(|time| time.to_rfc3339()),
@@ -1945,7 +1958,7 @@ impl WorkspaceApp {
                         "connection_ref": connection_ref,
                         "revision": connections::connection_revision(&self.connection_store, &connection_key),
                         "type": CONNECTION_TYPE_SERIAL,
-                        "name": profile.name,
+                        "name": profile.display_name(),
                         "group": profile.group,
                         "notes": profile.notes,
                         "port_path": profile.port_path,
@@ -1978,7 +1991,7 @@ impl WorkspaceApp {
                         "connection_ref": connection_ref,
                         "revision": connections::connection_revision(&self.connection_store, &connection_key),
                         "type": CONNECTION_TYPE_TELNET,
-                        "name": profile.name,
+                        "name": profile.display_name(),
                         "group": profile.group,
                         "notes": profile.notes,
                         "host": profile.host,
@@ -2008,7 +2021,7 @@ impl WorkspaceApp {
                         "connection_ref": connection_ref,
                         "revision": connections::connection_revision(&self.connection_store, &connection_key),
                         "type": CONNECTION_TYPE_MOSH,
-                        "name": profile.name,
+                        "name": profile.display_name(),
                         "group": profile.group,
                         "notes": profile.notes,
                         "host": profile.host,
@@ -2046,7 +2059,7 @@ impl WorkspaceApp {
                         "connection_ref": connection_ref,
                         "revision": connections::connection_revision(&self.connection_store, &connection_key),
                         "type": profile.protocol.provider_id(),
-                        "name": profile.name,
+                        "name": profile.display_name(),
                         "group": profile.group,
                         "notes": profile.notes,
                         "host": profile.host,
@@ -2124,7 +2137,11 @@ impl WorkspaceApp {
             .as_ref()
             .is_some_and(|chain| !chain.is_empty())
         {
-            match self.expand_saved_connection_tree(&connection_id, config, connection.name) {
+            match self.expand_saved_connection_tree(
+                &connection_id,
+                config,
+                connection.display_name().into_owned(),
+            ) {
                 Ok(expansion) => expansion.target_node_id,
                 Err(_) => {
                     request.finish(ToolEnvelope::failed(
@@ -2134,7 +2151,11 @@ impl WorkspaceApp {
                 }
             }
         } else {
-            self.materialize_ssh_root_node(config, connection.name, Some(connection_id.clone()))
+            self.materialize_ssh_root_node(
+                config,
+                connection.display_name().into_owned(),
+                Some(connection_id.clone()),
+            )
         };
         if !self.ensure_node_connection_started(&node_id, cx) {
             request.finish(ToolEnvelope::failed(

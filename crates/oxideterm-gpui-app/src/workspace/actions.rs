@@ -2465,7 +2465,8 @@ impl WorkspaceApp {
                     values.host = Some(Zeroizing::new(connection.host.clone()));
                     values.username = Some(Zeroizing::new(connection.username.clone()));
                     values.port = Some(connection.port);
-                    values.connection = Some(Zeroizing::new(connection.name.clone()));
+                    values.connection =
+                        Some(Zeroizing::new(connection.display_name().into_owned()));
                     values.group = connection
                         .group
                         .clone()
@@ -2481,7 +2482,7 @@ impl WorkspaceApp {
                     values.host = Some(Zeroizing::new(profile.host.clone()));
                     values.username = Some(Zeroizing::new(profile.username.clone()));
                     values.port = Some(profile.ssh_port);
-                    values.connection = Some(Zeroizing::new(profile.name.clone()));
+                    values.connection = Some(Zeroizing::new(profile.display_name().into_owned()));
                     values.group = profile
                         .group
                         .clone()
@@ -2498,7 +2499,7 @@ impl WorkspaceApp {
                 {
                     values.host = Some(Zeroizing::new(profile.host.clone()));
                     values.port = Some(profile.port);
-                    values.connection = Some(Zeroizing::new(profile.name.clone()));
+                    values.connection = Some(Zeroizing::new(profile.display_name().into_owned()));
                     values.group = profile
                         .group
                         .clone()
@@ -2514,7 +2515,7 @@ impl WorkspaceApp {
                     .find(|profile| profile.id == saved.saved_connection_id)
                 {
                     values.host = Some(Zeroizing::new(profile.port_path.clone()));
-                    values.connection = Some(Zeroizing::new(profile.name.clone()));
+                    values.connection = Some(Zeroizing::new(profile.display_name().into_owned()));
                     values.group = profile
                         .group
                         .clone()

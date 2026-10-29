@@ -76,6 +76,17 @@ mod standalone_sftp_modal;
 
 use field_controls::{AuthSelectorContext, ConnectionFormSection, serial_port_display_label};
 
+/// Shows the label an unnamed connection would display, so the optional field
+/// has no hidden state; falls back to the localized example until an endpoint exists.
+pub(super) fn connection_name_placeholder(endpoint: &str, fallback: String) -> String {
+    let endpoint = endpoint.trim();
+    if endpoint.is_empty() {
+        fallback
+    } else {
+        oxideterm_connections::endpoint_host_label(endpoint).into_owned()
+    }
+}
+
 const TAURI_EDIT_MODAL_WIDTH: f32 = 500.0; // Tauri sm:max-w-[500px]
 const TAURI_EDIT_COLOR_FALLBACK: u32 = 0x22d3ee;
 const TAURI_EDIT_COLOR_FALLBACK_TEXT: &str = "#22d3ee";

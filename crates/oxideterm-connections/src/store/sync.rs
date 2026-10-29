@@ -351,12 +351,15 @@ impl ConnectionStore {
                 }
 
                 let existing_by_id = self.get(&record.id).cloned();
-                let existing_by_name = if existing_by_id.is_none() {
+                // Name-based dedupe only makes sense for named connections.
+                // Unnamed ones all share an empty name and must not collapse.
+                let payload_name = payload.name.trim();
+                let existing_by_name = if existing_by_id.is_none() && !payload_name.is_empty() {
                     self.data
                         .connections
                         .iter()
                         .find(|candidate| {
-                            candidate.name == payload.name && candidate.id != record.id
+                            candidate.name.trim() == payload_name && candidate.id != record.id
                         })
                         .cloned()
                 } else {
@@ -783,7 +786,7 @@ fn build_saved_connection_from_sync_payload(
     Ok(SavedConnection {
         id: payload.id.clone(),
         version: CONFIG_VERSION,
-        name: non_empty(payload.name.trim(), "Connection name")?.to_string(),
+        name: payload.name.trim().to_string(),
         group: normalize_optional_group_name(payload.group.as_deref())?,
         notes: payload.notes.clone(),
         host: non_empty(payload.host.trim(), "Host")?.to_string(),

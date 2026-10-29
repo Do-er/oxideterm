@@ -42,8 +42,6 @@
       "ssh_options_hint": "設定連線建立、轉送與相容性。",
       "appearance": "外觀",
       "appearance_hint": "自訂此連線在清單中的顯示方式。",
-      "name": "名稱（選填）",
-      "name_placeholder": "我的伺服器",
       "host": "目標主機 *",
       "host_placeholder": "192.168.1.100",
       "port": "連接埠",

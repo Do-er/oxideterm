@@ -3079,9 +3079,15 @@ impl WorkspaceApp {
                     .flex_row()
                     .gap(px(self.tokens.metrics.form_host_port_gap))
                     .child(div().flex_1().child(self.render_connection_field(
-                        self.i18n.t("ssh.form.name"),
+                        self.i18n.t("local_session.name"),
                         &name,
-                        self.i18n.t("ssh.form.name_placeholder"),
+                        // The shell label is what the profile would be called.
+                        resolved_shell
+                            .as_ref()
+                            .map(|shell| shell.label.clone())
+                            .unwrap_or_else(|| {
+                                self.i18n.t("modals.new_connection.name_placeholder")
+                            }),
                         NewConnectionField::Name,
                         false,
                         cx,
@@ -3432,9 +3438,12 @@ impl WorkspaceApp {
                             .flex_row()
                             .gap(px(self.tokens.metrics.form_host_port_gap))
                             .child(div().flex_1().child(self.render_connection_field(
-                                self.i18n.t("ssh.form.name"),
+                                self.i18n.t("modals.new_connection.name"),
                                 &name,
-                                self.i18n.t("ssh.form.name_placeholder"),
+                                connection_name_placeholder(
+                                    &host,
+                                    self.i18n.t("modals.new_connection.name_placeholder"),
+                                ),
                                 NewConnectionField::Name,
                                 false,
                                 cx,
@@ -3910,10 +3919,12 @@ impl WorkspaceApp {
                             .flex_row()
                             .gap(px(self.tokens.metrics.form_host_port_gap))
                             .child(div().flex_1().child(self.render_connection_field(
-                                self.i18n.t("modals.new_connection.telnet_profile_name"),
+                                self.i18n.t("modals.new_connection.name"),
                                 &profile_name,
-                                self.i18n
-                                    .t("modals.new_connection.telnet_profile_name_placeholder"),
+                                connection_name_placeholder(
+                                    &host,
+                                    self.i18n.t("modals.new_connection.name_placeholder"),
+                                ),
                                 NewConnectionField::TelnetProfileName,
                                 false,
                                 cx,
@@ -4016,6 +4027,7 @@ impl WorkspaceApp {
     ) -> AnyElement {
         let Some((
             ports,
+            port_path,
             baud_rate,
             data_bits,
             stop_bits,
@@ -4031,6 +4043,7 @@ impl WorkspaceApp {
         )) = self.connection_form_state(cx).form.as_ref().map(|form| {
             (
                 form.serial_ports.clone(),
+                form.serial_port_path.clone(),
                 form.serial_baud_rate.clone(),
                 form.serial_data_bits,
                 form.serial_stop_bits,
@@ -4121,10 +4134,12 @@ impl WorkspaceApp {
                             .flex_row()
                             .gap(px(self.tokens.metrics.form_host_port_gap))
                             .child(div().flex_1().child(self.render_connection_field(
-                                self.i18n.t("modals.new_connection.serial_profile_name"),
+                                self.i18n.t("modals.new_connection.name"),
                                 &profile_name,
-                                self.i18n
-                                    .t("modals.new_connection.serial_profile_name_placeholder"),
+                                connection_name_placeholder(
+                                    &port_path,
+                                    self.i18n.t("modals.new_connection.name_placeholder"),
+                                ),
                                 NewConnectionField::SerialProfileName,
                                 false,
                                 cx,

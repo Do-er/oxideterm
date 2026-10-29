@@ -374,9 +374,12 @@ impl WorkspaceApp {
                     )
                     .child(self.render_standalone_sftp_transfer_mode(form.transfer_mode, cx))
                     .child(self.render_connection_field(
-                        self.i18n.t("ssh.form.name"),
+                        self.i18n.t("modals.new_connection.name"),
                         &form.name,
-                        self.i18n.t("ssh.form.name_placeholder"),
+                        connection_name_placeholder(
+                            &form.host,
+                            self.i18n.t("modals.new_connection.name_placeholder"),
+                        ),
                         NewConnectionField::Name,
                         false,
                         cx,

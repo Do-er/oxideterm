@@ -159,10 +159,8 @@ impl ConnectionStore {
             self.stored_credential_targets(&CredentialOwner::Ftp(profile.id.clone()));
         let existing = self.get_ftp_profile(&profile.id).cloned();
         profile.host = profile.host.trim().to_owned();
+        // An empty name keeps the label derived from the endpoint.
         profile.name = profile.name.trim().to_owned();
-        if profile.name.is_empty() {
-            profile.name = format!("{}@{}", profile.username, profile.host);
-        }
         profile.group = normalize_optional_group_name(profile.group.as_deref())?;
         profile.notes = normalize_optional_text(profile.notes);
         profile.updated_at = Utc::now();

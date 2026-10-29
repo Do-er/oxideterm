@@ -42,8 +42,6 @@
       "ssh_options_hint": "연결 설정, 포워딩 및 호환성을 구성합니다.",
       "appearance": "모양",
       "appearance_hint": "저장된 연결의 표시 방식을 사용자 지정합니다.",
-      "name": "이름 (선택 사항)",
-      "name_placeholder": "내 서버",
       "host": "대상 호스트 *",
       "host_placeholder": "192.168.1.100",
       "port": "포트",

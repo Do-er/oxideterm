@@ -374,32 +374,48 @@ impl WorkspaceApp {
             .unwrap_or_default();
         let scope_scroll = self.selectable_text_scroll_handle("settings-privilege-scopes-scroll");
 
-        let mut scope_list = div().flex().flex_col().gap(px(1.0));
+        let mut scope_list = div().flex().flex_col().gap(px(2.0));
         for scope in scopes {
             let selected = scope.id == active_scope.id;
             let scope_id = scope.id.clone();
+            let badge_bg = if selected {
+                rgba((theme.accent << 8) | 0x28)
+            } else {
+                rgba((theme.bg_panel << 8) | 0xcc)
+            };
+            let badge_text = if selected {
+                rgb(theme.accent)
+            } else {
+                rgb(theme.text_muted)
+            };
             scope_list = scope_list.child(
                 div()
                     .w_full()
                     .rounded(px(self.tokens.radii.md))
                     .border_1()
                     .border_color(if selected {
-                        rgba((theme.accent << 8) | 0x99)
+                        rgba((theme.accent << 8) | 0x66)
                     } else {
-                        rgba(theme.border << 8)
+                        rgba(0x00000000)
                     })
                     .bg(if selected {
-                        rgba((theme.accent << 8) | 0x14)
+                        rgba((theme.accent << 8) | 0x1f)
                     } else {
-                        rgba(theme.bg_panel << 8)
+                        rgba(0x00000000)
                     })
                     .px(px(10.0))
                     .py(px(6.0))
                     .flex()
                     .items_center()
-                    .gap(px(10.0))
+                    .gap(px(8.0))
                     .cursor_pointer()
-                    .hover(move |row| row.bg(rgba((theme.bg_hover << 8) | 0xcc)))
+                    .hover(move |row| {
+                        if selected {
+                            row
+                        } else {
+                            row.bg(rgba((theme.bg_hover << 8) | 0x88))
+                        }
+                    })
                     .on_mouse_down(
                         MouseButton::Left,
                         cx.listener(move |this, _event, _window, cx| {
@@ -413,7 +429,7 @@ impl WorkspaceApp {
                         } else {
                             LucideIcon::Server
                         },
-                        16.0,
+                        15.0,
                         if selected {
                             rgb(theme.accent)
                         } else {
@@ -426,17 +442,29 @@ impl WorkspaceApp {
                             .flex_1()
                             .truncate()
                             .text_size(px(self.tokens.metrics.ui_text_sm))
-                            .font_weight(gpui::FontWeight::MEDIUM)
-                            .text_color(rgb(theme.text))
+                            .font_weight(if selected {
+                                gpui::FontWeight::SEMIBOLD
+                            } else {
+                                gpui::FontWeight::MEDIUM
+                            })
+                            .text_color(if selected {
+                                rgb(theme.text_heading)
+                            } else {
+                                rgb(theme.text)
+                            })
                             .child(scope.title.clone()),
                     )
                     .child(
                         div()
                             .flex_none()
-                            .min_w(px(20.0))
-                            .text_align(gpui::TextAlign::Right)
+                            .px(px(6.0))
+                            .py(px(1.0))
+                            .rounded_full()
+                            .text_align(gpui::TextAlign::Center)
                             .text_size(px(self.tokens.metrics.ui_text_xs))
-                            .text_color(rgb(theme.text_muted))
+                            .font_weight(gpui::FontWeight::MEDIUM)
+                            .bg(badge_bg)
+                            .text_color(badge_text)
                             .child(scope.credential_count.to_string()),
                     ),
             );
@@ -471,16 +499,31 @@ impl WorkspaceApp {
                             .relative()
                             .w_full()
                             .max_h(px(PRIVILEGE_SCOPE_LIST_MAX_HEIGHT))
+                            .rounded(px(self.tokens.radii.lg))
+                            .border_1()
+                            .border_color(rgb(theme.border))
+                            .bg(rgb(theme.bg_sunken))
+                            .p(px(4.0))
                             .child(
                                 div()
-                                    .id("settings-privilege-scopes-scroll")
+                                    .relative()
                                     .w_full()
-                                    .max_h(px(PRIVILEGE_SCOPE_LIST_MAX_HEIGHT))
-                                    .selectable_overflow_y_scroll(&scope_scroll)
-                                    .on_scroll_wheel(|_, _, cx| cx.stop_propagation())
-                                    .child(scope_list),
-                            )
-                            .vertical_scrollbar(&scope_scroll),
+                                    .max_h(px(PRIVILEGE_SCOPE_LIST_MAX_HEIGHT - 8.0))
+                                    .child(
+                                        div()
+                                            .id("settings-privilege-scopes-scroll")
+                                            .w_full()
+                                            .max_h(px(PRIVILEGE_SCOPE_LIST_MAX_HEIGHT - 8.0))
+                                            .pr(px(8.0))
+                                            .selectable_overflow_y_scroll(&scope_scroll)
+                                            .on_scroll_wheel(|_, _, cx| cx.stop_propagation())
+                                            .child(scope_list),
+                                    )
+                                    .child(selectable_vertical_scrollbar_layer(
+                                        "settings-privilege-scopes-scrollbar",
+                                        &scope_scroll,
+                                    )),
+                            ),
                     ),
             )
             .child(
@@ -1342,7 +1385,7 @@ impl WorkspaceApp {
     ) -> SettingsPrivilegeScopeRow {
         SettingsPrivilegeScopeRow {
             id: connection.id.clone(),
-            title: connection.name.clone(),
+            title: connection.display_name().into_owned(),
             subtitle: format!(
                 "{}@{}:{}",
                 connection.username, connection.host, connection.port

@@ -1,5 +1,6 @@
 mod connection_import;
 mod connection_transport;
+mod display;
 mod draft;
 mod keychain;
 pub mod oxide_file;
@@ -16,6 +17,7 @@ pub use connection_import::{
     ImportedConnectionAuthType, ImportedConnectionDraft, ImportedProxyHopDraft,
     apply_connection_import, preview_connection_import,
 };
+pub use display::endpoint_host_label;
 pub use connection_transport::{
     ConnectionTransport, MOSH_DEFAULT_PORT_TEXT, RDP_DEFAULT_PORT_TEXT, SSH_DEFAULT_PORT_TEXT,
     TELNET_DEFAULT_PORT_TEXT, TransportUsernameTransition, VNC_DEFAULT_PORT_TEXT,

@@ -520,13 +520,13 @@ impl WorkspaceApp {
             .find(|connection| {
                 connection.options.terminal.highlight_rule_set.as_deref() == Some(&id)
             })
-            .map(|connection| connection.name.clone())
+            .map(|connection| connection.display_name().into_owned())
             .or_else(|| {
                 self.connection_store
                     .telnet_profiles()
                     .iter()
                     .find(|profile| profile.terminal.highlight_rule_set.as_deref() == Some(&id))
-                    .map(|profile| profile.name.clone())
+                    .map(|profile| profile.display_name().into_owned())
             });
         if let Some(owner_name) = owner_name {
             let message = self
@@ -716,7 +716,7 @@ impl WorkspaceApp {
             .find(|connection| {
                 connection.options.terminal.semantic_scheme.as_deref() == Some(id.as_str())
             })
-            .map(|connection| connection.name.as_str())
+            .map(|connection| connection.display_name().into_owned())
             .or_else(|| {
                 self.connection_store
                     .telnet_profiles()
@@ -724,13 +724,13 @@ impl WorkspaceApp {
                     .find(|profile| {
                         profile.terminal.semantic_scheme.as_deref() == Some(id.as_str())
                     })
-                    .map(|profile| profile.name.as_str())
+                    .map(|profile| profile.display_name().into_owned())
             });
         if let Some(name) = referenced_by {
             let message = self
                 .i18n
                 .t("settings_view.terminal.highlight_rules.semantic_scheme_delete_in_use")
-                .replace("{{name}}", name);
+                .replace("{{name}}", &name);
             self.send_settings_notice(message, TerminalNoticeVariant::Error, cx);
             return;
         }

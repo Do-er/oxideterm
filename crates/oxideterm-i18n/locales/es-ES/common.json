@@ -1468,11 +1468,11 @@
     "unlock_pending": "Desbloqueando los datos portátiles..."
   },
   "local_session": {
+    "name": "Nombre",
     "directory": "Directorio inicial",
     "inherit_directory": "Usar el directorio predeterminado de Configuración",
     "inherit_shell": "Usar el shell predeterminado de Configuración",
     "shell_unavailable": "El shell guardado no está disponible en este dispositivo. Edite la sesión para elegir un shell instalado.",
-    "directory_unavailable": "El directorio inicial no está disponible. Edite la sesión para elegir un directorio existente.",
-    "name_required": "Introduzca un nombre para guardar esta sesión local."
+    "directory_unavailable": "El directorio inicial no está disponible. Edite la sesión para elegir un directorio existente."
   }
 }

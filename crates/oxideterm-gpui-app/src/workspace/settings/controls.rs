@@ -2006,7 +2006,12 @@ impl WorkspaceApp {
                     .connection_store
                     .connections()
                     .iter()
-                    .map(|connection| (connection.id.clone(), connection.name.clone()))
+                    .map(|connection| {
+                        (
+                            connection.id.clone(),
+                            connection.display_name().into_owned(),
+                        )
+                    })
                     .collect::<Vec<_>>();
                 let mut popup = select_panel_overlay_popup_with_max_height(
                     &self.tokens,

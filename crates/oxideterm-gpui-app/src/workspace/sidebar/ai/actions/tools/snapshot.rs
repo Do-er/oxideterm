@@ -132,11 +132,7 @@ impl WorkspaceApp {
         for connection in self.connection_store.connections() {
             let mut refs = BTreeMap::new();
             refs.insert("connectionId".to_string(), connection.id.clone());
-            let connection_label = if connection.name.trim().is_empty() {
-                connection.host.as_str()
-            } else {
-                connection.name.as_str()
-            };
+            let connection_label = connection.display_name();
             targets.push(AiOrchestratorTarget {
                 id: format!("saved-connection:{}", connection.id),
                 kind: "saved-connection".to_string(),
@@ -151,7 +147,7 @@ impl WorkspaceApp {
                     "host": connection.host,
                     "port": connection.port,
                     "username": connection.username,
-                    "name": connection.name,
+                    "name": connection.display_name(),
                     "group": connection.group,
                 }),
                 terminal_buffer: None,
@@ -2292,11 +2288,7 @@ impl WorkspaceApp {
                 )
                 .with_optional_target(target);
         };
-        let title = if connection.name.trim().is_empty() {
-            format!("{}@{}", connection.username, connection.host)
-        } else {
-            connection.name.clone()
-        };
+        let title = connection.display_name().into_owned();
         self.start_saved_connection_flow(
             resource_ref.id().to_string(),
             config,
@@ -3818,9 +3810,8 @@ impl WorkspaceApp {
         let label = self
             .connection_store
             .get(resource_ref.id())
-            .map(|connection| connection.name.trim())
-            .filter(|label| !label.is_empty())
-            .unwrap_or("saved connection");
+            .map(|connection| connection.display_name().into_owned())
+            .unwrap_or_else(|| "saved connection".to_string());
         Some(
             snapshot.to_executed_tool_result(
                 tool_call_id.to_string(),

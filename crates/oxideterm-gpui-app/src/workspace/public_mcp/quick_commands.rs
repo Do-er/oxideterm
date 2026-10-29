@@ -351,7 +351,7 @@ impl WorkspaceApp {
         let context = QuickCommandTargetContext {
             target_id: node_ref.to_string(),
             label: saved_connection
-                .map(|connection| connection.name.clone())
+                .map(|connection| connection.display_name().into_owned())
                 .unwrap_or_else(|| metadata.host.clone()),
             protocol: QuickCommandTargetProtocol::Ssh,
             values: QuickCommandContextValues {
@@ -359,7 +359,7 @@ impl WorkspaceApp {
                 username: Some(Zeroizing::new(metadata.username.clone())),
                 port: Some(metadata.port),
                 connection: saved_connection
-                    .map(|connection| Zeroizing::new(connection.name.clone())),
+                    .map(|connection| Zeroizing::new(connection.display_name().into_owned())),
                 group: saved_connection
                     .and_then(|connection| connection.group.clone())
                     .map(Zeroizing::new),

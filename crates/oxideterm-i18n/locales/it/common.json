@@ -1468,11 +1468,11 @@
     "unlock_pending": "Sblocco dei dati portatili..."
   },
   "local_session": {
+    "name": "Nome",
     "directory": "Directory iniziale",
     "inherit_directory": "Usa la directory predefinita delle impostazioni",
     "inherit_shell": "Usa la shell predefinita delle impostazioni",
     "shell_unavailable": "La shell salvata non è disponibile su questo dispositivo. Modifica la sessione e scegli una shell installata.",
-    "directory_unavailable": "La directory iniziale non è disponibile. Modifica la sessione e scegli una directory esistente.",
-    "name_required": "Inserisci un nome per salvare questa sessione locale."
+    "directory_unavailable": "La directory iniziale non è disponibile. Modifica la sessione e scegli una directory esistente."
   }
 }

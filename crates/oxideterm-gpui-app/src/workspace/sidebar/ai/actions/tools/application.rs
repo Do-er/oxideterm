@@ -396,7 +396,7 @@ impl WorkspaceApp {
             .map(|profile| {
                 serde_json::json!({
                     "id": profile.id,
-                    "name": profile.name,
+                    "name": profile.display_name(),
                     "group": profile.group,
                     "portPath": profile.port_path,
                     "baudRate": profile.baud_rate,
@@ -414,7 +414,7 @@ impl WorkspaceApp {
             .map(|profile| {
                 serde_json::json!({
                     "id": profile.id,
-                    "name": profile.name,
+                    "name": profile.display_name(),
                     "group": profile.group,
                     "host": profile.host,
                     "port": profile.port,
@@ -428,7 +428,7 @@ impl WorkspaceApp {
             .map(|profile| {
                 serde_json::json!({
                     "id": profile.id,
-                    "name": profile.name,
+                    "name": profile.display_name(),
                     "group": profile.group,
                     "protocol": format!("{:?}", profile.protocol).to_lowercase(),
                     "host": profile.host,
@@ -948,7 +948,7 @@ impl WorkspaceApp {
             .map(|profile| {
                 serde_json::json!({
                     "profileId": profile.id,
-                    "profileName": profile.name,
+                    "profileName": profile.display_name(),
                     "protocol": format!("{:?}", profile.protocol).to_lowercase(),
                     "hasCredential": true,
                 })

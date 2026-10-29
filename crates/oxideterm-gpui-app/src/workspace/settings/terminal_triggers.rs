@@ -1998,7 +1998,7 @@ impl WorkspaceApp {
                             kind: SavedConnectionKind::Ssh,
                             id: connection.id.clone(),
                         },
-                        format!("SSH · {}", connection.name),
+                        format!("SSH · {}", connection.display_name()),
                     )
                 }),
         );
@@ -2012,7 +2012,7 @@ impl WorkspaceApp {
                             kind: SavedConnectionKind::Telnet,
                             id: profile.id.clone(),
                         },
-                        format!("Telnet · {}", profile.name),
+                        format!("Telnet · {}", profile.display_name()),
                     )
                 }),
         );
@@ -2022,7 +2022,7 @@ impl WorkspaceApp {
                     kind: SavedConnectionKind::Mosh,
                     id: profile.id.clone(),
                 },
-                format!("Mosh · {}", profile.name),
+                format!("Mosh · {}", profile.display_name()),
             )
         }));
         options.extend(
@@ -2035,7 +2035,7 @@ impl WorkspaceApp {
                             kind: SavedConnectionKind::Serial,
                             id: profile.id.clone(),
                         },
-                        format!("Serial · {}", profile.name),
+                        format!("Serial · {}", profile.display_name()),
                     )
                 }),
         );

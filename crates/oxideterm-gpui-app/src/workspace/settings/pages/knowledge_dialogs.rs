@@ -282,7 +282,7 @@ impl WorkspaceApp {
             .knowledge_new_collection_connection_id();
         selected_connection_id
             .and_then(|connection_id| self.connection_store.get(connection_id))
-            .map(|connection| connection.name.clone())
+            .map(|connection| connection.display_name().into_owned())
             .unwrap_or_else(|| self.i18n.t("settings_view.knowledge.scope_global"))
     }
 

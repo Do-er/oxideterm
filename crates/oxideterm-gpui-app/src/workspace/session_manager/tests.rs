@@ -526,7 +526,8 @@ pub(super) fn unnamed_save_request_preserves_custom_icon_and_independent_colors(
     form.icon_background_color = "#082f49".to_string();
     let request = save_request_from_form(&mut form, Some("conn-1".to_string())).unwrap();
 
-    assert_eq!(request.name, "me@192.168.1.2");
+    // An omitted name stays empty so the display label keeps following the endpoint.
+    assert_eq!(request.name, "");
     assert_eq!(request.icon.as_deref(), Some("cloud"));
     assert_eq!(request.color.as_deref(), Some("#7dd3fc"));
     assert_eq!(request.icon_background_color.as_deref(), Some("#082f49"));
@@ -602,8 +603,9 @@ pub(super) fn edit_properties_optional_name_preserves_connection_identity_and_sa
     let saved_connection = saved_connection_fixture(existing.clone());
     for (name, expected) in [
         ("Home", "Home"),
-        ("", "deploy@server.example.com"),
-        (" \t ", "deploy@server.example.com"),
+        // An omitted name stays empty so the label keeps following the endpoint.
+        ("", ""),
+        (" \t ", ""),
     ] {
         let mut form = form_from_saved_connection(&saved_connection, None);
         assert!(!form.password_loaded);
