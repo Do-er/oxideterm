@@ -1569,17 +1569,28 @@ impl WorkspaceApp {
         trace_mode: ConnectionTraceMode,
         cx: &mut Context<Self>,
     ) -> bool {
+        let Ok(path_node_ids) = self.node_router.path_to_node(node_id) else {
+            return false;
+        };
+        if path_node_ids.is_empty() {
+            return false;
+        }
+        // A single-node path has no jump-host ancestors, so it does not need the
+        // global connection chain. Routing it through the per-node path lets two
+        // independent direct connections proceed concurrently instead of queueing
+        // behind `active_connection_chain`.
+        if path_node_ids.len() == 1 {
+            return self.ensure_node_connection_started_without_ancestors_with_mode(
+                node_id,
+                trace_mode,
+                cx,
+            );
+        }
         if self
             .workspace_runtime
             .read(cx)
             .has_active_connection_chain()
         {
-            return false;
-        }
-        let Ok(path_node_ids) = self.node_router.path_to_node(node_id) else {
-            return false;
-        };
-        if path_node_ids.is_empty() {
             return false;
         }
 
