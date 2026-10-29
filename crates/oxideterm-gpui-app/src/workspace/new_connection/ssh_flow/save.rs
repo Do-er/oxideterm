@@ -2682,7 +2682,7 @@ impl WorkspaceApp {
             return;
         }
         let config = config.expect("credential form handles unavailable configurations");
-        let title = conn.name.clone();
+        let title = conn.display_name().into_owned();
         self.start_saved_connection_flow(id.to_string(), config, title, None, window, cx);
     }
 
@@ -2967,7 +2967,7 @@ impl WorkspaceApp {
                                     &conn,
                                 )
                             {
-                                let title = conn.name.clone();
+                                let title = conn.display_name().into_owned();
                                 // Drop the stale failed runtime node before
                                 // materializing the edited connection again.
                                 self.remove_inactive_session_tree_node(&node_id, window, cx);

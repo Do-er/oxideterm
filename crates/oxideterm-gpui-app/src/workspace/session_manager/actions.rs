@@ -1559,7 +1559,7 @@ impl WorkspaceApp {
             );
             return;
         };
-        self.start_ssh_test_flow(config, conn.name, cx);
+        self.start_ssh_test_flow(config, conn.display_name().into_owned(), cx);
     }
 
     pub(super) fn move_selected_connections(
