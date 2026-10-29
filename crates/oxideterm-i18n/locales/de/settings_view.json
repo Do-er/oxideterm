@@ -217,6 +217,8 @@
       "update_channel": "Update-Kanal",
       "window_behavior": "Fensterverhalten",
       "window_behavior_hint": "Lege fest, wie das Hauptfenster geschlossen wird.",
+      "sidebar_title": "Seitenleiste",
+      "sidebar_hint": "Wähle aus, welche Host-Tool-Schaltflächen in der rechten Seitenleiste angezeigt werden.",
       "app_lock_title": "Anwendungssperre",
       "app_lock_label": "Arbeitsbereich bei aktiven Verbindungen schützen",
       "app_lock_description": "Die Sperre blendet alle Arbeitsbereichsfenster aus und blockiert Eingaben, ohne SSH, SFTP, Weiterleitungen oder andere Hintergrundsitzungen zu trennen.",

@@ -217,6 +217,8 @@
       "update_channel": "Canale di aggiornamento",
       "window_behavior": "Comportamento della finestra",
       "window_behavior_hint": "Configura come si chiude la finestra principale.",
+      "sidebar_title": "Barra laterale",
+      "sidebar_hint": "Scegli quali pulsanti degli strumenti host mostrare nella barra laterale destra.",
       "app_lock_title": "Blocco applicazione",
       "app_lock_label": "Proteggi l’area di lavoro mentre le connessioni restano attive",
       "app_lock_description": "Il blocco nasconde tutte le finestre dell’area di lavoro e impedisce l’input senza disconnettere SSH, SFTP, inoltri o altre sessioni in background.",

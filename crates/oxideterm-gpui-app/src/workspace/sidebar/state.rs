@@ -451,6 +451,17 @@ impl WorkspaceApp {
             cx.notify();
             return false;
         }
+        if panel == ContextSidebarPanel::HostTools {
+            let tools = self.enabled_context_sidebar_tools();
+            let Some(&first_tool) = tools.first() else {
+                return false;
+            };
+            if !tools.contains(&self.host_tools.read(cx).active_tool()) {
+                self.host_tools.update(cx, |host_tools, cx| {
+                    host_tools.select_sidebar_tool(first_tool, cx);
+                });
+            }
+        }
 
         self.active_context_sidebar_panel = panel;
         if panel != ContextSidebarPanel::Sessions {

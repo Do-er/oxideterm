@@ -217,6 +217,8 @@
       "update_channel": "更新通道",
       "window_behavior": "視窗行為",
       "window_behavior_hint": "設定主視窗關閉時的行為。",
+      "sidebar_title": "側邊欄",
+      "sidebar_hint": "自訂右側邊欄顯示的主機工具按鈕。",
       "app_lock_title": "應用程式鎖定",
       "app_lock_label": "連線保持運作時保護工作區",
       "app_lock_description": "鎖定會隱藏所有工作區視窗並封鎖輸入，但不會中斷 SSH、SFTP、連接埠轉送或其他背景工作階段。",

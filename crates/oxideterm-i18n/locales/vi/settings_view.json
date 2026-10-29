@@ -217,6 +217,8 @@
       "update_channel": "Kênh cập nhật",
       "window_behavior": "Hành vi cửa sổ",
       "window_behavior_hint": "Cấu hình cách đóng cửa sổ chính.",
+      "sidebar_title": "Thanh bên",
+      "sidebar_hint": "Chọn các nút công cụ máy chủ hiển thị ở thanh bên phải.",
       "app_lock_title": "Khóa ứng dụng",
       "app_lock_label": "Bảo vệ không gian làm việc trong khi vẫn duy trì kết nối",
       "app_lock_description": "Khóa sẽ ẩn mọi cửa sổ làm việc và chặn thao tác nhập mà không ngắt SSH, SFTP, chuyển tiếp cổng hoặc các phiên chạy nền khác.",

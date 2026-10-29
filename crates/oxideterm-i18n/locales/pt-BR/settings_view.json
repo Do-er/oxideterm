@@ -217,6 +217,8 @@
       "update_channel": "Canal de atualização",
       "window_behavior": "Comportamento da janela",
       "window_behavior_hint": "Configure como a janela principal fecha.",
+      "sidebar_title": "Barra lateral",
+      "sidebar_hint": "Escolha quais botões de ferramentas do host aparecem na barra lateral direita.",
       "app_lock_title": "Bloqueio do aplicativo",
       "app_lock_label": "Proteger o espaço de trabalho enquanto as conexões permanecem ativas",
       "app_lock_description": "O bloqueio oculta todas as janelas do espaço de trabalho e impede entradas sem desconectar SSH, SFTP, encaminhamentos ou outras sessões em segundo plano.",

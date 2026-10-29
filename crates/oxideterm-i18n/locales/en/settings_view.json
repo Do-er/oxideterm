@@ -217,6 +217,8 @@
       "update_channel": "Update Channel",
       "window_behavior": "Window Behavior",
       "window_behavior_hint": "Configure how the main app window closes.",
+      "sidebar_title": "Sidebar",
+      "sidebar_hint": "Choose which host tool buttons appear in the right sidebar.",
       "app_lock_title": "Application Lock",
       "app_lock_label": "Protect the workspace while connections stay active",
       "app_lock_description": "Locking hides every workspace window and blocks input without disconnecting SSH, SFTP, forwarding, or other background sessions.",

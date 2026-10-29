@@ -217,6 +217,8 @@
       "update_channel": "Canal de mise à jour",
       "window_behavior": "Comportement de la fenêtre",
       "window_behavior_hint": "Configure la fermeture de la fenêtre principale.",
+      "sidebar_title": "Barre latérale",
+      "sidebar_hint": "Choisissez quels boutons d’outils d’hôte s’affichent dans la barre latérale droite.",
       "app_lock_title": "Verrouillage de l’application",
       "app_lock_label": "Protéger l’espace de travail tout en gardant les connexions actives",
       "app_lock_description": "Le verrouillage masque toutes les fenêtres de l’espace de travail et bloque les saisies sans déconnecter SSH, SFTP, les redirections ou les autres sessions en arrière-plan.",

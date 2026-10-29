@@ -46,8 +46,9 @@ impl WorkspaceApp {
                     rows,
                 )
             }
-            1 => self.render_app_lock_settings_card(cx),
-            2 => {
+            1 => self.render_sidebar_settings_card(settings, cx),
+            2 => self.render_app_lock_settings_card(cx),
+            3 => {
                 let data_dir_info = self.settings_data_directory_info();
                 let data_dir = data_dir_info.path.display().to_string();
                 self.settings_card(
@@ -116,7 +117,7 @@ impl WorkspaceApp {
                     ],
                 )
             }
-            3 => {
+            4 => {
                 let cli = self.settings_workspace.read(cx).cli_companion_snapshot();
                 let cli_status = cli.status.as_ref();
                 let cli_loading = cli.loading;
@@ -573,6 +574,60 @@ impl WorkspaceApp {
                 cx,
             );
         });
+    }
+
+    pub(in crate::workspace) fn render_sidebar_settings_card(
+        &self,
+        settings: &PersistedSettings,
+        cx: &mut Context<Self>,
+    ) -> AnyElement {
+        let mut pills = Vec::with_capacity(ContextSidebarTool::ALL.len());
+        for tool in ContextSidebarTool::ALL {
+            let enabled = !settings
+                .sidebar_ui
+                .hidden_host_tools
+                .iter()
+                .any(|hidden| hidden == tool.settings_key());
+            let icon_color = if enabled {
+                self.tokens.ui.accent
+            } else {
+                self.tokens.ui.text_muted
+            };
+            pills.push(
+                settings_background_tab_pill(
+                    &self.tokens,
+                    self.i18n.t(tool.label_key()),
+                    Self::render_lucide_icon(
+                        tool.icon(),
+                        self.tokens.metrics.settings_background_tab_icon_size,
+                        rgb(icon_color),
+                    ),
+                    enabled,
+                )
+                .id(("settings-sidebar-tool", tool as usize))
+                .on_mouse_down(
+                    MouseButton::Left,
+                    cx.listener(move |this, _event, _window, cx| {
+                        this.toggle_sidebar_host_tool_visibility(tool, cx);
+                        cx.stop_propagation();
+                    }),
+                )
+                .into_any_element(),
+            );
+        }
+        self.settings_card(
+            "settings_view.general.sidebar_title",
+            "settings_view.general.sidebar_hint",
+            vec![
+                div()
+                    .w_full()
+                    .grid()
+                    .grid_cols(3)
+                    .gap(px(10.0))
+                    .children(pills)
+                    .into_any_element(),
+            ],
+        )
     }
 
     pub(in crate::workspace) fn general_checkbox_row(

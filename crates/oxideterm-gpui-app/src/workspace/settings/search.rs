@@ -73,8 +73,6 @@ const fn ai_search_entry(
 }
 
 fn settings_search_specs() -> Vec<SettingsSearchEntrySpec> {
-    let window_behavior_sections =
-        usize::from(cfg!(any(target_os = "windows", target_os = "macos")));
     let mut specs = vec![
         settings_search_entry(
             SettingsTab::General,
@@ -84,13 +82,32 @@ fn settings_search_specs() -> Vec<SettingsSearchEntrySpec> {
         ),
         settings_search_entry(
             SettingsTab::General,
-            3 + window_behavior_sections,
+            1,
+            "settings_view.general.sidebar_title",
+            &[
+                "settings_view.general.sidebar_hint",
+                "sidebar.panels.host_monitor",
+                "sidebar.panels.processes",
+                "sidebar.panels.gpu",
+                "sidebar.panels.docker",
+                "sidebar.panels.services",
+                "sidebar.panels.logs",
+                "sidebar.panels.ports",
+                "sidebar.panels.tmux",
+                "sidebar.panels.filesystems",
+                "sidebar.panels.schedules",
+                "sidebar.panels.packages",
+            ],
+        ),
+        settings_search_entry(
+            SettingsTab::General,
+            3,
             "settings_view.general.data_directory",
             &["settings_view.general.data_directory_hint"],
         ),
         settings_search_entry(
             SettingsTab::General,
-            4 + window_behavior_sections,
+            4,
             "settings_view.general.cli_companion",
             &[
                 "settings_view.general.cli_tool",
@@ -99,7 +116,7 @@ fn settings_search_specs() -> Vec<SettingsSearchEntrySpec> {
         ),
         settings_search_entry(
             SettingsTab::General,
-            1,
+            0,
             "settings_view.general.startup",
             &[
                 "settings_view.general.startup_hint",
@@ -820,13 +837,13 @@ fn settings_search_specs() -> Vec<SettingsSearchEntrySpec> {
     #[cfg(any(target_os = "windows", target_os = "macos"))]
     specs.push(settings_search_entry(
         SettingsTab::General,
-        2,
+        0,
         "settings_view.general.window_behavior",
         &["settings_view.general.window_behavior_hint"],
     ));
     specs.push(settings_search_entry(
         SettingsTab::General,
-        2 + window_behavior_sections,
+        2,
         "settings_view.general.app_lock_title",
         &[
             "settings_view.general.app_lock_description",

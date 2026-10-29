@@ -19,9 +19,32 @@ const TOOLS: [ContextSidebarTool; 11] = [
     ContextSidebarTool::Packages,
 ];
 
-const MONITORING_TOOL_COUNT: usize = 4;
-
 impl ContextSidebarTool {
+    pub(in crate::workspace) const ALL: [Self; 11] = TOOLS;
+
+    pub(in crate::workspace) fn settings_key(self) -> &'static str {
+        match self {
+            Self::Monitor => "monitor",
+            Self::Gpu => "gpu",
+            Self::Processes => "processes",
+            Self::Services => "services",
+            Self::Logs => "logs",
+            Self::Tmux => "tmux",
+            Self::Docker => "docker",
+            Self::Ports => "ports",
+            Self::Schedules => "schedules",
+            Self::Filesystems => "filesystems",
+            Self::Packages => "packages",
+        }
+    }
+
+    fn is_monitoring_tool(self) -> bool {
+        matches!(
+            self,
+            Self::Monitor | Self::Processes | Self::Gpu | Self::Docker
+        )
+    }
+
     pub(in crate::workspace) fn label_key(self) -> &'static str {
         match self {
             Self::Monitor => "sidebar.panels.host_monitor",
@@ -55,30 +78,75 @@ impl ContextSidebarTool {
     }
 }
 
+fn enabled_tools(hidden_host_tools: &[String]) -> Vec<ContextSidebarTool> {
+    TOOLS
+        .into_iter()
+        .filter(|tool| {
+            let key = tool.settings_key();
+            !hidden_host_tools.iter().any(|hidden| hidden == key)
+        })
+        .collect()
+}
+
+fn monitoring_tool_count(tools: &[ContextSidebarTool]) -> usize {
+    tools
+        .iter()
+        .take_while(|tool| tool.is_monitoring_tool())
+        .count()
+}
+
+fn visible_tool_count_for_tools(
+    tools: &[ContextSidebarTool],
+    available_height: f32,
+    row_height: f32,
+    separator_height: f32,
+    ai_enabled: bool,
+) -> usize {
+    if tools.is_empty() {
+        return 0;
+    }
+    let monitoring_count = monitoring_tool_count(tools);
+    // Reserve More only for overflow, and the second divider only when both groups show.
+    (0..=tools.len())
+        .rev()
+        .find(|&count| {
+            let more_height = if count < tools.len() { row_height } else { 0.0 };
+            tool_stack_height_for_tools(
+                count,
+                monitoring_count,
+                row_height,
+                separator_height,
+                ai_enabled,
+            ) + more_height
+                <= available_height
+        })
+        .unwrap_or(0)
+}
+
+#[cfg(test)]
 fn visible_tool_count(
     available_height: f32,
     row_height: f32,
     separator_height: f32,
     ai_enabled: bool,
 ) -> usize {
-    // Reserve More only for overflow, and the second divider only when both groups show.
-    (0..=TOOLS.len())
-        .rev()
-        .find(|&count| {
-            let more_height = if count < TOOLS.len() { row_height } else { 0.0 };
-            tool_stack_height(count, row_height, separator_height, ai_enabled) + more_height
-                <= available_height
-        })
-        .unwrap_or(0)
+    visible_tool_count_for_tools(
+        &TOOLS,
+        available_height,
+        row_height,
+        separator_height,
+        ai_enabled,
+    )
 }
 
-fn tool_stack_height(
+fn tool_stack_height_for_tools(
     count: usize,
+    monitoring_count: usize,
     row_height: f32,
     separator_height: f32,
     ai_enabled: bool,
 ) -> f32 {
-    let separators = if count > MONITORING_TOOL_COUNT {
+    let separators = if monitoring_count > 0 && count > monitoring_count {
         2.0
     } else {
         1.0
@@ -87,8 +155,13 @@ fn tool_stack_height(
     (count as f32 + leading_tools) * row_height + separators * separator_height
 }
 
+fn overflow_tools_from(tools: &[ContextSidebarTool], visible: usize) -> Vec<ContextSidebarTool> {
+    tools[visible.min(tools.len())..].to_vec()
+}
+
+#[cfg(test)]
 fn overflow_tools(visible: usize) -> Vec<ContextSidebarTool> {
-    TOOLS[visible..].to_vec()
+    overflow_tools_from(&TOOLS, visible)
 }
 
 impl WorkspaceApp {
@@ -118,7 +191,64 @@ impl WorkspaceApp {
         )
     }
 
-    fn context_tool_count(&self, window: &Window, cx: &App) -> usize {
+    pub(in crate::workspace) fn enabled_context_sidebar_tools(&self) -> Vec<ContextSidebarTool> {
+        enabled_tools(&self.settings_store.settings().sidebar_ui.hidden_host_tools)
+    }
+
+    pub(in crate::workspace) fn toggle_sidebar_host_tool_visibility(
+        &mut self,
+        tool: ContextSidebarTool,
+        cx: &mut Context<Self>,
+    ) {
+        let key = tool.settings_key();
+        self.edit_settings(
+            |settings| {
+                let hidden = &mut settings.sidebar_ui.hidden_host_tools;
+                if let Some(index) = hidden.iter().position(|item| item == key) {
+                    hidden.remove(index);
+                } else {
+                    hidden.push(key.to_string());
+                }
+            },
+            cx,
+        );
+        self.reconcile_visible_context_sidebar_tools(cx);
+    }
+
+    pub(in crate::workspace) fn reconcile_visible_context_sidebar_tools(
+        &mut self,
+        cx: &mut Context<Self>,
+    ) {
+        let tools = self.enabled_context_sidebar_tools();
+        if self
+            .context_tools_menu
+            .is_some_and(|highlighted| !tools.contains(&highlighted))
+        {
+            self.context_tools_menu = tools.first().copied();
+        }
+        let active_tool = self.host_tools.read(cx).active_tool();
+        if !tools.contains(&active_tool) {
+            if let Some(&replacement) = tools.first() {
+                self.host_tools.update(cx, |host_tools, cx| {
+                    host_tools.select_sidebar_tool(replacement, cx);
+                });
+            } else if self.active_context_sidebar_panel == ContextSidebarPanel::HostTools {
+                self.active_context_sidebar_panel = ContextSidebarPanel::Sessions;
+                if self.context_sidebar_visible() {
+                    self.collapse_context_sidebar(cx);
+                } else {
+                    self.sync_host_tools_lifecycle(false, cx);
+                }
+            }
+        }
+    }
+
+    fn context_tool_count_for(
+        &self,
+        tools: &[ContextSidebarTool],
+        window: &Window,
+        cx: &App,
+    ) -> usize {
         let metrics = self.tokens.metrics;
         let lock_height = if self.settings_store.settings().sidebar_ui.show_app_lock_icon {
             metrics.activity_icon_size + metrics.activity_icon_gap + self.tokens.spacing.two * 2.0
@@ -140,7 +270,8 @@ impl WorkspaceApp {
             - PRIMARY_SIDEBAR_CONTENT_TOP_INSET
             - lock_height
             - plugin_height;
-        visible_tool_count(
+        visible_tool_count_for_tools(
+            tools,
             available,
             metrics.activity_icon_size + metrics.activity_icon_gap,
             metrics.divider_height + metrics.activity_icon_gap,
@@ -243,7 +374,9 @@ impl WorkspaceApp {
         window: &Window,
         cx: &mut Context<Self>,
     ) -> AnyElement {
-        let count = self.context_tool_count(window, cx);
+        let tools = self.enabled_context_sidebar_tools();
+        let monitoring_count = monitoring_tool_count(&tools);
+        let count = self.context_tool_count_for(&tools, window, cx);
         let ai_enabled = self.settings_store.settings().ai.enabled;
         let mut buttons = div()
             .flex_1()
@@ -262,9 +395,11 @@ impl WorkspaceApp {
                 cx,
             ));
         }
-        let mut buttons = buttons.child(self.context_tool_separator());
-        for (index, tool) in TOOLS.iter().take(count).copied().enumerate() {
-            if index == MONITORING_TOOL_COUNT {
+        if !tools.is_empty() {
+            buttons = buttons.child(self.context_tool_separator());
+        }
+        for (index, tool) in tools.iter().take(count).copied().enumerate() {
+            if monitoring_count > 0 && index == monitoring_count {
                 buttons = buttons.child(self.context_tool_separator());
             }
             let active = self.context_tool_active(tool, cx);
@@ -292,7 +427,7 @@ impl WorkspaceApp {
                     )),
             );
         }
-        let overflow = overflow_tools(count);
+        let overflow = overflow_tools_from(&tools, count);
         if !overflow.is_empty() {
             let active = self.context_tools_menu.is_some()
                 || overflow
@@ -318,7 +453,11 @@ impl WorkspaceApp {
                             let open = this.context_tools_menu.is_none();
                             this.prepare_modal_interaction_boundary(cx);
                             if open {
-                                let overflow = overflow_tools(this.context_tool_count(window, cx));
+                                let tools = this.enabled_context_sidebar_tools();
+                                let overflow = overflow_tools_from(
+                                    &tools,
+                                    this.context_tool_count_for(&tools, window, cx),
+                                );
                                 if overflow.is_empty() {
                                     return;
                                 }
@@ -369,8 +508,10 @@ impl WorkspaceApp {
             self.context_tools_menu = None;
             return None;
         }
-        let count = self.context_tool_count(window, cx);
-        let overflow = overflow_tools(count);
+        let tools = self.enabled_context_sidebar_tools();
+        let monitoring_count = monitoring_tool_count(&tools);
+        let count = self.context_tool_count_for(&tools, window, cx);
+        let overflow = overflow_tools_from(&tools, count);
         if overflow.is_empty() {
             self.context_tools_menu = None;
             return None;
@@ -403,9 +544,10 @@ impl WorkspaceApp {
             // Keep one scroll item per tool, including its optional group divider.
             popup = popup.child(
                 div()
-                    .when(index > 0 && count + index == MONITORING_TOOL_COUNT, |row| {
-                        row.child(select_separator(&self.tokens))
-                    })
+                    .when(
+                        monitoring_count > 0 && index > 0 && count + index == monitoring_count,
+                        |row| row.child(select_separator(&self.tokens)),
+                    )
                     .child(option),
             );
         }
@@ -415,8 +557,9 @@ impl WorkspaceApp {
         let top = self.window_titlebar_height(window)
             + metrics.tabbar_height
             + PRIMARY_SIDEBAR_CONTENT_TOP_INSET
-            + tool_stack_height(
+            + tool_stack_height_for_tools(
                 count,
+                monitoring_count,
                 metrics.activity_icon_size + metrics.activity_icon_gap,
                 metrics.divider_height + metrics.activity_icon_gap,
                 self.settings_store.settings().ai.enabled,
@@ -463,7 +606,8 @@ impl WorkspaceApp {
         let Some(highlighted) = self.context_tools_menu else {
             return false;
         };
-        let overflow = overflow_tools(self.context_tool_count(window, cx));
+        let tools = self.enabled_context_sidebar_tools();
+        let overflow = overflow_tools_from(&tools, self.context_tool_count_for(&tools, window, cx));
         if overflow.is_empty() {
             self.context_tools_menu = None;
             return false;
@@ -549,5 +693,33 @@ mod tests {
         // When AI is disabled, one fewer leading tool is rendered (only Sessions, saving 40px).
         assert_eq!(visible_tool_count(498.0, 40.0, 9.0, false), 11);
         assert_eq!(visible_tool_count(497.0, 40.0, 9.0, false), 9);
+    }
+
+    #[test]
+    fn hidden_host_tools_filter_rail_order_and_omit_redundant_group_divider() {
+        let hidden = vec![
+            "monitor".to_string(),
+            "processes".to_string(),
+            "gpu".to_string(),
+            "docker".to_string(),
+            "packages".to_string(),
+        ];
+        let tools = enabled_tools(&hidden);
+        assert_eq!(
+            tools,
+            vec![
+                ContextSidebarTool::Services,
+                ContextSidebarTool::Logs,
+                ContextSidebarTool::Ports,
+                ContextSidebarTool::Tmux,
+                ContextSidebarTool::Filesystems,
+                ContextSidebarTool::Schedules,
+            ]
+        );
+        assert_eq!(monitoring_tool_count(&tools), 0);
+        // Without monitoring tools, only one divider is needed: 6 tools + 2 leading = 8 * 40 + 9 = 329.
+        assert_eq!(visible_tool_count_for_tools(&tools, 329.0, 40.0, 9.0, true), 6);
+        assert_eq!(overflow_tools_from(&tools, 6), Vec::<ContextSidebarTool>::new());
+        assert_eq!(visible_tool_count_for_tools(&[], 500.0, 40.0, 9.0, true), 0);
     }
 }

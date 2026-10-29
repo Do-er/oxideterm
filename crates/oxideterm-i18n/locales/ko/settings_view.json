@@ -217,6 +217,8 @@
       "update_channel": "업데이트 채널",
       "window_behavior": "창 동작",
       "window_behavior_hint": "기본 창을 닫을 때의 동작을 설정합니다.",
+      "sidebar_title": "사이드바",
+      "sidebar_hint": "오른쪽 사이드바에 표시할 호스트 도구 버튼을 선택합니다.",
       "app_lock_title": "애플리케이션 잠금",
       "app_lock_label": "연결을 유지하면서 작업 공간 보호",
       "app_lock_description": "잠그면 SSH, SFTP, 포트 전달 또는 기타 백그라운드 세션을 끊지 않고 모든 작업 공간 창을 숨기고 입력을 차단합니다.",

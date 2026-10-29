@@ -217,6 +217,8 @@
       "update_channel": "更新チャネル",
       "window_behavior": "ウィンドウの動作",
       "window_behavior_hint": "メインウィンドウを閉じるときの動作を設定します。",
+      "sidebar_title": "サイドバー",
+      "sidebar_hint": "右サイドバーに表示するホストツールボタンを選択します。",
       "app_lock_title": "アプリロック",
       "app_lock_label": "接続を維持したままワークスペースを保護",
       "app_lock_description": "ロックすると、SSH、SFTP、ポート転送などのバックグラウンドセッションを切断せずに、すべてのワークスペースウィンドウを隠して入力を遮断します。",

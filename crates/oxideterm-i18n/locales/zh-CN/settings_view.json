@@ -217,6 +217,8 @@
       "update_channel": "更新通道",
       "window_behavior": "窗口行为",
       "window_behavior_hint": "配置主窗口关闭时的行为。",
+      "sidebar_title": "侧边栏",
+      "sidebar_hint": "自定义右侧边栏显示的主机工具按钮。",
       "app_lock_title": "应用锁",
       "app_lock_label": "连接保持运行时保护工作区",
       "app_lock_description": "锁定会隐藏所有工作区窗口并阻止输入，但不会断开 SSH、SFTP、端口转发或其他后台会话。",

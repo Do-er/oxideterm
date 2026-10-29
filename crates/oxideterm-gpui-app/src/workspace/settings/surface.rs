@@ -472,8 +472,7 @@ impl WorkspaceApp {
                 cli.loading.hash(&mut hasher);
                 cli.error.is_some().hash(&mut hasher);
                 cli.status.hash(&mut hasher);
-                let app_lock_section_index =
-                    2 + usize::from(cfg!(any(target_os = "windows", target_os = "macos")));
+                let app_lock_section_index = 2;
                 if index
                     == oxideterm_settings_model::SETTINGS_SECTION_HEADER_ITEM_COUNT
                         + app_lock_section_index

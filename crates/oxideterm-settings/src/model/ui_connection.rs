@@ -208,6 +208,8 @@ pub struct SidebarUiState {
     pub session_manual_order: Vec<String>,
     #[serde(default)]
     pub hidden_local_terminal_profile_ids: Vec<String>,
+    #[serde(default)]
+    pub hidden_host_tools: Vec<String>,
     pub collapsed: bool,
     pub active_section: String,
     pub width: i64,
@@ -230,6 +232,7 @@ impl Default for SidebarUiState {
             session_sort_order: SessionSortOrder::Default,
             session_manual_order: Vec::new(),
             hidden_local_terminal_profile_ids: Vec::new(),
+            hidden_host_tools: Vec::new(),
             width: 300,
             ai_sidebar_collapsed: true,
             ai_sidebar_width: AI_SIDEBAR_DEFAULT_WIDTH,
