@@ -177,7 +177,7 @@ fn default_file_manager_sidebar_width() -> i64 {
 }
 
 fn default_show_app_lock_icon() -> bool {
-    true
+    false
 }
 
 #[derive(Clone, Copy, Debug, Default, Deserialize, Eq, PartialEq, Serialize)]
@@ -232,13 +232,20 @@ impl Default for SidebarUiState {
             session_sort_order: SessionSortOrder::Default,
             session_manual_order: Vec::new(),
             hidden_local_terminal_profile_ids: Vec::new(),
-            hidden_host_tools: Vec::new(),
+            hidden_host_tools: vec![
+                "gpu".to_string(),
+                "docker".to_string(),
+                "logs".to_string(),
+                "tmux".to_string(),
+                "schedules".to_string(),
+                "packages".to_string(),
+            ],
             width: 300,
             ai_sidebar_collapsed: true,
             ai_sidebar_width: AI_SIDEBAR_DEFAULT_WIDTH,
             file_manager_sidebar_width: FILE_MANAGER_SIDEBAR_DEFAULT_WIDTH,
             zen_mode: false,
-            show_app_lock_icon: true,
+            show_app_lock_icon: false,
             extra: ExtraFields::new(),
         }
     }

@@ -604,7 +604,7 @@ impl WorkspaceApp {
                 port,
             } => self.open_quick_connect_form(username, host, port, window, cx),
             PaletteAction::QuickConnectAlias(alias) => {
-                self.open_ssh_config_alias_from_palette(alias, window, cx);
+                self.open_ssh_config_alias_form(alias, window, cx);
             }
             PaletteAction::OpenTelnetTerminal => self.open_telnet_connection_form(window, cx),
             PaletteAction::OpenSerialTerminal => self.open_serial_connection_form(window, cx),
@@ -949,7 +949,7 @@ impl WorkspaceApp {
         cx.notify();
     }
 
-    pub(super) fn open_ssh_config_alias_from_palette(
+    pub(super) fn open_ssh_config_alias_form(
         &mut self,
         alias: String,
         window: &mut Window,
@@ -966,6 +966,60 @@ impl WorkspaceApp {
                     self.show_active_input_caret(cx);
                     self.needs_active_pane_focus = false;
                     window.focus(&self.focus_handle, cx);
+                }
+                Err(error) => {
+                    self.set_command_palette_error(error.to_string(), cx);
+                }
+            },
+            Ok(None) => {
+                self.set_command_palette_error(
+                    self.i18n
+                        .t("command_palette.quick_connect_alias_not_found")
+                        .replace("{{alias}}", &alias),
+                    cx,
+                );
+            }
+            Err(error) => {
+                let message = self
+                    .i18n
+                    .t("command_palette.quick_connect_resolve_failed")
+                    .replace("{{alias}}", &alias);
+                self.set_command_palette_error(format!("{message}: {error}"), cx);
+            }
+        }
+        cx.notify();
+    }
+
+    pub(super) fn connect_ssh_config_alias_transient(
+        &mut self,
+        alias: String,
+        cx: &mut Context<Self>,
+    ) {
+        match resolve_ssh_config_alias(&alias) {
+            Ok(Some(host)) => match saved_connection_from_ssh_host(host) {
+                Ok(conn) => {
+                    match oxideterm_session_adapter::ssh_config_from_saved_connection(
+                        &self.connection_store,
+                        self.settings_store.settings(),
+                        &conn,
+                    ) {
+                        Some(config) => {
+                            self.start_ssh_preflight(
+                                config,
+                                alias,
+                                SshConnectionIntent::ConnectTemporary,
+                                cx,
+                            );
+                        }
+                        None => {
+                            self.set_command_palette_error(
+                                self.i18n
+                                    .t("command_palette.quick_connect_resolve_failed")
+                                    .replace("{{alias}}", &alias),
+                                cx,
+                            );
+                        }
+                    }
                 }
                 Err(error) => {
                     self.set_command_palette_error(error.to_string(), cx);

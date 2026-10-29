@@ -706,7 +706,7 @@ mod tests {
             4096
         );
         assert_eq!(sanitized.settings.sidebar_ui.width, 600);
-        assert!(sanitized.settings.sidebar_ui.show_app_lock_icon);
+        assert!(!sanitized.settings.sidebar_ui.show_app_lock_icon);
         assert_eq!(sanitized.settings.connection_pool.idle_timeout_secs, 1);
         assert!(!sanitized.validation_warnings.is_empty());
     }

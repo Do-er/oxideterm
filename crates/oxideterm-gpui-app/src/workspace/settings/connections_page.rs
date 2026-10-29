@@ -3060,6 +3060,7 @@ impl WorkspaceApp {
         });
         if imported > 0 {
             self.queue_cloud_sync_dirty_refresh(cx);
+            self.refresh_session_manager_ssh_config_hosts(cx);
         }
     }
 

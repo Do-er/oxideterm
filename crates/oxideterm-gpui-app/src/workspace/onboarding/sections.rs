@@ -462,7 +462,7 @@ impl WorkspaceApp {
         let mod_key = if cfg!(target_os = "macos") {
             "⌘K"
         } else {
-            "Ctrl+K"
+            "Ctrl+P"
         };
         let features = [
             (LucideIcon::Terminal, "cmd_palette", Some(mod_key), true),

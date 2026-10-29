@@ -179,7 +179,8 @@ impl SessionManagerDisplayItem {
     }
 
     pub(super) fn row_action_target(&self) -> Option<SessionManagerRowActionTarget> {
-        // SSH config discoveries are not persisted rows and therefore have no delete menu.
+        // SSH config discoveries are virtual rows; their menu offers connect,
+        // import, edit, and copy-alias actions instead of a delete entry.
         match self {
             Self::Tunnel(item) => Some(SessionManagerRowActionTarget::Tunnel(
                 item.forward.id.clone(),
@@ -189,6 +190,9 @@ impl SessionManagerDisplayItem {
             }
             Self::Connection(connection) => Some(SessionManagerRowActionTarget::Connection(
                 connection.id.clone(),
+            )),
+            Self::SshConfig(host) => Some(SessionManagerRowActionTarget::SshConfig(
+                host.alias.clone(),
             )),
             Self::Serial(profile) => {
                 Some(SessionManagerRowActionTarget::Serial(profile.id.clone()))
@@ -207,7 +211,6 @@ impl SessionManagerDisplayItem {
             Self::RemoteDesktop(profile) => Some(SessionManagerRowActionTarget::RemoteDesktop(
                 profile.id.clone(),
             )),
-            Self::SshConfig(_) => None,
         }
     }
 
@@ -2050,6 +2053,7 @@ impl WorkspaceApp {
             SessionManagerDisplayItem::SshConfig(host) => {
                 let open_alias = host.alias.clone();
                 let import_alias = host.alias.clone();
+                let menu_alias = host.alias.clone();
                 div()
                     .w(px(MANAGER_ROW_ACTIONS_WIDTH))
                     .flex_none()
@@ -2063,8 +2067,8 @@ impl WorkspaceApp {
                         MANAGER_ROW_ACTION_ICON_SIZE,
                         rgb(self.tokens.ui.accent),
                         has_background,
-                        move |this, _event, window, cx| {
-                            this.open_ssh_config_alias_from_palette(open_alias.clone(), window, cx);
+                        move |this, _event, _window, cx| {
+                            this.connect_ssh_config_alias_transient(open_alias.clone(), cx);
                             cx.stop_propagation();
                         },
                         cx,
@@ -2077,6 +2081,23 @@ impl WorkspaceApp {
                         has_background,
                         move |this, _event, _window, cx| {
                             this.import_session_manager_ssh_config_host(import_alias.clone(), cx);
+                            cx.stop_propagation();
+                        },
+                        cx,
+                    ))
+                    .child(self.render_row_icon_button(
+                        LucideIcon::MoreVertical,
+                        MANAGER_ROW_ACTION_BUTTON,
+                        MANAGER_ROW_ACTION_ICON_SIZE,
+                        rgb(self.tokens.ui.text),
+                        has_background,
+                        move |this, event, _window, cx| {
+                            this.open_session_manager_row_action_menu(
+                                SessionManagerRowActionTarget::SshConfig(menu_alias.clone()),
+                                f32::from(event.position.x),
+                                f32::from(event.position.y),
+                                cx,
+                            );
                             cx.stop_propagation();
                         },
                         cx,
@@ -2428,6 +2449,7 @@ impl WorkspaceApp {
             SessionManagerRowActionTarget::Connection(_) => {
                 MANAGER_ROW_ACTION_MENU_CONNECTION_HEIGHT
             }
+            SessionManagerRowActionTarget::SshConfig(_) => MANAGER_ROW_ACTION_MENU_GROUP_HEIGHT,
             SessionManagerRowActionTarget::Serial(_)
             | SessionManagerRowActionTarget::Tunnel(_)
             | SessionManagerRowActionTarget::Plugin(_)
@@ -2703,6 +2725,65 @@ impl WorkspaceApp {
                 .child(dropdown_menu_separator(&self.tokens));
         }
 
+        if let SessionManagerRowActionTarget::SshConfig(alias) = &menu.target {
+            let connect_alias = alias.clone();
+            let import_alias = alias.clone();
+            let edit_alias = alias.clone();
+            popup = popup
+                .child(self.render_session_manager_menu_action(
+                    dropdown_menu_item(
+                        &self.tokens,
+                        self.i18n.t("sessionManager.actions.connect"),
+                        DropdownMenuItemKind::Plain,
+                        false,
+                        false,
+                    ),
+                    false,
+                    false,
+                    has_background,
+                    move |this, _event, _window, cx| {
+                        this.connect_ssh_config_alias_transient(connect_alias.clone(), cx);
+                        cx.stop_propagation();
+                    },
+                    cx,
+                ))
+                .child(dropdown_menu_separator(&self.tokens))
+                .child(self.render_session_manager_menu_action(
+                    dropdown_menu_item(
+                        &self.tokens,
+                        self.i18n.t("settings_view.connections.ssh_config.import"),
+                        DropdownMenuItemKind::Plain,
+                        false,
+                        false,
+                    ),
+                    false,
+                    false,
+                    has_background,
+                    move |this, _event, _window, cx| {
+                        this.import_session_manager_ssh_config_host(import_alias.clone(), cx);
+                        cx.stop_propagation();
+                    },
+                    cx,
+                ))
+                .child(self.render_session_manager_menu_action(
+                    dropdown_menu_item(
+                        &self.tokens,
+                        self.i18n.t("sessionManager.actions.edit"),
+                        DropdownMenuItemKind::Plain,
+                        false,
+                        false,
+                    ),
+                    false,
+                    false,
+                    has_background,
+                    move |this, _event, window, cx| {
+                        this.open_ssh_config_alias_form(edit_alias.clone(), window, cx);
+                        cx.stop_propagation();
+                    },
+                    cx,
+                ));
+        }
+
         if matches!(&menu.target, SessionManagerRowActionTarget::Batch) {
             popup = popup
                 .child(self.render_session_manager_menu_action(
@@ -2970,6 +3051,7 @@ impl WorkspaceApp {
             SessionManagerRowActionTarget::Connection(id) => {
                 Some((id.clone(), self.i18n.t("sessionManager.actions.delete")))
             }
+            SessionManagerRowActionTarget::SshConfig(_) => None,
             SessionManagerRowActionTarget::Serial(id) => Some((
                 id.clone(),
                 self.i18n.t("sessionManager.serial_profiles.delete"),
@@ -3062,6 +3144,7 @@ impl WorkspaceApp {
                                 this.request_delete_session_group(&delete_id, cx)
                             }
                             SessionManagerRowActionTarget::GroupRoot
+                            | SessionManagerRowActionTarget::SshConfig(_)
                             | SessionManagerRowActionTarget::Batch => {}
                         }
                         cx.stop_propagation();
@@ -3149,7 +3232,7 @@ impl WorkspaceApp {
                 self.open_saved_connection(&connection_id, window, cx)
             }
             SessionManagerOpenTarget::SshConfig(alias) => {
-                self.open_ssh_config_alias_from_palette(alias, window, cx)
+                self.connect_ssh_config_alias_transient(alias, cx)
             }
             SessionManagerOpenTarget::Serial(profile_id) => {
                 self.open_saved_serial_profile(&profile_id, window, cx)

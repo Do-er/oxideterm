@@ -346,6 +346,7 @@ pub(super) enum SessionManagerRowActionTarget {
     Tunnel(String),
     Plugin(String),
     Connection(String),
+    SshConfig(String),
     Serial(String),
     LocalTerminal(String),
     Telnet(String),
