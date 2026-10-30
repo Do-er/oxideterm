@@ -7607,7 +7607,7 @@ dependencies = [
 
 [[package]]
 name = "oxideterm-image-decoder"
-version = "2.2.6"
+version = "3.0.0"
 dependencies = [
  "anyhow",
  "fast_image_resize",
