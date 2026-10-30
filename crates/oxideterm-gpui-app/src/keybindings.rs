@@ -242,7 +242,7 @@ pub(crate) static ACTION_DEFINITIONS: LazyLock<Vec<ActionDefinition>> = LazyLock
         def_with_terminal_behavior(
             "app.closeTab",
             ActionScope::Global,
-            TerminalBehavior::Never,
+            TerminalBehavior::Always,
             KeyCombo::cmd("w"),
             KeyCombo::ctrl("w"),
         ),
