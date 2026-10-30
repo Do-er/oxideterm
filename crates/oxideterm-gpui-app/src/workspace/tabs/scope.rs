@@ -74,6 +74,16 @@ impl WorkspaceApp {
         }
     }
 
+    fn is_non_terminal_page_tab(tab: &Tab) -> bool {
+        !matches!(
+            tab.kind,
+            TabKind::LocalTerminal
+                | TabKind::SshTerminal
+                | TabKind::MoshTerminal
+                | TabKind::Workspace
+        )
+    }
+
     pub(in crate::workspace) fn tab_cleanup_count(
         &self,
         target: TabCleanupTarget,
@@ -84,8 +94,14 @@ impl WorkspaceApp {
             TabCleanupTarget::Global => host
                 .unfiltered_main_tabs()
                 .filter(|(_, tab)| {
-                    self.tab_affinities(tab.id, cx)
-                        .contains(&TabAffinity::Global)
+                    Self::is_non_terminal_page_tab(tab)
+                        || host.tab_contents(tab.id).iter().any(|content| {
+                            if let TabContent::Page(page_id) = content {
+                                host.tab_by_id(*page_id).is_some_and(Self::is_non_terminal_page_tab)
+                            } else {
+                                false
+                            }
+                        })
                 })
                 .count(),
             TabCleanupTarget::LocalTerminal => host
@@ -123,14 +139,19 @@ impl WorkspaceApp {
             TabCleanupTarget::Global => {
                 let mut page_ids = Vec::new();
                 for (_, tab) in self.tab_host.read(cx).unfiltered_main_tabs() {
-                    for content in self.tab_host.read(cx).tab_contents(tab.id) {
-                        if let TabContent::Page(page_id) = content
-                            && self
-                                .page_affinities(page_id, cx)
-                                .contains(&TabAffinity::Global)
-                            && !page_ids.contains(&page_id)
-                        {
-                            page_ids.push(page_id);
+                    if Self::is_non_terminal_page_tab(tab) {
+                        if !page_ids.contains(&tab.id) {
+                            page_ids.push(tab.id);
+                        }
+                    } else {
+                        for content in self.tab_host.read(cx).tab_contents(tab.id) {
+                            if let TabContent::Page(page_id) = content
+                                && let Some(page_tab) = self.tab_by_id(page_id, cx)
+                                && Self::is_non_terminal_page_tab(page_tab)
+                                && !page_ids.contains(&page_id)
+                            {
+                                page_ids.push(page_id);
+                            }
                         }
                     }
                 }
@@ -187,9 +208,16 @@ impl WorkspaceApp {
         available_width: f32,
     ) -> (String, f32) {
         let label = self.i18n.t("sidebar.tab_scope.clean_tabs");
-        let width = (self.tab_text_width(&label, self.tokens.metrics.ui_text_sm, window)
-            + self.tokens.metrics.ui_control_padding_x * 4.0)
-            .clamp(96.0, 180.0)
+        let trigger_text_width =
+            self.tab_text_width(&label, self.tokens.metrics.ui_text_sm, window);
+        let max_option_text_width = TabCleanupTarget::ALL.iter().fold(0.0f32, |acc, target| {
+            let option_label = self.tab_cleanup_label(*target);
+            acc.max(self.tab_text_width(&option_label, self.tokens.metrics.ui_text_sm, window))
+        });
+        let option_extra = 14.0 + self.tokens.spacing.two * 2.0 + 16.0;
+        let content_width = trigger_text_width.max(max_option_text_width + option_extra);
+        let width = (content_width + self.tokens.metrics.ui_control_padding_x * 3.5)
+            .clamp(116.0, 180.0)
             .min(available_width.max(0.0));
         (label, width)
     }
@@ -258,74 +286,80 @@ impl WorkspaceApp {
             return None;
         }
         let viewport_width = f32::from(window.viewport_size().width);
-        let menu_width = 156.0;
+        let (_, menu_width) = self.tab_cleanup_trigger_metrics(window, viewport_width);
         let left = ((viewport_width - menu_width) * 0.5).max(8.0);
         let top = (self.window_titlebar_height(window) - 4.0).max(0.0);
 
-        let mut panel = oxideterm_gpui_ui::select::select_event_boundary(
-            oxideterm_gpui_ui::menu::menu_content(&self.tokens)
-                .w_full()
-                .min_w(px(0.0)),
-        );
+        let mut list = div()
+            .w_full()
+            .flex()
+            .flex_col()
+            .gap(px(self.tokens.spacing.one));
         let hover_bg = rgb(self.tokens.ui.bg_hover);
         for target in TabCleanupTarget::ALL {
             let label = self.tab_cleanup_label(target);
             let count = self.tab_cleanup_count(target, cx);
             let icon = Self::tab_cleanup_icon(target);
             let workspace = cx.entity().downgrade();
-            panel = panel.child(
-                div()
-                    .id(("titlebar-tab-cleanup-option", target as usize))
-                    .w_full()
-                    .h(px(self.tokens.metrics.ui_control_height))
-                    .px(px(self.tokens.metrics.ui_menu_item_padding_x))
-                    .rounded(px(self.tokens.radii.xs))
-                    .flex()
-                    .items_center()
-                    .justify_between()
-                    .gap(px(self.tokens.spacing.two))
-                    .text_size(px(self.tokens.metrics.ui_text_sm))
-                    .text_color(rgb(self.tokens.ui.text))
-                    .opacity(if count == 0 { 0.5 } else { 1.0 })
-                    .cursor_pointer()
-                    .hover(move |row| row.bg(hover_bg))
-                    .role(gpui::Role::MenuItem)
-                    .aria_label(label.clone())
-                    .child(
-                        div()
-                            .flex_1()
-                            .min_w(px(0.0))
-                            .flex()
-                            .items_center()
-                            .gap(px(self.tokens.spacing.two))
-                            .child(Self::render_lucide_icon(
-                                icon,
-                                14.0,
-                                rgb(self.tokens.ui.text_muted),
-                            ))
-                            .child(div().flex_1().min_w(px(0.0)).truncate().child(label)),
-                    )
-                    .child(
-                        div()
-                            .flex_none()
-                            .text_size(px(self.tokens.metrics.ui_text_xs))
-                            .text_color(rgb(self.tokens.ui.text_muted))
-                            .child(count.to_string()),
-                    )
-                    .on_a11y_action(gpui::AccessibleAction::Click, move |_, window, cx| {
-                        let _ = workspace.update(cx, |this, cx| {
-                            this.cleanup_tabs(target, window, cx);
-                        });
-                    })
-                    .on_mouse_down(
-                        MouseButton::Left,
-                        cx.listener(move |this, _, window, cx| {
-                            this.cleanup_tabs(target, window, cx);
-                            cx.stop_propagation();
-                        }),
-                    ),
-            );
+            let pill = div()
+                .id(("titlebar-tab-cleanup-option", target as usize))
+                .w_full()
+                .h(px(self.tokens.metrics.ui_control_height))
+                .px(px(self.tokens.metrics.ui_control_padding_x * 1.5))
+                .rounded(px(self.tokens.radii.md))
+                .border_1()
+                .border_color(rgb(self.tokens.ui.border))
+                .bg(rgb(self.tokens.ui.bg_elevated))
+                .shadow(oxideterm_gpui_ui::theme_overlay_shadow(&self.tokens))
+                .flex()
+                .items_center()
+                .justify_between()
+                .gap(px(self.tokens.spacing.two))
+                .text_size(px(self.tokens.metrics.ui_text_sm))
+                .text_color(rgb(self.tokens.ui.text))
+                .opacity(if count == 0 { 0.5 } else { 1.0 })
+                .cursor_pointer()
+                .hover(move |row| row.bg(hover_bg))
+                .role(gpui::Role::MenuItem)
+                .aria_label(label.clone())
+                .child(
+                    div()
+                        .flex_1()
+                        .min_w(px(0.0))
+                        .flex()
+                        .items_center()
+                        .gap(px(self.tokens.spacing.two))
+                        .child(Self::render_lucide_icon(
+                            icon,
+                            14.0,
+                            rgb(self.tokens.ui.text_muted),
+                        ))
+                        .child(div().flex_1().min_w(px(0.0)).truncate().child(label)),
+                )
+                .child(
+                    div()
+                        .flex_none()
+                        .text_size(px(self.tokens.metrics.ui_text_xs))
+                        .text_color(rgb(self.tokens.ui.text_muted))
+                        .child(count.to_string()),
+                )
+                .on_a11y_action(gpui::AccessibleAction::Click, move |_, window, cx| {
+                    let _ = workspace.update(cx, |this, cx| {
+                        this.cleanup_tabs(target, window, cx);
+                    });
+                })
+                .on_mouse_down(
+                    MouseButton::Left,
+                    cx.listener(move |this, _, window, cx| {
+                        this.cleanup_tabs(target, window, cx);
+                        cx.stop_propagation();
+                    }),
+                );
+
+            list = list.child(pill);
         }
+
+        let panel = oxideterm_gpui_ui::select::select_event_boundary(list);
 
         Some(
             div()
