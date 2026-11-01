@@ -624,7 +624,8 @@ impl WorkspaceApp {
                 self.settings_workspace
                     .read(cx)
                     .account_credential_draft
-                    .is_some()
+                    .as_ref()
+                    .map(|draft| (true, draft.show_password))
                     .hash(&mut hasher);
                 self.settings_workspace
                     .read(cx)

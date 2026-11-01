@@ -11,6 +11,7 @@ pub(super) struct AccountCredentialDraft {
     pub name: String,
     pub username: String,
     pub password: Zeroizing<String>,
+    pub show_password: bool,
 }
 
 impl AccountCredentialDraft {
@@ -20,6 +21,7 @@ impl AccountCredentialDraft {
             name: credential.map(|entry| entry.name.clone()).unwrap_or_default(),
             username: credential.map(|entry| entry.username.clone()).unwrap_or_default(),
             password: Zeroizing::new(String::new()),
+            show_password: false,
         }
     }
 }
@@ -225,6 +227,7 @@ impl WorkspaceApp {
             let id = draft.id.clone();
             let name = draft.name.clone();
             let username = draft.username.clone();
+            let show_password = draft.show_password;
 
             let editor = div()
                 .flex()
@@ -251,16 +254,13 @@ impl WorkspaceApp {
                     false,
                     cx,
                 ))
-                .child(self.settings_privilege_text_field(
-                    "settings_view.account_credentials.password",
-                    SettingsInput::AccountCredentialPassword,
-                    "",
+                .child(self.settings_account_credential_password_field(
                     self.i18n.t(if id.is_some() {
                         "settings_view.account_credentials.password_edit_hint"
                     } else {
                         "settings_view.account_credentials.password_placeholder"
                     }),
-                    true,
+                    show_password,
                     cx,
                 ))
                 .child(
@@ -326,6 +326,57 @@ impl WorkspaceApp {
             "settings_view.account_credentials.title",
             "settings_view.account_credentials.description",
             vec![body.into_any_element()],
+        )
+    }
+
+    fn settings_account_credential_password_field(
+        &self,
+        placeholder: String,
+        show_password: bool,
+        cx: &mut Context<Self>,
+    ) -> AnyElement {
+        let input = SettingsInput::AccountCredentialPassword;
+        let input_el = self.settings_text_input_control_inner(
+            input,
+            "",
+            placeholder,
+            None,
+            TextInputContentAlign::Start,
+            !show_password,
+            cx,
+        );
+        let icon = if show_password {
+            LucideIcon::EyeOff
+        } else {
+            LucideIcon::Eye
+        };
+        let eye_btn = self.workspace_icon_action_button(
+            icon,
+            16.0,
+            rgb(self.tokens.ui.text_muted),
+            IconButtonOptions {
+                hover_background: Some(rgba((self.tokens.ui.bg_hover << 8) | 0x99)),
+                ..IconButtonOptions::opaque_toolbar(28.0, ButtonRadius::Sm)
+            },
+            move |this, _, _, cx| {
+                this.settings_workspace.update(cx, |settings, cx| {
+                    if let Some(draft) = settings.account_credential_draft.as_mut() {
+                        draft.show_password = !draft.show_password;
+                        cx.notify();
+                    }
+                });
+                cx.stop_propagation();
+            },
+            cx,
+        )
+        .absolute()
+        .right(px(4.0))
+        .top(px(4.0));
+
+        form_field(
+            &self.tokens,
+            self.i18n.t("settings_view.account_credentials.password"),
+            div().relative().w_full().child(input_el).child(eye_btn),
         )
     }
 }

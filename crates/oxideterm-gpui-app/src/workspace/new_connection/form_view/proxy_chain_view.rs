@@ -6,6 +6,7 @@ struct JumpServerRenderSnapshot {
     host: String,
     port: String,
     username: String,
+    account_credential_id: Option<String>,
     auth_tab: SshAuthTab,
     empty_password: bool,
     key_path: String,
@@ -27,6 +28,7 @@ impl JumpServerRenderSnapshot {
             host: hop.host.clone(),
             port: hop.port.clone(),
             username: hop.username.clone(),
+            account_credential_id: hop.account_credential_id.clone(),
             auth_tab: hop.auth_tab,
             empty_password: hop.empty_password,
             key_path: hop.key_path.clone(),
@@ -1416,26 +1418,28 @@ impl WorkspaceApp {
                             .when(jump_form.auth_tab == SshAuthTab::Password, |content| {
                                 content
                                     .child(self.render_account_credential_selector(true, cx))
-                                    .child(self.render_connection_secret_field(
-                                        self.i18n.t("ssh.form.password"),
-                                        String::new(),
-                                        NewConnectionField::JumpPassword,
-                                        cx,
-                                    ))
-                                    .child(self.render_connection_checkbox(
-                                        self.i18n.t("ssh.form.use_empty_password"),
-                                        jump_form.empty_password,
-                                        |form| {
-                                            if let Some(jump) = form.jump_server_form.as_mut() {
-                                                jump.empty_password = !jump.empty_password;
-                                                if jump.empty_password {
-                                                    jump.password.zeroize();
+                                    .when(jump_form.account_credential_id.is_none(), |c| {
+                                        c.child(self.render_connection_secret_field(
+                                            self.i18n.t("ssh.form.password"),
+                                            String::new(),
+                                            NewConnectionField::JumpPassword,
+                                            cx,
+                                        ))
+                                        .child(self.render_connection_checkbox(
+                                            self.i18n.t("ssh.form.use_empty_password"),
+                                            jump_form.empty_password,
+                                            |form| {
+                                                if let Some(jump) = form.jump_server_form.as_mut() {
+                                                    jump.empty_password = !jump.empty_password;
+                                                    if jump.empty_password {
+                                                        jump.password.zeroize();
+                                                    }
                                                 }
-                                            }
-                                            form.field_focused = false;
-                                        },
-                                        cx,
-                                    ))
+                                                form.field_focused = false;
+                                            },
+                                            cx,
+                                        ))
+                                    })
                             })
                             .when(jump_form.auth_tab == SshAuthTab::Agent, |content| {
                                 content

@@ -2011,42 +2011,51 @@ impl WorkspaceApp {
             )
             .child(self.render_auth_selector(active_tab, context, false, cx))
             .when(active_tab == SshAuthTab::Password, |content| {
+                let credential_linked = !secondary
+                    && self
+                        .connection_form_state(cx)
+                        .form
+                        .as_ref()
+                        .and_then(|f| f.account_credential_id.as_ref())
+                        .is_some();
                 content
                     .when(!secondary, |c| {
                         c.child(self.render_account_credential_selector(false, cx))
                     })
-                    .child(self.render_connection_checkbox(
-                        self.i18n.t("ssh.form.use_empty_password"),
-                        empty_password,
-                        if secondary {
-                            toggle_secondary_sftp_empty_password
-                        } else {
-                            toggle_primary_sftp_empty_password
-                        },
-                        cx,
-                    ))
-                    .child(self.render_connection_secret_field(
-                        self.i18n.t("ssh.form.password"),
-                        String::new(),
-                        password_field,
-                        cx,
-                    ))
-                    .when(saved_credential_present, |content| {
-                        content.child(self.render_connection_hint(
-                            self.i18n.t("sessionManager.edit_properties.password_hint"),
-                        ))
-                    })
-                    .when(!saved_credential_present, |content| {
-                        content.child(self.render_connection_checkbox(
-                            self.i18n.t("ssh.form.save_password"),
-                            save_password,
+                    .when(!credential_linked, |c| {
+                        c.child(self.render_connection_checkbox(
+                            self.i18n.t("ssh.form.use_empty_password"),
+                            empty_password,
                             if secondary {
-                                toggle_secondary_sftp_password_persistence
+                                toggle_secondary_sftp_empty_password
                             } else {
-                                toggle_primary_sftp_password_persistence
+                                toggle_primary_sftp_empty_password
                             },
                             cx,
                         ))
+                        .child(self.render_connection_secret_field(
+                            self.i18n.t("ssh.form.password"),
+                            String::new(),
+                            password_field,
+                            cx,
+                        ))
+                        .when(saved_credential_present, |content| {
+                            content.child(self.render_connection_hint(
+                                self.i18n.t("sessionManager.edit_properties.password_hint"),
+                            ))
+                        })
+                        .when(!saved_credential_present, |content| {
+                            content.child(self.render_connection_checkbox(
+                                self.i18n.t("ssh.form.save_password"),
+                                save_password,
+                                if secondary {
+                                    toggle_secondary_sftp_password_persistence
+                                } else {
+                                    toggle_primary_sftp_password_persistence
+                                },
+                                cx,
+                            ))
+                        })
                     })
             })
             .when(active_tab == SshAuthTab::DefaultKey, |content| {
