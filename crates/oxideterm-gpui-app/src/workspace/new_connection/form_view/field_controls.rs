@@ -525,6 +525,10 @@ impl WorkspaceApp {
         match select_id {
             NewConnectionSelect::Totp => SelectAnchorId::NewConnectionTotp,
             NewConnectionSelect::JumpTotp => SelectAnchorId::NewConnectionJumpTotp,
+            NewConnectionSelect::AccountCredential => SelectAnchorId::NewConnectionAccountCredential,
+            NewConnectionSelect::JumpAccountCredential => {
+                SelectAnchorId::NewConnectionJumpAccountCredential
+            }
             NewConnectionSelect::Group => SelectAnchorId::NewConnectionGroup,
             NewConnectionSelect::TunnelHost => SelectAnchorId::NewConnectionTunnelHost,
             NewConnectionSelect::KeyAuthSource => SelectAnchorId::NewConnectionKeyAuthSource,
@@ -1224,6 +1228,102 @@ impl WorkspaceApp {
             .into_any_element()
     }
 
+    pub(super) fn render_account_credential_selector(
+        &self,
+        jump: bool,
+        cx: &mut Context<Self>,
+    ) -> AnyElement {
+        let select = if jump {
+            NewConnectionSelect::JumpAccountCredential
+        } else {
+            NewConnectionSelect::AccountCredential
+        };
+        let id = self
+            .connection_form_state(cx)
+            .form
+            .as_ref()
+            .and_then(|form| {
+                if jump {
+                    form.jump_server_form
+                        .as_ref()
+                        .and_then(|hop| hop.account_credential_id.clone())
+                } else {
+                    form.account_credential_id.clone()
+                }
+            });
+        let label = id
+            .as_deref()
+            .and_then(|id| self.connection_store.get_account_credential(id))
+            .map(|entry| format!("{} ({})", entry.name, entry.username))
+            .unwrap_or_else(|| self.i18n.t("settings_view.account_credentials.none"));
+        let trigger = self
+            .new_connection_select_trigger(select, label, id.is_none(), false, cx)
+            .on_mouse_down(
+                MouseButton::Left,
+                cx.listener(move |this, _, window, cx| {
+                    this.update_connection_form_state(cx, |state| {
+                        if let Some(form) = &mut state.form {
+                            form.field_focused = false;
+                            form.selected_field = None;
+                        }
+                    });
+                    this.open_new_connection_select_from_pointer(select, cx);
+                    window.focus(&this.focus_handle, cx);
+                    cx.stop_propagation();
+                }),
+            );
+
+        let mut row = div()
+            .flex()
+            .flex_col()
+            .gap_1()
+            .child(form_field(
+                &self.tokens,
+                self.i18n.t("settings_view.account_credentials.connection_label"),
+                self.track_new_connection_select_anchor(select, trigger, cx),
+            ));
+
+        if id.is_some() {
+            row = row.child(
+                div()
+                    .flex()
+                    .items_center()
+                    .gap_2()
+                    .child(self.render_connection_hint(
+                        self.i18n.t("settings_view.account_credentials.linked_hint"),
+                    ))
+                    .child(
+                        div()
+                            .text_size(px(self.tokens.metrics.ui_text_xs))
+                            .text_color(rgb(self.tokens.ui.accent))
+                            .cursor_pointer()
+                            .hover(|s| s.underline())
+                            .child(self.i18n.t("settings_view.account_credentials.unlink"))
+                            .on_mouse_down(
+                                MouseButton::Left,
+                                cx.listener(move |this, _, _, cx| {
+                                    this.update_connection_form_state(cx, |state| {
+                                        if let Some(form) = &mut state.form {
+                                            if jump {
+                                                if let Some(hop) = &mut form.jump_server_form {
+                                                    hop.account_credential_id = None;
+                                                }
+                                            } else {
+                                                form.account_credential_id = None;
+                                            }
+                                        }
+                                    });
+                                    cx.stop_propagation();
+                                    cx.notify();
+                                }),
+                            ),
+                    ),
+            );
+        }
+
+        row.into_any_element()
+    }
+
     pub(super) fn render_standalone_sftp_secondary_managed_key_select(
         &self,
         label: String,
@@ -1501,7 +1601,9 @@ impl WorkspaceApp {
                         jump_form.managed_key_id = key_id;
                         form.focused_field = NewConnectionField::JumpManagedKeyId;
                     }
-                    NewConnectionSelect::Group
+                    NewConnectionSelect::AccountCredential
+                    | NewConnectionSelect::JumpAccountCredential
+                    | NewConnectionSelect::Group
                     | NewConnectionSelect::Totp
                     | NewConnectionSelect::JumpTotp
                     | NewConnectionSelect::KeyAuthSource
@@ -1910,6 +2012,9 @@ impl WorkspaceApp {
             .child(self.render_auth_selector(active_tab, context, false, cx))
             .when(active_tab == SshAuthTab::Password, |content| {
                 content
+                    .when(!secondary, |c| {
+                        c.child(self.render_account_credential_selector(false, cx))
+                    })
                     .child(self.render_connection_checkbox(
                         self.i18n.t("ssh.form.use_empty_password"),
                         empty_password,

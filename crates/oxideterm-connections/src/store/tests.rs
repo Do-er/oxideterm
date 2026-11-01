@@ -515,6 +515,7 @@ mod tests {
         );
         request.proxy_chain.push(SavedProxyHop {
             totp_credential_id: None,
+            account_credential_id: None,
             host: "jump.example.test".to_string(),
             port: 22,
             username: "jump".to_string(),
@@ -1011,6 +1012,7 @@ mod tests {
         );
         request.proxy_chain.push(SavedProxyHop {
             totp_credential_id: None,
+            account_credential_id: None,
             host: "jump.example.com".to_string(),
             port: 22,
             username: "ops".to_string(),
@@ -1542,6 +1544,7 @@ mod tests {
         let mut req = request("conn-1", SavedAuth::Agent);
         req.proxy_chain = vec![SavedProxyHop {
             totp_credential_id: None,
+            account_credential_id: None,
             host: "jump.example.com".to_string(),
             port: 2222,
             username: "ops".to_string(),
@@ -1611,6 +1614,7 @@ mod tests {
         let mut destination = request("target-with-hop", SavedAuth::Agent);
         destination.proxy_chain.push(SavedProxyHop {
             totp_credential_id: None,
+            account_credential_id: None,
             host: "jump.example.com".to_string(),
             port: 22,
             username: "ops".to_string(),
@@ -1711,6 +1715,7 @@ mod tests {
         );
         req.proxy_chain = vec![SavedProxyHop {
             totp_credential_id: None,
+            account_credential_id: None,
             host: "jump.example.com".to_string(),
             port: 22,
             username: "ops".to_string(),
@@ -2630,6 +2635,7 @@ mod tests {
         let mut req = request("conn-1", SavedAuth::Agent);
         req.proxy_chain = vec![SavedProxyHop {
             totp_credential_id: None,
+            account_credential_id: None,
             host: "jump.example.com".to_string(),
             port: 22,
             username: "ops".to_string(),
@@ -2679,6 +2685,7 @@ mod tests {
         let mut update = request("conn-1", SavedAuth::Agent);
         update.proxy_chain = vec![SavedProxyHop {
             totp_credential_id: None,
+            account_credential_id: None,
             host: "jump.example.com".to_string(),
             port: 22,
             username: "ops".to_string(),
@@ -3950,6 +3957,8 @@ mod tests {
             },
         );
         input.proxy_chain.push(SavedProxyHop {
+            totp_credential_id: None,
+            account_credential_id: None,
             host: "jump.example".into(),
             port: 22,
             username: "jump".into(),

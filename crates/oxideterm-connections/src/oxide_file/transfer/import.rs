@@ -981,6 +981,7 @@ fn import_proxy_hop(
 ) -> Result<SavedProxyHop, OxideFileError> {
     Ok(SavedProxyHop {
         totp_credential_id: hop.totp_credential_id,
+        account_credential_id: None,
         host: hop.host,
         port: hop.port,
         username: hop.username,

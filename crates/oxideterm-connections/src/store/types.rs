@@ -343,6 +343,8 @@ impl SshAlgorithmPreferences {
 pub struct ConnectionOptions {
     #[serde(default, skip_serializing_if = "Option::is_none")]
     pub totp_credential_id: Option<String>,
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub account_credential_id: Option<String>,
     /// Overrides the SSH TCP and protocol-handshake timeout for this host.
     #[serde(default, skip_serializing_if = "Option::is_none")]
     pub connect_timeout_seconds: Option<u64>,
@@ -417,6 +419,8 @@ impl ConnectionOptions {
 pub struct SavedProxyHop {
     #[serde(default, skip_serializing_if = "Option::is_none")]
     pub totp_credential_id: Option<String>,
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub account_credential_id: Option<String>,
     pub host: String,
     #[serde(default = "default_port")]
     pub port: u16,
@@ -707,6 +711,8 @@ impl<'de> Deserialize<'de> for SavedPrivilegeCredential {
 pub struct ProxyHopInfo {
     #[serde(default, skip_serializing_if = "Option::is_none")]
     pub totp_credential_id: Option<String>,
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub account_credential_id: Option<String>,
     pub host: String,
     pub port: u16,
     pub username: String,
@@ -737,6 +743,7 @@ impl From<&SavedProxyHop> for ProxyHopInfo {
     fn from(hop: &SavedProxyHop) -> Self {
         Self {
             totp_credential_id: hop.totp_credential_id.clone(),
+            account_credential_id: hop.account_credential_id.clone(),
             host: hop.host.clone(),
             port: hop.port,
             username: hop.username.clone(),
@@ -852,6 +859,8 @@ impl SavedConnection {
 pub struct ConnectionInfo {
     #[serde(default, skip_serializing_if = "Option::is_none")]
     pub totp_credential_id: Option<String>,
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub account_credential_id: Option<String>,
     pub id: String,
     pub name: String,
     pub group: Option<String>,
@@ -983,6 +992,7 @@ impl From<&SavedConnection> for ConnectionInfo {
     fn from(conn: &SavedConnection) -> Self {
         Self {
             totp_credential_id: conn.options.totp_credential_id.clone(),
+            account_credential_id: conn.options.account_credential_id.clone(),
             id: conn.id.clone(),
             // Public snapshots expose the resolved label so consumers never
             // receive an empty name for an unnamed asset.
@@ -2002,6 +2012,7 @@ fn is_false(value: &bool) -> bool {
 #[derive(Clone, Debug)]
 pub struct SaveConnectionRequest {
     pub totp_credential_id: Option<String>,
+    pub account_credential_id: Option<String>,
     pub id: Option<String>,
     pub name: String,
     pub group: Option<String>,
@@ -2087,6 +2098,8 @@ pub struct ConnectionStoreData {
     pub plugin_profiles: Vec<PluginConnectionProfile>,
     #[serde(default, skip_serializing_if = "Vec::is_empty")]
     pub totp_credentials: Vec<crate::totp::TotpCredential>,
+    #[serde(default, skip_serializing_if = "Vec::is_empty")]
+    pub account_credentials: Vec<crate::account_credential::AccountCredential>,
     #[serde(default = "default_config_version")]
     pub version: u32,
     #[serde(default)]
@@ -2141,6 +2154,7 @@ impl Default for ConnectionStoreData {
             plugin_tombstones: Vec::new(),
             plugin_profiles: Vec::new(),
             totp_credentials: Vec::new(),
+            account_credentials: Vec::new(),
             version: CONFIG_VERSION,
             connections: Vec::new(),
             cleared_credentials: Vec::new(),

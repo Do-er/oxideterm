@@ -1525,6 +1525,9 @@ impl WorkspaceApp {
             | SettingsInput::TotpSecret
             | SettingsInput::TotpPattern
             | SettingsInput::TotpPeriod
+            | SettingsInput::AccountCredentialName
+            | SettingsInput::AccountCredentialUsername
+            | SettingsInput::AccountCredentialPassword
             | SettingsInput::LocalPrivilegeUsernameHint
             | SettingsInput::LocalPrivilegeSecret
             | SettingsInput::LocalPrivilegePromptPatterns
@@ -1705,6 +1708,9 @@ impl WorkspaceApp {
             | SettingsInput::TotpSecret
             | SettingsInput::TotpPattern
             | SettingsInput::TotpPeriod
+            | SettingsInput::AccountCredentialName
+            | SettingsInput::AccountCredentialUsername
+            | SettingsInput::AccountCredentialPassword
             | SettingsInput::LocalPrivilegeUsernameHint
             | SettingsInput::LocalPrivilegeSecret
             | SettingsInput::LocalPrivilegePromptPatterns
@@ -1980,6 +1986,8 @@ pub(in crate::workspace) fn select_anchor_tracks_while_closed(anchor_id: SelectA
             | SelectAnchorId::NewConnectionManagedKey
             | SelectAnchorId::NewConnectionTotp
             | SelectAnchorId::NewConnectionJumpTotp
+            | SelectAnchorId::NewConnectionAccountCredential
+            | SelectAnchorId::NewConnectionJumpAccountCredential
             | SelectAnchorId::NewConnectionJumpSavedConnection
             | SelectAnchorId::NewConnectionRemoteDesktopSshGateway
             | SelectAnchorId::NewConnectionJumpKeyAuthSource

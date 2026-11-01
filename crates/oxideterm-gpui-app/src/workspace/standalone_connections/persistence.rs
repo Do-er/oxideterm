@@ -170,6 +170,7 @@ impl LaunchSnapshot {
                             .totp
                             .as_ref()
                             .map(|binding| binding.credential_id.clone()),
+                        account_credential_id: None,
                         host: hop.host.clone(),
                         port: hop.port,
                         username: hop.username.clone(),

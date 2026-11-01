@@ -79,6 +79,79 @@ impl WorkspaceApp {
 
         let mut popup = select_overlay_popup_with_max_height(&self.tokens, width, max_height);
         match select_id {
+            NewConnectionSelect::AccountCredential | NewConnectionSelect::JumpAccountCredential => {
+                let current = self
+                    .connection_form_state(cx)
+                    .form
+                    .as_ref()
+                    .and_then(|form| {
+                        if select_id == NewConnectionSelect::JumpAccountCredential {
+                            form.jump_server_form
+                                .as_ref()
+                                .and_then(|hop| hop.account_credential_id.clone())
+                        } else {
+                            form.account_credential_id.clone()
+                        }
+                    });
+                let choices = std::iter::once((None, self.i18n.t("settings_view.account_credentials.none"), None, None))
+                    .chain(
+                        self.connection_store
+                            .account_credentials()
+                            .iter()
+                            .map(|entry| {
+                                (
+                                    Some(entry.id.clone()),
+                                    format!("{} ({})", entry.name, entry.username),
+                                    Some(entry.username.clone()),
+                                    self.connection_store.get_account_credential_password(&entry.id).ok(),
+                                )
+                            }),
+                    );
+                for (id, label, username, password) in choices {
+                    popup = popup.child(select_option_action(
+                        select_option(&self.tokens, label, id == current),
+                        false,
+                        false,
+                        cx.listener(move |this, _, _, cx| {
+                            this.close_new_connection_select(cx);
+                            let password = password.clone();
+                            let username = username.clone();
+                            this.update_connection_form_state(cx, |state| {
+                                if let Some(form) = &mut state.form {
+                                    if select_id == NewConnectionSelect::JumpAccountCredential {
+                                        if let Some(hop) = &mut form.jump_server_form {
+                                            hop.account_credential_id = id.clone();
+                                            if let Some(u) = &username {
+                                                hop.username = u.clone();
+                                            }
+                                            if let Some(p) = &password {
+                                                hop.password = p.expose_secret().to_string();
+                                                hop.empty_password = false;
+                                                hop.auth_tab = SshAuthTab::Password;
+                                            }
+                                        }
+                                    } else {
+                                        form.account_credential_id = id.clone();
+                                        if let Some(u) = &username {
+                                            form.username = u.clone();
+                                        }
+                                        if let Some(p) = &password {
+                                            form.password = p.expose_secret().to_string();
+                                            form.empty_password = false;
+                                            form.auth_tab = SshAuthTab::Password;
+                                            form.password_loaded = true;
+                                            form.saved_password_keychain_id = None;
+                                            form.password_from_store = false;
+                                        }
+                                    }
+                                }
+                            });
+                            cx.stop_propagation();
+                            cx.notify();
+                        }),
+                    ));
+                }
+            }
             NewConnectionSelect::Totp | NewConnectionSelect::JumpTotp => {
                 let current = self
                     .connection_form_state(cx)
@@ -1342,6 +1415,7 @@ impl WorkspaceApp {
                             })
                             .when(jump_form.auth_tab == SshAuthTab::Password, |content| {
                                 content
+                                    .child(self.render_account_credential_selector(true, cx))
                                     .child(self.render_connection_secret_field(
                                         self.i18n.t("ssh.form.password"),
                                         String::new(),

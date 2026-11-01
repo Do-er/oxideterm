@@ -365,6 +365,7 @@ pub(in crate::workspace) fn form_from_saved_connection(
     form.legacy_ssh_compatibility = conn.options.legacy_ssh_compatibility;
     form.ssh_algorithms = conn.options.ssh_algorithms.clone();
     form.totp_credential_id = conn.options.totp_credential_id.clone();
+    form.account_credential_id = conn.options.account_credential_id.clone();
     form.connect_timeout_seconds = conn.options.effective_connect_timeout_seconds();
     form.connect_timeout_seconds_text = form.connect_timeout_seconds.to_string();
     form.dedicated_new_terminal_connection = conn.options.dedicated_new_terminal_connection;
@@ -762,6 +763,7 @@ fn connection_draft_from_form_with_proxy_hop_prefix(
 ) -> ConnectionDraft {
     ConnectionDraft {
         totp_credential_id: form.totp_credential_id.clone(),
+        account_credential_id: form.account_credential_id.clone(),
         // An omitted display name stays empty so the label keeps following the endpoint.
         name: form.name.trim().to_string(),
         host: form.host.clone(),
@@ -798,6 +800,7 @@ pub(super) fn proxy_hop_draft_from_form(
 ) -> ProxyHopDraft {
     ProxyHopDraft {
         totp_credential_id: hop.totp_credential_id.clone(),
+        account_credential_id: hop.account_credential_id.clone(),
         host: hop.host.clone(),
         port: hop.port.clone(),
         username: hop.username.clone(),

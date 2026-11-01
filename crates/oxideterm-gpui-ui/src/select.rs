@@ -158,6 +158,8 @@ pub enum SelectAnchorId {
     NewConnectionManagedKey,
     NewConnectionTotp,
     NewConnectionJumpTotp,
+    NewConnectionAccountCredential,
+    NewConnectionJumpAccountCredential,
     NewConnectionStandaloneSftpSecondaryKeyAuthSource,
     NewConnectionStandaloneSftpSecondaryManagedKey,
     NewConnectionJumpSavedConnection,
@@ -293,6 +295,8 @@ impl SelectAnchorId {
                 | Self::NewConnectionManagedKey
                 | Self::NewConnectionTotp
                 | Self::NewConnectionJumpTotp
+                | Self::NewConnectionAccountCredential
+                | Self::NewConnectionJumpAccountCredential
                 | Self::NewConnectionStandaloneSftpSecondaryKeyAuthSource
                 | Self::NewConnectionStandaloneSftpSecondaryManagedKey
                 | Self::NewConnectionJumpSavedConnection

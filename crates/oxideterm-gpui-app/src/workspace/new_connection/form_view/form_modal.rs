@@ -633,6 +633,7 @@ impl WorkspaceApp {
                                                                         .child(selector)
                                                                         .child(self.render_connection_totp_select(false, cx));
                                                                     if form.auth_tab == SshAuthTab::Password {
+                                                                        auth = auth.child(self.render_account_credential_selector(false, cx));
                                                                         auth = auth.child(self.render_connection_secret_field(
                                                                             self.i18n.t("ssh.form.password"),
                                                                             String::new(),
@@ -721,6 +722,7 @@ impl WorkspaceApp {
                                                                         .child(selector)
                                                                         .child(self.render_connection_totp_select(false, cx));
                                                                     if form.auth_tab == SshAuthTab::Password {
+                                                                        auth = auth.child(self.render_account_credential_selector(false, cx));
                                                                         auth = auth.child(self.render_connection_secret_field(
                                                                             self.i18n.t("ssh.drill_down.password"),
                                                                             String::new(),
@@ -1003,6 +1005,7 @@ impl WorkspaceApp {
                                                                                 .child(selector);
 
                                                                             if form.auth_tab == SshAuthTab::Password {
+                                                                                auth_card = auth_card.child(self.render_account_credential_selector(false, cx));
                                                                                 let pw_child = if edit_properties_mode && form.saved_password_keychain_id.is_some() {
                                                                                     if form.password_loaded {
                                                                                         self.render_connection_secret_field(

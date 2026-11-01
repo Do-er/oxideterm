@@ -200,7 +200,8 @@ impl WorkspaceApp {
         }
 
         let request = oxideterm_connections::SaveConnectionRequest {
-            totp_credential_id: None,
+            totp_credential_id: conn.options.totp_credential_id.clone(),
+            account_credential_id: conn.options.account_credential_id.clone(),
             id: Some(conn.id),
             name: conn.name,
             group: conn.group,

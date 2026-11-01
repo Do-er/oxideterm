@@ -1809,6 +1809,7 @@ fn imported_auth_to_saved(
 fn imported_proxy_hop_to_saved(hop: &ImportedProxyHopDraft) -> SavedProxyHop {
     SavedProxyHop {
         totp_credential_id: None,
+        account_credential_id: None,
         host: hop.host.clone(),
         port: hop.port,
         username: hop.username.clone(),

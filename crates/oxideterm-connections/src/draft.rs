@@ -95,6 +95,7 @@ impl Default for ConnectionAuthDraft {
 #[derive(Clone, Debug)]
 pub struct ProxyHopDraft {
     pub totp_credential_id: Option<String>,
+    pub account_credential_id: Option<String>,
     pub host: String,
     pub port: String,
     pub username: String,
@@ -109,6 +110,7 @@ pub struct ProxyHopDraft {
 #[derive(Clone, Debug)]
 pub struct ConnectionDraft {
     pub totp_credential_id: Option<String>,
+    pub account_credential_id: Option<String>,
     pub name: String,
     pub host: String,
     pub port: String,
@@ -155,6 +157,7 @@ pub fn saved_connection_from_ssh_host(host: SshConfigHost) -> Result<SavedConnec
         .into_iter()
         .map(|hop| SavedProxyHop {
             totp_credential_id: None,
+            account_credential_id: None,
             host: hop.host,
             port: hop.port.unwrap_or(22),
             username: hop.user.unwrap_or_else(current_username),
@@ -263,6 +266,7 @@ pub fn save_request_from_draft(
     let port = draft.port.trim().parse::<u16>().unwrap_or(22);
     Ok(SaveConnectionRequest {
         totp_credential_id: draft.totp_credential_id,
+        account_credential_id: draft.account_credential_id,
         id,
         name: draft.name.trim().to_string(),
         group: Some(draft.group.trim().to_string()),
@@ -427,6 +431,7 @@ fn saved_proxy_chain_from_drafts(hops: Vec<ProxyHopDraft>) -> Result<Vec<SavedPr
             let auth = saved_proxy_hop_auth_from_draft(hop.auth)?;
             Ok(SavedProxyHop {
                 totp_credential_id: hop.totp_credential_id,
+                account_credential_id: hop.account_credential_id,
                 host: hop.host.trim().to_string(),
                 port: hop.port.trim().parse::<u16>().unwrap_or(22),
                 username: hop.username.trim().to_string(),
@@ -697,6 +702,7 @@ mod tests {
     fn proxy_hop_two_factor_is_saved_as_keyboard_interactive() {
         let draft = ConnectionDraft {
             totp_credential_id: None,
+            account_credential_id: None,
             name: "Home".to_string(),
             host: "target.example.com".to_string(),
             port: "22".to_string(),
@@ -713,6 +719,7 @@ mod tests {
             tags: Vec::new(),
             proxy_hops: vec![ProxyHopDraft {
                 totp_credential_id: None,
+                account_credential_id: None,
                 host: "jump.example.com".to_string(),
                 port: "22".to_string(),
                 username: "ops".to_string(),

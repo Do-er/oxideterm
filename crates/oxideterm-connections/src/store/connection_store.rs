@@ -252,6 +252,7 @@ impl ConnectionStore {
             request.ssh_algorithms.validate()?;
             options.ssh_algorithms = request.ssh_algorithms;
             options.totp_credential_id = request.totp_credential_id;
+            options.account_credential_id = request.account_credential_id;
             options.dedicated_new_terminal_connection = request.dedicated_new_terminal_connection;
             options.ssh_channel_strategy = request.ssh_channel_strategy;
             options.x11_forwarding = request.x11_forwarding;
@@ -343,7 +344,9 @@ impl ConnectionStore {
                 .iter()
                 .filter(|keychain_id| !next_keychain_ids.contains(*keychain_id))
             {
-                let _ = self.keychain.delete(keychain_id);
+                if !crate::account_credential::is_account_credential_keychain_id(keychain_id) {
+                    let _ = self.keychain.delete(keychain_id);
+                }
             }
             Ok((
                 ConnectionInfo::from(self.get(&id).expect("connection saved")),
@@ -382,7 +385,9 @@ impl ConnectionStore {
                 self.normalize();
                 self.save()?;
                 for keychain_id in keychain_ids {
-                    let _ = self.keychain.delete(&keychain_id);
+                    if !crate::account_credential::is_account_credential_keychain_id(&keychain_id) {
+                        let _ = self.keychain.delete(&keychain_id);
+                    }
                 }
                 for keychain_id in privilege_keychain_ids {
                     let _ = self.privilege_keychain.delete(&keychain_id);
@@ -425,7 +430,9 @@ impl ConnectionStore {
                 .iter()
                 .filter(|keychain_id| !next_keychain_ids.contains(*keychain_id))
             {
-                let _ = self.keychain.delete(keychain_id);
+                if !crate::account_credential::is_account_credential_keychain_id(keychain_id) {
+                    let _ = self.keychain.delete(keychain_id);
+                }
             }
             Ok(true)
         })();
@@ -1623,7 +1630,9 @@ impl ConnectionStore {
             if deleted {
                 self.save()?;
                 for keychain_id in keychain_ids {
-                    let _ = self.keychain.delete(&keychain_id);
+                    if !crate::account_credential::is_account_credential_keychain_id(&keychain_id) {
+                        let _ = self.keychain.delete(&keychain_id);
+                    }
                 }
             }
             Ok(deleted)
@@ -2069,7 +2078,9 @@ impl ConnectionStore {
             if deleted {
                 self.save()?;
                 for keychain_id in keychain_ids {
-                    let _ = self.keychain.delete(&keychain_id);
+                    if !crate::account_credential::is_account_credential_keychain_id(&keychain_id) {
+                        let _ = self.keychain.delete(&keychain_id);
+                    }
                 }
             }
             Ok(deleted)
@@ -3669,6 +3680,7 @@ impl ConnectionStore {
                 self.materialize_auth_with_runtime_secret(hop.auth, None)?;
             materialized.push(SavedProxyHop {
                 totp_credential_id: hop.totp_credential_id,
+                account_credential_id: hop.account_credential_id,
                 host: non_empty(hop.host.trim(), "Proxy host")?.to_string(),
                 port: hop.port.max(1),
                 username: non_empty(hop.username.trim(), "Proxy username")?.to_string(),
@@ -3894,6 +3906,7 @@ impl ConnectionStore {
             touched_keychain_ids.extend(collect_keychain_ids_for_auth(&hop_auth));
             proxy_chain.push(SavedProxyHop {
                 totp_credential_id: hop.totp_credential_id,
+                account_credential_id: hop.account_credential_id,
                 host: non_empty(hop.host.trim(), "Proxy host")?.to_string(),
                 port: hop.port.max(1),
                 username: non_empty(hop.username.trim(), "Proxy username")?.to_string(),

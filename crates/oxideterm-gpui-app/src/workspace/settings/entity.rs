@@ -445,6 +445,8 @@ pub(in crate::workspace) struct SettingsWorkspaceEntity {
     pub(super) privilege_draft: PrivilegeCredentialDraft,
     pub(super) totp_draft: Option<super::totp_credentials_page::TotpDraft>,
     pub(super) totp_error: Option<oxideterm_connections::totp::TotpError>,
+    pub(super) account_credential_draft: Option<super::account_credentials_page::AccountCredentialDraft>,
+    pub(super) account_credential_error: Option<oxideterm_connections::AccountCredentialError>,
     pub(super) privilege_error: Option<String>,
     pub(super) privilege_editor_open: bool,
     pub(super) privilege_scope_id: Option<String>,
@@ -622,6 +624,8 @@ impl SettingsWorkspaceEntity {
             privilege_draft: PrivilegeCredentialDraft::default(),
             totp_draft: None,
             totp_error: None,
+            account_credential_draft: None,
+            account_credential_error: None,
             privilege_error: None,
             privilege_editor_open: false,
             privilege_scope_id: None,
@@ -712,6 +716,8 @@ impl SettingsWorkspaceEntity {
         }
         self.totp_draft = None;
         self.totp_error = None;
+        self.account_credential_draft = None;
+        self.account_credential_error = None;
         self.route.active_tab = tab;
         cx.notify();
         true
@@ -2343,6 +2349,15 @@ impl SettingsWorkspaceEntity {
             SettingsInput::TotpPeriod => {
                 self.totp_draft.as_ref().map(|draft| draft.period.as_str())
             }
+            SettingsInput::AccountCredentialName => {
+                self.account_credential_draft.as_ref().map(|draft| draft.name.as_str())
+            }
+            SettingsInput::AccountCredentialUsername => {
+                self.account_credential_draft.as_ref().map(|draft| draft.username.as_str())
+            }
+            SettingsInput::AccountCredentialPassword => {
+                self.account_credential_draft.as_ref().map(|draft| draft.password.as_str())
+            }
             SettingsInput::LocalPrivilegeUsernameHint => Some(&self.privilege_draft.username_hint),
             SettingsInput::LocalPrivilegeSecret => Some(&self.privilege_draft.secret),
             SettingsInput::LocalPrivilegePromptPatterns => {
@@ -2404,6 +2419,9 @@ impl SettingsWorkspaceEntity {
             | SettingsInput::TotpSecret
             | SettingsInput::TotpPattern
             | SettingsInput::TotpPeriod
+            | SettingsInput::AccountCredentialName
+            | SettingsInput::AccountCredentialUsername
+            | SettingsInput::AccountCredentialPassword
             | SettingsInput::LocalPrivilegeUsernameHint
             | SettingsInput::LocalPrivilegeSecret
             | SettingsInput::LocalPrivilegePromptPatterns
@@ -2506,6 +2524,9 @@ impl SettingsWorkspaceEntity {
             | SettingsInput::TotpSecret
             | SettingsInput::TotpPattern
             | SettingsInput::TotpPeriod => self.totp_error = None,
+            SettingsInput::AccountCredentialName
+            | SettingsInput::AccountCredentialUsername
+            | SettingsInput::AccountCredentialPassword => self.account_credential_error = None,
             _ => {}
         }
     }
@@ -2552,6 +2573,15 @@ impl SettingsWorkspaceEntity {
             SettingsInput::TotpSecret => self.totp_draft.as_mut().map(|draft| &mut *draft.secret),
             SettingsInput::TotpPattern => self.totp_draft.as_mut().map(|draft| &mut draft.pattern),
             SettingsInput::TotpPeriod => self.totp_draft.as_mut().map(|draft| &mut draft.period),
+            SettingsInput::AccountCredentialName => {
+                self.account_credential_draft.as_mut().map(|draft| &mut draft.name)
+            }
+            SettingsInput::AccountCredentialUsername => {
+                self.account_credential_draft.as_mut().map(|draft| &mut draft.username)
+            }
+            SettingsInput::AccountCredentialPassword => {
+                self.account_credential_draft.as_mut().map(|draft| &mut *draft.password)
+            }
             SettingsInput::LocalPrivilegeUsernameHint => {
                 Some(&mut self.privilege_draft.username_hint)
             }

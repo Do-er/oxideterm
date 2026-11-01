@@ -221,6 +221,9 @@ pub enum SettingsInput {
     TotpSecret,
     TotpPattern,
     TotpPeriod,
+    AccountCredentialName,
+    AccountCredentialUsername,
+    AccountCredentialPassword,
     LocalPrivilegePromptPatterns,
     LocalPrivilegeHostPatterns,
     LocalPrivilegeSecondFactorPatterns,
@@ -676,6 +679,9 @@ impl SettingsInput {
             Self::TotpSecret => 31_011,
             Self::TotpPattern => 31_012,
             Self::TotpPeriod => 31_013,
+            Self::AccountCredentialName => 31_020,
+            Self::AccountCredentialUsername => 31_021,
+            Self::AccountCredentialPassword => 31_022,
             Self::LocalPrivilegePromptPatterns => 31_003,
             Self::LocalPrivilegeHostPatterns => 31_004,
             Self::LocalPrivilegeSecondFactorPatterns => 31_005,
@@ -825,6 +831,7 @@ impl SettingsInput {
                 | Self::AppLockConfirmPassword
                 | Self::LocalPrivilegeSecret
                 | Self::TotpSecret
+                | Self::AccountCredentialPassword
                 | Self::ManagedKeyFilePassphrase
                 | Self::ManagedKeyPastePrivateKey
                 | Self::ManagedKeyPastePassphrase

@@ -120,6 +120,8 @@ impl WorkspaceApp {
             settings.close_navigation_editor(cx);
             settings.totp_draft = None;
             settings.totp_error = None;
+            settings.account_credential_draft = None;
+            settings.account_credential_error = None;
             settings.close_settings_search(true, cx);
         });
         self.focused_settings_input = None;
@@ -615,6 +617,20 @@ impl WorkspaceApp {
                 }
             }
             SettingsTab::Privilege => {
+                self.connection_store
+                    .account_credentials()
+                    .len()
+                    .hash(&mut hasher);
+                self.settings_workspace
+                    .read(cx)
+                    .account_credential_draft
+                    .is_some()
+                    .hash(&mut hasher);
+                self.settings_workspace
+                    .read(cx)
+                    .account_credential_error
+                    .is_some()
+                    .hash(&mut hasher);
                 self.connection_store
                     .list_privilege_credentials(SSH_COMMON_PRIVILEGE_SCOPE_ID)
                     .map(|credentials| credentials.len())

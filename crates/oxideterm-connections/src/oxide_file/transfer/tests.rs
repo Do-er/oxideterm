@@ -390,6 +390,7 @@ mod tests {
             },
             proxy_chain: vec![SavedProxyHop {
                 totp_credential_id: None,
+                account_credential_id: None,
                 host: "jump.example.com".to_string(),
                 port: 22,
                 username: "jump".to_string(),
@@ -955,6 +956,7 @@ mod tests {
         };
         request.proxy_chain.push(SavedProxyHop {
             totp_credential_id: None,
+            account_credential_id: None,
             host: "jump.example.test".to_string(),
             port: 22,
             username: "jump".to_string(),

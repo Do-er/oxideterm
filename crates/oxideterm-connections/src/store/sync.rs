@@ -1447,6 +1447,7 @@ fn build_synced_proxy_chain(
             }
             SavedProxyHop {
                 totp_credential_id: hop.totp_credential_id.clone(),
+                account_credential_id: hop.account_credential_id.clone(),
                 host: hop.host.clone(),
                 port: hop.port,
                 username: hop.username.clone(),
@@ -1571,6 +1572,7 @@ mod mosh_tests {
         let mut profile = password_profile(Some("local-keychain-entry"));
         profile.proxy_chain.push(SavedProxyHop {
             totp_credential_id: None,
+            account_credential_id: None,
             host: "jump.example.test".to_string(),
             port: 22,
             username: "jump".to_string(),
@@ -1617,6 +1619,7 @@ mod mosh_tests {
         let mut local = password_profile(Some("local-keychain-entry"));
         local.proxy_chain.push(SavedProxyHop {
             totp_credential_id: None,
+            account_credential_id: None,
             host: "jump.example.test".to_string(),
             port: 22,
             username: "jump".to_string(),

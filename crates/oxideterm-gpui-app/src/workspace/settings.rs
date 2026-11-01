@@ -227,6 +227,7 @@ mod portable_runtime;
 mod privilege_credentials_page;
 mod remote_shell_integration;
 mod search;
+mod account_credentials_page;
 mod sftp_page;
 mod surface;
 mod terminal_controls;

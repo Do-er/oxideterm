@@ -30,6 +30,7 @@ include!("store/plugin.rs");
 include!("store/resolved_sync.rs");
 include!("store/managed_sync.rs");
 include!("store/privilege_sync.rs");
+include!("store/account_credential.rs");
 #[cfg(test)]
 include!("store/tests.rs");
 

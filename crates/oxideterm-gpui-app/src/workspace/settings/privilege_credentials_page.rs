@@ -310,8 +310,9 @@ impl WorkspaceApp {
         cx: &mut Context<Self>,
     ) -> AnyElement {
         match section_index {
-            0 => self.settings_privilege_credentials_card(cx),
-            1 => self.settings_totp_credentials_card(cx),
+            0 => self.settings_account_credentials_card(cx),
+            1 => self.settings_privilege_credentials_card(cx),
+            2 => self.settings_totp_credentials_card(cx),
             _ => div().into_any_element(),
         }
     }

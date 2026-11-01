@@ -218,6 +218,7 @@ fn saved_standalone_sftp_proxy_hop_from_form(
     );
     Ok(SavedProxyHop {
         totp_credential_id: hop.totp_credential_id.clone(),
+        account_credential_id: hop.account_credential_id.clone(),
         host,
         port,
         username,

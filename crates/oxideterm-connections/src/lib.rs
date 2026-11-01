@@ -10,7 +10,9 @@ mod ssh_config_sync;
 mod ssh_keys;
 mod ssh_paths;
 mod store;
+pub mod account_credential;
 pub mod totp;
+pub use account_credential::{AccountCredential, AccountCredentialError};
 pub use connection_import::{
     ConnectionImportApplyRequest, ConnectionImportApplyResult, ConnectionImportDuplicateStrategy,
     ConnectionImportErrorInfo, ConnectionImportPreview, ConnectionImportSource,
