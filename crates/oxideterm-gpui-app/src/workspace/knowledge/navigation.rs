@@ -196,7 +196,7 @@ impl WorkspaceApp {
                 div()
                     .text_size(px(self.tokens.metrics.ui_text_sm))
                     .font_weight(gpui::FontWeight::MEDIUM)
-                    .child(self.i18n.t("settings_view.knowledge.notes_title")),
+                    .child(self.i18n.t("settings_view.knowledge.title")),
             )
             .into_any_element()
     }
@@ -267,21 +267,13 @@ impl WorkspaceApp {
             .border_b_1()
             .border_color(rgb(self.tokens.ui.border))
             .child(
-                div()
-                    .flex()
+                // The dropdown itself shows the collection name, so the icon
+                // labels the control without a second text run beside it.
+                svg()
+                    .path(LucideIcon::BookOpen.path())
+                    .size(px(KNOWLEDGE_NAVIGATOR_ACTION_ICON_SIZE))
                     .flex_none()
-                    .items_center()
-                    .gap(px(self.tokens.spacing.two))
-                    .text_size(px(self.tokens.metrics.ui_text_sm))
-                    .text_color(rgb(self.tokens.ui.text_muted))
-                    .child(
-                        svg()
-                            .path(LucideIcon::BookOpen.path())
-                            .size(px(KNOWLEDGE_NAVIGATOR_ACTION_ICON_SIZE))
-                            .flex_none()
-                            .text_color(rgb(self.tokens.ui.text_muted)),
-                    )
-                    .child(self.i18n.t("settings_view.knowledge.notebooks")),
+                    .text_color(rgb(self.tokens.ui.text_muted)),
             )
             .child(
                 oxideterm_gpui_ui::toolbar_button(&self.tokens, String::new(), None, options)
@@ -344,7 +336,7 @@ impl WorkspaceApp {
             .text_color(rgb(self.tokens.ui.text_muted))
             .child(
                 self.i18n
-                    .t("settings_view.knowledge.note_count")
+                    .t("settings_view.knowledge.document_count")
                     .replace("{{count}}", &count.to_string()),
             )
             .child(self.knowledge_navigator_action(
@@ -398,7 +390,7 @@ impl WorkspaceApp {
                     });
                 vec![
                     (
-                        self.i18n.t("settings_view.knowledge.rename_note"),
+                        self.i18n.t("settings_view.knowledge.rename_document"),
                         KnowledgeAction::RenameDocument(note.clone()),
                         busy,
                     ),
@@ -436,7 +428,7 @@ impl WorkspaceApp {
                     )
                 })
                 .chain(std::iter::once((
-                    self.i18n.t("settings_view.knowledge.new_notebook"),
+                    self.i18n.t("settings_view.knowledge.create_collection"),
                     KnowledgeAction::CreateNotebook,
                     false,
                 )))
@@ -461,27 +453,27 @@ impl WorkspaceApp {
                     !can_paste,
                 ),
                 (
-                    self.i18n.t("settings_view.knowledge.new_notebook"),
+                    self.i18n.t("settings_view.knowledge.create_collection"),
                     KnowledgeAction::CreateNotebook,
                     false,
                 ),
                 (
-                    self.i18n.t("settings_view.knowledge.rename_notebook"),
+                    self.i18n.t("settings_view.knowledge.rename_collection"),
                     KnowledgeAction::RenameNotebook,
                     collection.is_none(),
                 ),
                 (
-                    self.i18n.t("settings_view.knowledge.delete_notebook"),
+                    self.i18n.t("settings_view.knowledge.delete_collection"),
                     KnowledgeAction::DeleteNotebook,
                     collection.is_none(),
                 ),
                 (
-                    self.i18n.t("settings_view.knowledge.rename_note"),
+                    self.i18n.t("settings_view.knowledge.rename_document"),
                     KnowledgeAction::RenameNote,
                     !can_edit,
                 ),
                 (
-                    self.i18n.t("settings_view.knowledge.move_note"),
+                    self.i18n.t("settings_view.knowledge.move_document"),
                     KnowledgeAction::Move,
                     !can_edit || state.navigator_snapshot.collections.len() < 2,
                 ),
@@ -750,9 +742,9 @@ impl WorkspaceApp {
         let error = rename.error.clone();
         let busy = state.metadata_task.is_some();
         let title = self.i18n.t(if rename.notebook {
-            "settings_view.knowledge.rename_notebook"
+            "settings_view.knowledge.rename_collection"
         } else {
-            "settings_view.knowledge.rename_note"
+            "settings_view.knowledge.rename_document"
         });
         let dialog = oxideterm_gpui_ui::dialog::dialog_content(&self.tokens)
             .w(px(420.0))

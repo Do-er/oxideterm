@@ -49,7 +49,7 @@ impl WorkspaceApp {
             return;
         };
         let load_generation = state.load_generation;
-        let copy_title = self.i18n.t("settings_view.knowledge.note_copy_title");
+        let copy_title = self.i18n.t("settings_view.knowledge.document_copy_title");
         let store = self.ai_entity.read(cx).rag_store();
         let operation = clipboard.clone();
         let target_for_result = target.clone();
