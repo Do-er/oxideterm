@@ -40,7 +40,9 @@
       "expand": "Seitenleiste erweitern",
       "collapse": "Seitenleiste einklappen",
       "new_local_terminal": "Neues lokales Terminal",
-      "open_pylance_guide": "Pylance-Anleitung öffnen"
+      "open_pylance_guide": "Pylance-Anleitung öffnen",
+      "pin_window": "Fenster oben anheften",
+      "unpin_window": "Anheften aufheben"
     },
     "panels": {
       "sessions": "Aktive Sitzungen",

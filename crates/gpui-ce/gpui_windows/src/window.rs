@@ -1041,6 +1041,28 @@ impl PlatformWindow for WindowsWindow {
         self.state.is_fullscreen()
     }
 
+    fn set_always_on_top(&self, always_on_top: bool) {
+        let hwnd = self.0.hwnd;
+        let insert_after = if always_on_top {
+            windows::Win32::UI::WindowsAndMessaging::HWND_TOPMOST
+        } else {
+            windows::Win32::UI::WindowsAndMessaging::HWND_NOTOPMOST
+        };
+        unsafe {
+            let _ = windows::Win32::UI::WindowsAndMessaging::SetWindowPos(
+                hwnd,
+                Some(insert_after),
+                0,
+                0,
+                0,
+                0,
+                windows::Win32::UI::WindowsAndMessaging::SWP_NOMOVE
+                    | windows::Win32::UI::WindowsAndMessaging::SWP_NOSIZE
+                    | windows::Win32::UI::WindowsAndMessaging::SWP_NOACTIVATE,
+            );
+        }
+    }
+
     fn start_window_move(&self) {
         if self.is_movable {
             self.start_native_window_operation(HTCAPTION);

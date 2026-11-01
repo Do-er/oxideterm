@@ -40,7 +40,9 @@
       "expand": "사이드바 펼치기",
       "collapse": "사이드바 접기",
       "new_local_terminal": "새 로컬 터미널",
-      "open_pylance_guide": "Pylance 가이드 열기"
+      "open_pylance_guide": "Pylance 가이드 열기",
+      "pin_window": "창 항상 위에 고정",
+      "unpin_window": "고정 해제"
     },
     "panels": {
       "sessions": "활성 세션",

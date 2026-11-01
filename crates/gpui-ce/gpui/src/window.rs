@@ -2887,6 +2887,11 @@ impl Window {
         self.platform_window.is_fullscreen()
     }
 
+    /// Sets whether the window should stay above other normal windows.
+    pub fn set_always_on_top(&self, always_on_top: bool) {
+        self.platform_window.set_always_on_top(always_on_top);
+    }
+
     /// Returns whether the window is currently in simple (borderless) fullscreen,
     /// where it covers the entire screen including the menu bar and notch area.
     /// Always `false` on platforms other than macOS.
@@ -6217,6 +6222,7 @@ impl Window {
                 PlatformInput::MousePressure(mouse_pressure)
             }
             PlatformInput::MouseExited(mouse_exited) => {
+                self.mouse_position = mouse_exited.position;
                 self.modifiers = mouse_exited.modifiers;
                 PlatformInput::MouseExited(mouse_exited)
             }

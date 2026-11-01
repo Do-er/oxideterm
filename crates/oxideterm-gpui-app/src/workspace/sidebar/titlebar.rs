@@ -504,16 +504,12 @@ impl WorkspaceApp {
             .t("sidebar.background_tasks.summary")
             .replace("{{count}}", &background_count_label);
         let background_workspace = cx.entity().downgrade();
-        let zen_label = self.i18n.t("sidebar.actions.enter_zen");
-        let zen_tooltip = tabs::effective_shortcut_label(
-            "app.zenMode",
-            &self.settings_store.settings().keybindings.overrides,
-        )
-        .map_or_else(
-            || zen_label.clone(),
-            |shortcut| format!("{zen_label} ({shortcut})"),
-        );
-        let zen_workspace = cx.entity().downgrade();
+        let pin_label = self.i18n.t(if self.main_window_pinned {
+            "sidebar.actions.unpin_window"
+        } else {
+            "sidebar.actions.pin_window"
+        });
+        let pin_workspace = cx.entity().downgrade();
         let palette_label = self.i18n.t("command_palette.title");
         let palette_tooltip = tabs::effective_shortcut_label(
             "app.commandPalette",
@@ -663,29 +659,41 @@ impl WorkspaceApp {
                     )
                     .child(
                         div()
-                            .id("titlebar-zen-button")
+                            .id("titlebar-pin-button")
                             .flex_none()
                             .px(px(action_button_padding))
                             .role(gpui::Role::Button)
-                            .aria_label(zen_label)
-                            .on_a11y_action(gpui::AccessibleAction::Click, move |_, _, cx| {
-                                let _ =
-                                    zen_workspace.update(cx, |this, cx| this.toggle_zen_mode(cx));
+                            .aria_label(pin_label.clone())
+                            .on_a11y_action(gpui::AccessibleAction::Click, move |_, window, cx| {
+                                let _ = pin_workspace.update(cx, |this, cx| {
+                                    this.toggle_main_window_pin(window, cx);
+                                });
                             })
                             .child(self.workspace_tooltip_icon_button(
-                                LucideIcon::EyeOff,
+                                LucideIcon::Pin,
                                 self.tokens.metrics.sidebar_action_icon_size,
-                                rgb(text_color),
-                                IconButtonOptions::opaque_toolbar(
-                                    action_button_size,
-                                    ButtonRadius::Md,
-                                ),
-                                zen_tooltip.clone(),
-                                "titlebar-zen",
+                                rgb(if self.main_window_pinned {
+                                    self.tokens.ui.accent
+                                } else {
+                                    text_color
+                                }),
+                                IconButtonOptions {
+                                    has_background: self.main_window_pinned,
+                                    background: self.main_window_pinned.then(|| {
+                                        self.settings_panel_background(self.tokens.ui.bg_panel)
+                                    }),
+                                    border: self.main_window_pinned.then(|| rgb(self.tokens.ui.border)),
+                                    ..IconButtonOptions::opaque_toolbar(
+                                        action_button_size,
+                                        ButtonRadius::Md,
+                                    )
+                                },
+                                pin_label.clone(),
+                                "titlebar-pin",
                                 true,
-                                cx.listener(move |this, _, _, cx| {
-                                    this.clear_workspace_tooltip(&zen_tooltip, cx);
-                                    this.toggle_zen_mode(cx);
+                                cx.listener(move |this, _, window, cx| {
+                                    this.clear_workspace_tooltip(&pin_label, cx);
+                                    this.toggle_main_window_pin(window, cx);
                                     cx.stop_propagation();
                                 }),
                                 cx.entity(),

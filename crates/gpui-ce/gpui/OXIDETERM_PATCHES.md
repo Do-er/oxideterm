@@ -199,6 +199,29 @@ ownership is added to the parent registry only after renderer and platform setup
 registration at that commit boundary: registering earlier can leave a destroyed child recorded as
 blocking, causing the parent window to reject all later input.
 
+### Window level pinning and macOS hover ownership
+
+`crates/gpui-ce/gpui/src/platform.rs` adds `PlatformWindow::set_always_on_top` with an empty
+default body, and `crates/gpui-ce/gpui/src/window.rs` exposes it as `Window::set_always_on_top`.
+macOS switches the native level between `NSFloatingWindowLevel` and `NSNormalWindowLevel` on the
+foreground executor, guarded by `if_window_not_closed`, so a toggle queued before teardown cannot
+touch a released window. Windows calls `SetWindowPos` with `HWND_TOPMOST` or `HWND_NOTOPMOST` and
+`SWP_NOMOVE | SWP_NOSIZE | SWP_NOACTIVATE`: pinning must change only the stacking order, never the
+frame or focus. The default body is a no-op, so X11, Wayland, and the headless backend keep their
+ordinary stacking; implement them explicitly before relying on pinning there.
+
+`crates/gpui-ce/gpui_macos/src/window.rs` previously left `on_hover_status_change` empty and
+declared only `mouseExited:`, so `mouseEntered:` fell through to NSResponder's forwarding default
+and pointer entry was never reported. The class now declares `mouseEntered:` alongside it, both
+routing to `handle_view_event`; the tracking area already requests `MouseEnteredAndExited`, so no
+setup change is needed. Both branches hand the stored callback out of `MacWindowState`, drop the
+state lock, invoke it, then put it back. The callback re-enters GPUI to set window hover state and
+cancel pointer interaction, so it must not run while the state mutex is held.
+
+`PlatformInput::MouseExited` now also records `Window::mouse_position`. Hit testing is derived from
+that position on every mouse dispatch, so leaving the window with a stale value makes the next
+frame test the wrong point.
+
 ### Transparent border-only quad overdraw
 
 `crates/gpui-ce/gpui/src/window.rs` limits transparent, border-only quads to four clipped

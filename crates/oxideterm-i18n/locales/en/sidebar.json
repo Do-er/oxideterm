@@ -40,7 +40,9 @@
       "expand": "Expand Sidebar",
       "collapse": "Collapse Sidebar",
       "new_local_terminal": "New Local Terminal",
-      "open_pylance_guide": "Open Pylance Guide"
+      "open_pylance_guide": "Open Pylance Guide",
+      "pin_window": "Pin Window on Top",
+      "unpin_window": "Unpin Window"
     },
     "panels": {
       "sessions": "Active Sessions",

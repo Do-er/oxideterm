@@ -1004,6 +1004,7 @@ pub trait PlatformWindow: HasWindowHandle + HasDisplayHandle {
     fn zoom(&self);
     fn toggle_fullscreen(&self);
     fn is_fullscreen(&self) -> bool;
+    fn set_always_on_top(&self, _always_on_top: bool) {}
     fn frame_waker(&self) -> Option<Rc<dyn Fn()>> {
         None
     }

@@ -163,10 +163,6 @@ impl WorkspaceApp {
                             // Match the center tab bar's chrome opacity instead
                             // of inheriting the more transparent sidebar body.
                             .bg(self.workspace_chrome_background(theme.bg))
-                            // The context-sidebar titlebar is fixed chrome.
-                            // Give it its own hitbox so wheel/drag events
-                            // cannot fall through to a scrollable tool body.
-                            .occlude()
                             .border_b_1()
                             .border_color(self.workspace_chrome_divider())
                             .child(

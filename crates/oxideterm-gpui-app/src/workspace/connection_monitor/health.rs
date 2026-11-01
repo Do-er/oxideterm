@@ -384,7 +384,6 @@ impl WorkspaceApp {
             .flex_1()
             .min_h_0()
             .overflow_hidden()
-            .occlude()
             .child(
                 div()
                     .size_full()

@@ -40,7 +40,9 @@
       "expand": "展開側邊欄",
       "collapse": "收合側邊欄",
       "new_local_terminal": "新增本機終端機",
-      "open_pylance_guide": "開啟 Pylance 指南"
+      "open_pylance_guide": "開啟 Pylance 指南",
+      "pin_window": "置頂視窗",
+      "unpin_window": "取消置頂"
     },
     "panels": {
       "sessions": "使用中的工作階段",

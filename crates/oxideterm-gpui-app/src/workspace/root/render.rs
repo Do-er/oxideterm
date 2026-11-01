@@ -357,7 +357,7 @@ impl WorkspaceApp {
         let titlebar_visible = self.window_titlebar_visible(window);
         let effective_titlebar_height = self.window_titlebar_height(window);
         let resize_hotzone_visible =
-            !zen_mode && (!self.sidebar_collapsed || self.context_sidebar_visible());
+            !zen_mode && (!self.sidebar_collapsed || self.context_sidebar_pinned);
         let sidebar_resize_cursor_active = (resize_hotzone_visible
             && self.sidebar_resize_hotzone_hovered)
             || self.sidebar_resizing
@@ -396,6 +396,11 @@ impl WorkspaceApp {
             })
             .track_focus(&self.focus_handle)
             .key_context(key_context)
+            .on_hover(cx.listener(|this, hovered: &bool, _window, cx| {
+                if !*hovered {
+                    this.handle_workspace_mouse_leave(cx);
+                }
+            }))
             // Host Tools actions bubble here from both sidebar pages and portaled dialogs.
             .on_action(
                 cx.listener(|this, request: &HostToolsWindowRequest, window, cx| {
@@ -763,6 +768,11 @@ impl WorkspaceApp {
                 },
             ))
             .on_mouse_move(cx.listener(|this, event: &MouseMoveEvent, window, cx| {
+                this.check_context_sidebar_boundary_on_mouse_move(
+                    f32::from(event.position.x),
+                    window,
+                    cx,
+                );
                 this.update_sidebar_resize(event, window, cx);
                 this.update_file_manager_bookmarks_resize(event, window, cx);
                 this.update_knowledge_resize(event, window, cx);
@@ -1163,7 +1173,7 @@ impl WorkspaceApp {
                         layout.child(self.render_context_activity_bar(window, cx))
                     }),
             )
-            .when(!zen_mode && self.context_sidebar_visible(), |root| {
+            .when(!zen_mode && self.context_sidebar_pinned, |root| {
                 root.child(
                     self.render_context_right_sidebar_resize_hotzone(effective_titlebar_height, cx),
                 )

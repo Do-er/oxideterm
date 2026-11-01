@@ -49,14 +49,6 @@ fn embedded_sftp_session_fraction(cursor_y: f32, split_top: f32, split_height: f
         .clamp(EMBEDDED_SFTP_MIN_SESSION_FRACTION, EMBEDDED_SFTP_MAX_SESSION_FRACTION)
 }
 
-fn should_collapse_primary_sidebar_section(
-    sidebar_collapsed: bool,
-    visible_section: SidebarSection,
-    requested_section: SidebarSection,
-) -> bool {
-    !sidebar_collapsed && visible_section == requested_section
-}
-
 pub(in crate::workspace) fn context_sidebar_panel_visible(
     sidebar_collapsed: bool,
     zen_mode: bool,
@@ -217,32 +209,6 @@ impl WorkspaceApp {
         if self.sidebar_collapsed {
             self.set_sidebar_collapsed_with_motion(false, cx);
         }
-        self.persist_sidebar_settings(cx);
-        cx.notify();
-    }
-
-    pub(in crate::workspace) fn toggle_sidebar_section(
-        &mut self,
-        section: SidebarSection,
-        cx: &mut Context<Self>,
-    ) {
-        // Activity-bar panel buttons are symmetric toggles: selecting another
-        // panel opens it, while selecting the visible panel hides the sidebar.
-        if should_collapse_primary_sidebar_section(
-            self.sidebar_collapsed,
-            self.effective_sidebar_panel_section(),
-            section,
-        ) {
-            self.toggle_sidebar(cx);
-        } else {
-            self.set_sidebar_section(section, cx);
-        }
-    }
-
-    pub(in crate::workspace) fn toggle_sidebar(&mut self, cx: &mut Context<Self>) {
-        self.set_sidebar_collapsed_with_motion(!self.sidebar_collapsed, cx);
-        self.sidebar_resizing = false;
-        self.sidebar_resize_hotzone_hovered = false;
         self.persist_sidebar_settings(cx);
         cx.notify();
     }
@@ -517,6 +483,67 @@ impl WorkspaceApp {
         cx.notify();
     }
 
+    pub(in crate::workspace) fn toggle_main_window_pin(
+        &mut self,
+        window: &mut Window,
+        cx: &mut Context<Self>,
+    ) {
+        self.main_window_pinned = !self.main_window_pinned;
+        window.set_always_on_top(self.main_window_pinned);
+        cx.notify();
+    }
+
+    pub(in crate::workspace) fn toggle_context_sidebar_panel_pin(
+        &mut self,
+        panel: ContextSidebarPanel,
+        cx: &mut Context<Self>,
+    ) {
+        let is_current =
+            self.context_sidebar_visible() && self.active_context_sidebar_panel == panel;
+        if is_current && self.context_sidebar_pinned {
+            self.context_sidebar_pinned = false;
+            self.apply_context_sidebar_hover_update(cx);
+            cx.notify();
+        } else {
+            self.open_context_sidebar_panel(panel, cx);
+        }
+    }
+
+    pub(in crate::workspace) fn toggle_context_host_tool_pin(
+        &mut self,
+        tool: ContextSidebarTool,
+        cx: &mut Context<Self>,
+    ) {
+        self.context_tools_menu = None;
+        self.clear_all_workspace_tooltips(cx);
+        let is_current = self.context_sidebar_visible()
+            && self.active_context_sidebar_panel == ContextSidebarPanel::HostTools
+            && self.host_tools.read(cx).active_tool() == tool;
+
+        if is_current && self.context_sidebar_pinned {
+            self.context_sidebar_pinned = false;
+            self.apply_context_sidebar_hover_update(cx);
+            cx.notify();
+        } else {
+            self.host_tools.update(cx, |ht, cx| {
+                ht.select_sidebar_tool(tool, cx);
+            });
+            self.open_context_sidebar_panel(ContextSidebarPanel::HostTools, cx);
+        }
+    }
+
+    pub(in crate::workspace) fn set_context_sidebar_activity_bar_hovered(
+        &mut self,
+        hovered: bool,
+        cx: &mut Context<Self>,
+    ) {
+        if self.context_sidebar_activity_bar_hovered == hovered {
+            return;
+        }
+        self.context_sidebar_activity_bar_hovered = hovered;
+        self.apply_context_sidebar_hover_update(cx);
+    }
+
     pub(in crate::workspace) fn set_context_sidebar_activity_hovered(
         &mut self,
         panel: Option<ContextSidebarPanel>,
@@ -541,8 +568,23 @@ impl WorkspaceApp {
         self.apply_context_sidebar_hover_update(cx);
     }
 
-    fn context_sidebar_hover_active(&self) -> bool {
-        self.context_sidebar_activity_hover_panel.is_some() || self.context_sidebar_drawer_hovered
+    fn context_sidebar_hover_active(&self, cx: &App) -> bool {
+        let sm = self.session_manager.read(cx);
+        let session_manager_menu_active = sm.row_action_menu.is_some()
+            || sm.view_mode_menu_open
+            || sm.sort_menu_open
+            || sm.show_batch_move
+            || sm.delete_confirm.is_some()
+            || sm.group_editor.is_some()
+            || sm.oxide_import_dialog.is_some()
+            || sm.oxide_export_dialog.is_some();
+
+        self.context_sidebar_activity_bar_hovered
+            || self.context_sidebar_activity_hover_panel.is_some()
+            || self.context_sidebar_drawer_hovered
+            || session_manager_menu_active
+            || self.session_sort_menu_open
+            || self.context_tools_menu.is_some()
     }
 
     fn apply_context_sidebar_hover_update(&mut self, cx: &mut Context<Self>) {
@@ -550,21 +592,85 @@ impl WorkspaceApp {
             return;
         }
         let visible = self.context_sidebar_visible();
-        if self.context_sidebar_hover_active() {
+        if self.context_sidebar_hover_active(cx) {
+            self.context_sidebar_hover_generation =
+                self.context_sidebar_hover_generation.wrapping_add(1);
             if let Some(panel) = self.context_sidebar_activity_hover_panel {
-                if !visible || self.active_context_sidebar_panel != panel {
+                if !visible {
                     self.active_context_sidebar_panel = panel;
                     self.set_context_sidebar_transient_visible(true, cx);
+                } else if self.active_context_sidebar_panel != panel {
+                    self.active_context_sidebar_panel = panel;
+                    cx.notify();
                 }
-            } else if !visible {
-                self.set_context_sidebar_transient_visible(true, cx);
             }
-        } else if visible {
-            self.set_context_sidebar_transient_visible(false, cx);
+        } else if visible && !self.context_sidebar_pinned {
+            self.context_sidebar_hover_generation =
+                self.context_sidebar_hover_generation.wrapping_add(1);
+            let generation = self.context_sidebar_hover_generation;
+            cx.spawn(async move |weak, cx| {
+                Timer::after(std::time::Duration::from_millis(200)).await;
+                let _ = weak.update(cx, |this, cx| {
+                    if this.context_sidebar_hover_generation == generation
+                        && !this.context_sidebar_hover_active(cx)
+                        && !this.context_sidebar_pinned
+                        && this.context_sidebar_visible()
+                    {
+                        this.set_context_sidebar_transient_visible(false, cx);
+                    }
+                });
+            })
+            .detach();
+        }
+    }
+
+    pub(in crate::workspace) fn handle_workspace_mouse_leave(&mut self, cx: &mut Context<Self>) {
+        if self.context_sidebar_activity_bar_hovered
+            || self.context_sidebar_activity_hover_panel.is_some()
+            || self.context_sidebar_drawer_hovered
+        {
+            self.context_sidebar_activity_bar_hovered = false;
+            self.context_sidebar_activity_hover_panel = None;
+            self.context_sidebar_drawer_hovered = false;
+            self.sidebar_resize_hotzone_hovered = false;
+            self.apply_context_sidebar_hover_update(cx);
+        }
+    }
+
+    pub(in crate::workspace) fn check_context_sidebar_boundary_on_mouse_move(
+        &mut self,
+        cursor_x: f32,
+        window: &Window,
+        cx: &mut Context<Self>,
+    ) {
+        if self.context_sidebar_pinned {
+            return;
+        }
+        let visible = self.context_sidebar_visible();
+        let activity_width = self.tokens.metrics.activity_bar_width;
+        let right_seam = f32::from(window.viewport_size().width)
+            - if visible {
+                self.ai_entity.read(cx).chat_ui().sidebar_width + activity_width
+            } else {
+                activity_width
+            };
+
+        if cursor_x < right_seam
+            && (self.context_sidebar_activity_bar_hovered
+                || self.context_sidebar_activity_hover_panel.is_some()
+                || self.context_sidebar_drawer_hovered)
+        {
+            self.context_sidebar_activity_bar_hovered = false;
+            self.context_sidebar_activity_hover_panel = None;
+            self.context_sidebar_drawer_hovered = false;
+            self.apply_context_sidebar_hover_update(cx);
         }
     }
 
     fn set_context_sidebar_transient_visible(&mut self, visible: bool, cx: &mut Context<Self>) {
+        if !visible {
+            self.sidebar_resize_hotzone_hovered = false;
+        }
         self.settings_store
             .settings_mut()
             .sidebar_ui

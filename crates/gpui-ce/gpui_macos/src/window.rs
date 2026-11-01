@@ -191,6 +191,10 @@ unsafe fn build_classes() {
                 handle_view_event as extern "C" fn(&Object, Sel, id),
             );
             decl.add_method(
+                sel!(mouseEntered:),
+                handle_view_event as extern "C" fn(&Object, Sel, id),
+            );
+            decl.add_method(
                 sel!(mouseExited:),
                 handle_view_event as extern "C" fn(&Object, Sel, id),
             );
@@ -683,6 +687,7 @@ struct MacWindowState {
     request_frame_callback: Option<Box<dyn FnMut(RequestFrameOptions)>>,
     event_callback: Option<Box<dyn FnMut(PlatformInput) -> gpui::DispatchEventResult>>,
     activate_callback: Option<Box<dyn FnMut(bool)>>,
+    hover_status_change: Option<Box<dyn FnMut(bool)>>,
     visibility_callback: Option<Box<dyn FnMut(WindowVisibility)>>,
     // `None` until a callback is registered, so notifications during
     // construction are not queued for delivery to a callback registered later.
@@ -1151,6 +1156,7 @@ impl MacWindow {
                 request_frame_callback: None,
                 event_callback: None,
                 activate_callback: None,
+                hover_status_change: None,
                 visibility_callback: None,
                 last_visibility: None,
                 resize_callback: None,
@@ -1438,6 +1444,7 @@ impl Drop for MacWindow {
             this.native_window.setDelegate_(nil);
         }
         this.input_handler.take();
+        this.hover_status_change.take();
         // A delivery task queued by `report_visibility` may still run after the
         // GPUI window is gone; without a callback it has nothing to notify.
         this.visibility_callback.take();
@@ -2037,6 +2044,23 @@ impl PlatformWindow for MacWindow {
             .detach();
     }
 
+    fn set_always_on_top(&self, always_on_top: bool) {
+        let this = self.0.lock();
+        let window = this.native_window;
+        let closed = this.closed.clone();
+        this.foreground_executor
+            .spawn(async move {
+                if_window_not_closed(closed, || unsafe {
+                    window.setLevel_(if always_on_top {
+                        NSFloatingWindowLevel
+                    } else {
+                        NSNormalWindowLevel
+                    });
+                })
+            })
+            .detach();
+    }
+
     fn toggle_simple_fullscreen(&self) {
         let state = self.0.clone();
         let (foreground_executor, closed) = {
@@ -2095,7 +2119,9 @@ impl PlatformWindow for MacWindow {
         state.visibility_callback = Some(callback);
     }
 
-    fn on_hover_status_change(&self, _: Box<dyn FnMut(bool)>) {}
+    fn on_hover_status_change(&self, callback: Box<dyn FnMut(bool)>) {
+        self.0.lock().hover_status_change = Some(callback);
+    }
 
     fn on_resize(&self, callback: Box<dyn FnMut(Size<Pixels>, f32)>) {
         self.0.as_ref().lock().resize_callback = Some(callback);
@@ -2860,6 +2886,22 @@ extern "C" fn handle_view_event(this: &Object, _: Sel, native_event: id) {
         }
         NSEventType::NSLeftMouseUp => {
             lock.last_left_mouse_down_event = None;
+        }
+        NSEventType::NSMouseExited => {
+            if let Some(mut callback) = lock.hover_status_change.take() {
+                drop(lock);
+                callback(false);
+                lock = window_state.as_ref().lock();
+                lock.hover_status_change = Some(callback);
+            }
+        }
+        NSEventType::NSMouseEntered => {
+            if let Some(mut callback) = lock.hover_status_change.take() {
+                drop(lock);
+                callback(true);
+                lock = window_state.as_ref().lock();
+                lock.hover_status_change = Some(callback);
+            }
         }
         _ => {}
     }

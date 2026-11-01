@@ -40,7 +40,9 @@
       "expand": "Mở rộng thanh bên",
       "collapse": "Thu gọn thanh bên",
       "new_local_terminal": "Terminal cục bộ mới",
-      "open_pylance_guide": "Mở hướng dẫn Pylance"
+      "open_pylance_guide": "Mở hướng dẫn Pylance",
+      "pin_window": "Ghim cửa sổ lên trên",
+      "unpin_window": "Bỏ ghim cửa sổ"
     },
     "panels": {
       "sessions": "Phiên hoạt động",

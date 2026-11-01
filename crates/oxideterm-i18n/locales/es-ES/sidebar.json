@@ -40,7 +40,9 @@
       "expand": "Expandir barra lateral",
       "collapse": "Contraer barra lateral",
       "new_local_terminal": "Nueva terminal local",
-      "open_pylance_guide": "Abrir guía de Pylance"
+      "open_pylance_guide": "Abrir guía de Pylance",
+      "pin_window": "Fijar ventana al frente",
+      "unpin_window": "Desfijar ventana"
     },
     "panels": {
       "sessions": "Sesiones activas",

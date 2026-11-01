@@ -40,7 +40,9 @@
       "expand": "展开侧边栏",
       "collapse": "折叠侧边栏",
       "new_local_terminal": "新建本地终端",
-      "open_pylance_guide": "打开 Pylance 指南"
+      "open_pylance_guide": "打开 Pylance 指南",
+      "pin_window": "置顶窗口",
+      "unpin_window": "取消置顶"
     },
     "panels": {
       "sessions": "活动会话",

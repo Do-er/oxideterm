@@ -40,7 +40,9 @@
       "expand": "サイドバーを展開",
       "collapse": "サイドバーを折りたたむ",
       "new_local_terminal": "新規ローカルターミナル",
-      "open_pylance_guide": "Pylanceガイドを開く"
+      "open_pylance_guide": "Pylanceガイドを開く",
+      "pin_window": "最前面に固定",
+      "unpin_window": "最前面固定を解除"
     },
     "panels": {
       "sessions": "アクティブセッション",

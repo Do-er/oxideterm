@@ -266,7 +266,6 @@ impl WorkspaceApp {
         };
         let available = f32::from(window.viewport_size().height)
             - self.window_titlebar_height(window)
-            - metrics.tabbar_height
             - PRIMARY_SIDEBAR_CONTENT_TOP_INSET
             - lock_height
             - plugin_height;
@@ -286,17 +285,7 @@ impl WorkspaceApp {
     }
 
     fn activate_context_tool(&mut self, tool: ContextSidebarTool, cx: &mut Context<Self>) {
-        self.context_tools_menu = None;
-        self.clear_all_workspace_tooltips(cx);
-        self.host_tools.update(cx, |host_tools, cx| {
-            host_tools.select_sidebar_tool(tool, cx)
-        });
-        if !self.context_sidebar_visible()
-            || self.active_context_sidebar_panel != ContextSidebarPanel::HostTools
-        {
-            self.open_context_sidebar_panel(ContextSidebarPanel::HostTools, cx);
-        }
-        cx.notify();
+        self.toggle_context_host_tool_pin(tool, cx);
     }
 
     fn context_tool_button_options(&self, active: bool) -> IconButtonOptions {
@@ -304,7 +293,13 @@ impl WorkspaceApp {
             radius: ButtonRadius::Md,
             has_background: active,
             background: active.then(|| self.settings_panel_background(self.tokens.ui.bg_panel)),
-            border: active.then(|| rgb(self.tokens.ui.border)),
+            border: active.then(|| {
+                rgb(if self.context_sidebar_pinned {
+                    self.tokens.ui.accent
+                } else {
+                    self.tokens.ui.border
+                })
+            }),
             hover_background: Some(rgb(self.tokens.ui.bg_hover)),
             idle_opacity: 1.0,
             ..IconButtonOptions::compact(self.tokens.metrics.activity_icon_size)
@@ -313,11 +308,9 @@ impl WorkspaceApp {
 
     fn render_sessions_context_tool(&self, cx: &mut Context<Self>) -> AnyElement {
         let active = self.active_sessions_sidebar_visible();
-        div()
-            .id("context-sessions-activity")
-            .flex_none()
-            .mb(px(self.tokens.metrics.activity_icon_gap))
-            .child(self.workspace_tooltip_icon_button(
+        let button = oxideterm_gpui_ui::button::icon_button(
+            &self.tokens,
+            Self::render_lucide_icon(
                 LucideIcon::Link2,
                 self.tokens.metrics.activity_icon_glyph_size,
                 rgb(if active {
@@ -325,35 +318,47 @@ impl WorkspaceApp {
                 } else {
                     self.tokens.ui.text
                 }),
-                self.context_tool_button_options(active),
-                self.i18n.t("sidebar.panels.sessions"),
-                "context-sessions",
-                true,
+            ),
+            self.context_tool_button_options(active),
+        );
+        let button = if active {
+            oxideterm_gpui_ui::theme_card_surface_shadow(button, &self.tokens)
+        } else {
+            button
+        };
+        let button = button
+            .id("context-sessions")
+            .on_mouse_down(
+                MouseButton::Left,
                 cx.listener(|this, _, _, cx| {
-                    let _ = this.open_context_sidebar_panel(ContextSidebarPanel::Sessions, cx);
+                    this.toggle_context_sidebar_panel_pin(ContextSidebarPanel::Sessions, cx);
                     cx.stop_propagation();
                 }),
-                cx.entity(),
-            ))
-            .on_hover(cx.listener(
-                |this, hovered: &bool, _window, cx| {
-                    this.set_context_sidebar_activity_hovered(
-                        (*hovered).then_some(ContextSidebarPanel::Sessions),
-                        cx,
-                    );
-                },
-            ))
+            );
+
+        div()
+            .id("context-sessions-activity")
+            .flex_none()
+            .mb(px(self.tokens.metrics.activity_icon_gap))
+            .child(button)
+            .on_hover(cx.listener(|this, hovered: &bool, _window, cx| {
+                if *hovered {
+                    this.clear_all_workspace_tooltips(cx);
+                }
+                this.set_context_sidebar_activity_hovered(
+                    (*hovered).then_some(ContextSidebarPanel::Sessions),
+                    cx,
+                );
+            }))
             .into_any_element()
     }
 
     fn render_connections_context_tool(&self, cx: &mut Context<Self>) -> AnyElement {
         let active = self.context_sidebar_visible()
             && self.active_context_sidebar_panel == ContextSidebarPanel::Connections;
-        div()
-            .id("context-connections-activity")
-            .flex_none()
-            .mb(px(self.tokens.metrics.activity_icon_gap))
-            .child(self.workspace_tooltip_icon_button(
+        let button = oxideterm_gpui_ui::button::icon_button(
+            &self.tokens,
+            Self::render_lucide_icon(
                 LucideIcon::Server,
                 self.tokens.metrics.activity_icon_glyph_size,
                 rgb(if active {
@@ -361,25 +366,87 @@ impl WorkspaceApp {
                 } else {
                     self.tokens.ui.text
                 }),
-                self.context_tool_button_options(active),
-                self.i18n.t("sidebar.panels.session_manager"),
-                "context-connections",
-                true,
+            ),
+            self.context_tool_button_options(active),
+        );
+        let button = if active {
+            oxideterm_gpui_ui::theme_card_surface_shadow(button, &self.tokens)
+        } else {
+            button
+        };
+        let button = button
+            .id("context-connections")
+            .on_mouse_down(
+                MouseButton::Left,
                 cx.listener(|this, _, _, cx| {
                     this.refresh_session_manager_ssh_config_hosts(cx);
-                    let _ = this.open_context_sidebar_panel(ContextSidebarPanel::Connections, cx);
+                    this.toggle_context_sidebar_panel_pin(ContextSidebarPanel::Connections, cx);
                     cx.stop_propagation();
                 }),
-                cx.entity(),
-            ))
-            .on_hover(cx.listener(
-                |this, hovered: &bool, _window, cx| {
-                    this.set_context_sidebar_activity_hovered(
-                        (*hovered).then_some(ContextSidebarPanel::Connections),
-                        cx,
-                    );
-                },
-            ))
+            );
+
+        div()
+            .id("context-connections-activity")
+            .flex_none()
+            .mb(px(self.tokens.metrics.activity_icon_gap))
+            .child(button)
+            .on_hover(cx.listener(|this, hovered: &bool, _window, cx| {
+                if *hovered {
+                    this.clear_all_workspace_tooltips(cx);
+                }
+                this.set_context_sidebar_activity_hovered(
+                    (*hovered).then_some(ContextSidebarPanel::Connections),
+                    cx,
+                );
+            }))
+            .into_any_element()
+    }
+
+    fn render_assistant_context_tool(&self, cx: &mut Context<Self>) -> AnyElement {
+        let active = self.context_sidebar_visible()
+            && self.active_context_sidebar_panel == ContextSidebarPanel::Assistant;
+        let button = oxideterm_gpui_ui::button::icon_button(
+            &self.tokens,
+            Self::render_lucide_icon(
+                LucideIcon::Sparkles,
+                self.tokens.metrics.activity_icon_glyph_size,
+                rgb(if active {
+                    self.tokens.ui.accent
+                } else {
+                    self.tokens.ui.text
+                }),
+            ),
+            self.context_tool_button_options(active),
+        );
+        let button = if active {
+            oxideterm_gpui_ui::theme_card_surface_shadow(button, &self.tokens)
+        } else {
+            button
+        };
+        let button = button
+            .id("context-assistant")
+            .on_mouse_down(
+                MouseButton::Left,
+                cx.listener(|this, _, _, cx| {
+                    this.toggle_context_sidebar_panel_pin(ContextSidebarPanel::Assistant, cx);
+                    cx.stop_propagation();
+                }),
+            );
+
+        div()
+            .id("context-assistant-activity")
+            .flex_none()
+            .mb(px(self.tokens.metrics.activity_icon_gap))
+            .child(button)
+            .on_hover(cx.listener(|this, hovered: &bool, _window, cx| {
+                if *hovered {
+                    this.clear_all_workspace_tooltips(cx);
+                }
+                this.set_context_sidebar_activity_hovered(
+                    (*hovered).then_some(ContextSidebarPanel::Assistant),
+                    cx,
+                );
+            }))
             .into_any_element()
     }
 
@@ -403,11 +470,7 @@ impl WorkspaceApp {
             .child(self.render_sessions_context_tool(cx))
             .child(self.render_connections_context_tool(cx));
         if ai_enabled {
-            buttons = buttons.child(self.render_activity_icon(
-                SidebarSection::Assistant,
-                LucideIcon::Sparkles,
-                cx,
-            ));
+            buttons = buttons.child(self.render_assistant_context_tool(cx));
         }
         if !tools.is_empty() {
             buttons = buttons.child(self.context_tool_separator());
@@ -417,31 +480,50 @@ impl WorkspaceApp {
                 buttons = buttons.child(self.context_tool_separator());
             }
             let active = self.context_tool_active(tool, cx);
+            let button = oxideterm_gpui_ui::button::icon_button(
+                &self.tokens,
+                Self::render_lucide_icon(
+                    tool.icon(),
+                    self.tokens.metrics.activity_icon_glyph_size,
+                    rgb(if active {
+                        self.tokens.ui.accent
+                    } else {
+                        self.tokens.ui.text
+                    }),
+                ),
+                self.context_tool_button_options(active),
+            );
+            let button = if active {
+                oxideterm_gpui_ui::theme_card_surface_shadow(button, &self.tokens)
+            } else {
+                button
+            };
+            let button = button
+                .id(format!("context-tool-btn-{index}"))
+                .on_mouse_down(
+                    MouseButton::Left,
+                    cx.listener(move |this, _, _, cx| {
+                        this.activate_context_tool(tool, cx);
+                        cx.stop_propagation();
+                    }),
+                );
+
             buttons = buttons.child(
                 div()
                     .id(format!("context-tool-activity-{index}"))
                     .flex_none()
                     .mb(px(self.tokens.metrics.activity_icon_gap))
-                    .child(self.workspace_tooltip_icon_button(
-                        tool.icon(),
-                        self.tokens.metrics.activity_icon_glyph_size,
-                        rgb(if active {
-                            self.tokens.ui.accent
-                        } else {
-                            self.tokens.ui.text
-                        }),
-                        self.context_tool_button_options(active),
-                        self.i18n.t(tool.label_key()),
-                        "context-tool",
-                        true,
-                        cx.listener(move |this, _, _, cx| {
-                            this.activate_context_tool(tool, cx);
-                            cx.stop_propagation();
-                        }),
-                        cx.entity(),
-                    ))
+                    .child(button)
                     .on_hover(cx.listener(
-                        |this, hovered: &bool, _window, cx| {
+                        move |this, hovered: &bool, _window, cx| {
+                            if *hovered {
+                                this.clear_all_workspace_tooltips(cx);
+                                if !this.context_sidebar_pinned {
+                                    this.host_tools.update(cx, |ht, cx| {
+                                        ht.select_sidebar_tool(tool, cx);
+                                    });
+                                }
+                            }
                             this.set_context_sidebar_activity_hovered(
                                 (*hovered).then_some(ContextSidebarPanel::HostTools),
                                 cx,
@@ -456,48 +538,65 @@ impl WorkspaceApp {
                 || overflow
                     .iter()
                     .any(|tool| self.context_tool_active(*tool, cx));
+            let button = oxideterm_gpui_ui::button::icon_button(
+                &self.tokens,
+                Self::render_lucide_icon(
+                    LucideIcon::MoreVertical,
+                    self.tokens.metrics.activity_icon_glyph_size,
+                    rgb(if active {
+                        self.tokens.ui.accent
+                    } else {
+                        self.tokens.ui.text
+                    }),
+                ),
+                self.context_tool_button_options(active),
+            );
+            let button = if active {
+                oxideterm_gpui_ui::theme_card_surface_shadow(button, &self.tokens)
+            } else {
+                button
+            };
+            let button = button
+                .id("context-tools-more")
+                .on_mouse_down(
+                    MouseButton::Left,
+                    cx.listener(move |this, _, window, cx| {
+                        let open = this.context_tools_menu.is_none();
+                        this.prepare_modal_interaction_boundary(cx);
+                        if open {
+                            let tools = this.enabled_context_sidebar_tools();
+                            let overflow = overflow_tools_from(
+                                &tools,
+                                this.context_tool_count_for(&tools, window, cx),
+                            );
+                            if overflow.is_empty() {
+                                return;
+                            }
+                            let active_tool = this.host_tools.read(cx).active_tool();
+                            let index = overflow
+                                .iter()
+                                .position(|tool| *tool == active_tool)
+                                .unwrap_or(0);
+                            this.context_tools_menu = Some(overflow[index]);
+                            this.context_tools_menu_scroll.scroll_to_item(index);
+                            window.focus(&this.focus_handle, cx);
+                        }
+                        cx.stop_propagation();
+                        cx.notify();
+                    }),
+                );
+
             buttons = buttons.child(
                 div()
+                    .id("context-tools-more-activity")
                     .flex_none()
                     .mb(px(self.tokens.metrics.activity_icon_gap))
-                    .child(self.workspace_tooltip_icon_button(
-                        LucideIcon::MoreVertical,
-                        self.tokens.metrics.activity_icon_glyph_size,
-                        rgb(if active {
-                            self.tokens.ui.accent
-                        } else {
-                            self.tokens.ui.text
-                        }),
-                        self.context_tool_button_options(active),
-                        self.i18n.t("sidebar.panels.more_tools"),
-                        "context-tools-more",
-                        true,
-                        cx.listener(move |this, _, window, cx| {
-                            let open = this.context_tools_menu.is_none();
-                            this.prepare_modal_interaction_boundary(cx);
-                            if open {
-                                let tools = this.enabled_context_sidebar_tools();
-                                let overflow = overflow_tools_from(
-                                    &tools,
-                                    this.context_tool_count_for(&tools, window, cx),
-                                );
-                                if overflow.is_empty() {
-                                    return;
-                                }
-                                let active_tool = this.host_tools.read(cx).active_tool();
-                                let index = overflow
-                                    .iter()
-                                    .position(|tool| *tool == active_tool)
-                                    .unwrap_or(0);
-                                this.context_tools_menu = Some(overflow[index]);
-                                this.context_tools_menu_scroll.scroll_to_item(index);
-                                window.focus(&this.focus_handle, cx);
-                            }
-                            cx.stop_propagation();
-                            cx.notify();
-                        }),
-                        cx.entity(),
-                    )),
+                    .child(button)
+                    .on_hover(cx.listener(|this, hovered: &bool, _window, cx| {
+                        if *hovered {
+                            this.clear_all_workspace_tooltips(cx);
+                        }
+                    })),
             );
         }
         // Plugin entries follow the host-tool block so their rows never shift
@@ -578,7 +677,6 @@ impl WorkspaceApp {
         // The fixed rail has no scroll transform. Derive the trigger position from the same
         // layout inputs in this frame, so resizing cannot leave a cached anchor behind.
         let top = self.window_titlebar_height(window)
-            + metrics.tabbar_height
             + PRIMARY_SIDEBAR_CONTENT_TOP_INSET
             + tool_stack_height_for_tools(
                 count,
