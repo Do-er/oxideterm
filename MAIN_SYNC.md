@@ -1,10 +1,10 @@
 # main → dev 同步台账
 
 - 基线：`b4e5c653`（dev 从 main 分叉前最后一个 main 提交）
-- 已同步水位：`5c186c012`（2026-10-30，#46 为止）。范围内 46 个提交全部处置完毕，#36 确认不采纳
-- 清单覆盖至：`5c186c012`（2026-10-30，main 当前最新）
-- 统计时间：2026-10-30
-- 合并提交不计入清单：范围内共 10 个 PR / 分支合并提交，其中 9 个为纯自动合并（两父重建 tree 与合并 tree 一致）；`3a000e01b`（PR #731）含 2 行手工解决，为 `export-ble`、`ble-local-echo` 两个复选框补上控件身份参数
+- 已同步水位：`c9c25ae62`（2026-11-02，#56 为止）。范围内 56 个提交全部处置完毕，#51 确认不采纳
+- 清单覆盖至：`c9c25ae62`（2026-11-02，main 当前最新）
+- 统计时间：2026-11-02
+- 合并提交不计入清单：`5c186c012..c9c25ae62` 范围内无合并提交。上一批 46 条范围内共 10 个 PR / 分支合并提交，其中 9 个为纯自动合并（两父重建 tree 与合并 tree 一致）；`3a000e01b`（PR #731）含 2 行手工解决，为 `export-ble`、`ble-local-echo` 两个复选框补上控件身份参数
 
 复现命令：
 
@@ -50,9 +50,9 @@ dev 自合并基点 `f2593f3bd` 起改动 270 个文件，集中在 `gpui-app`(1
 
 ## 提交清单
 
-共 46 个提交，全部已处置。只追加，不删行。
+共 56 个提交，全部已处置。只追加，不删行。
 
-`处置` 取值及本表分布：`直接继承` 4、`cherry-pick 合入` 33、`手工移植` 1、`不同步` 8。
+`处置` 取值及本表分布：`直接继承` 4、`cherry-pick 合入` 40、`手工移植` 3、`不同步` 9。
 
 | # | main 提交 | 内容 | 领域 | 状态 | 处置 | 说明 | dev 侧提交 |
 | --- | --- | --- | --- | --- | --- | --- | --- |
@@ -102,3 +102,13 @@ dev 自合并基点 `f2593f3bd` 起改动 270 个文件，集中在 `gpui-app`(1
 | 44 | `a28666915` | 编辑器文本快照共享：批量编辑单次应用、撤销保留切片、语法解析从 chunk 读入，IDE 保存沿用共享文本 | 编辑器 / IDE 内核 | ✅ | cherry-pick 合入 | 依赖 #18、#41。42 个文件，新增 `editor-syntax/src/source.rs`（`TextSource`）。唯一真实冲突 `gpui-ide/surface/editor_actions.rs::create_editor`：取上游的 `from_shared_text` + `cache_active`（来自已吸收的 #6 `is_markdown_preview`）；其余差异均为 #20 的 `sync_tab_render_caches`/markdown 缓存释放，不在本条范围 | `96bb41503` |
 | 45 | `7c5d4aae2` | 折叠行映射压缩为区间记录，替代逐行记录 | 编辑器 / IDE 内核 | ✅ | cherry-pick 合入 | 依赖 #18、#26。合入 #18 与 #26 后零冲突 | `3e5c4ee5a` |
 | 46 | `5c186c012` | Markdown 解析树共享所有权，块高度累积索引与布局复用 | 编辑器 / IDE 内核 | ✅ | cherry-pick 合入 | 依赖 #20、#21。`gpui-markdown/{layout,navigation}.rs` 与 `sftp/runtime.rs` 的冲突均随两条前置落地消失，`docs/development/native-editor-memory.md` 为纯追加 67 行，全条零冲突合入。引入 `MarkdownDocument` 的 `Arc` 共享、`BlockHeights` 累积索引、借用式 `MarkdownLayoutItem<'a>`、`MarkdownMeasurements::prepare` 内建布局，以及 `gpui-app` 的 `MarkdownPreviewCache<T>` 弱属主缓存（关闭对话框与切源码模式时释放） | `bf6b36b5b` |
+| 47 | `67cf8ebcf` | 扩展 Kitty 图形生命周期与动画：有序 grid 事件、会话授权本地资源、Unicode 占位符与相对放置 | 终端内核 | ✅ | 手工移植 | 54 个文件，主体为 `alacritty-terminal/src/term/graphics{,.d}/`、`oxideterm-terminal-graphics/src/graphics/{kitty,placeholders,relative,grid}.rs`、`gpui-terminal` 的 `image_animation` 与 `paint`。手工移植原因：`session/ble.rs` 在 dev 已删除，其图形接线无落点（`graphics_alt_screen_active` 字段随 BLE 一并消失，alt-screen 跟踪改由 grid 事件 API 承担）。唯一内容冲突 `session/serial.rs` 取 dev 文本；该文件内其余的换行重排属上游 diff 自身，非本题改动。11 个语言包的 `terminal.kitty_file_transmission` 文案同步更新为「本地资源授权」语义 | `d20d5be43` |
+| 48 | `a1499807e` | 图片像素以共享内存租约计数，解码预算集中到 `oxideterm-image-decoder` | 渲染 / 图形底座 | ✅ | cherry-pick 合入 | 零冲突。新增 `oxideterm-image-decoder/src/budget.rs`（像素预算与租约）与 `terminal-graphics/tests/budget.rs`；`background-media`、`render-policy`、`settings`、`image_cache`、`image_animation` 改为共用同一预算实现 | `f582826e1` |
+| 49 | `9edfe67ba` | 接入 Sixel grid 生命周期与 HiDPI 渲染 | 终端内核 | ✅ | cherry-pick 合入 | 零冲突。新增 `terminal-graphics/src/graphics/sixel_grid.rs`、`docs/development/sixel-graphics-compatibility.md`；`alacritty-terminal/src/term/graphics.rs` 增加 Sixel 网格接口，`terminal/src/{local/events,local/graphics_state,local/pty,tmux,vte}` 贯通事件与重排 | `cb26727ff` |
+| 50 | `a44658014` | Markdown 预览测试夹具关闭无关的 agent 采样 | 测试 | ✅ | cherry-pick 合入 | 零冲突，单文件 5 行。测试跟随其所属的编辑器领域，前置 #46 已在 dev | `a8a3e25c6` |
+| 51 | `544e76e8d` | 发布 OxideTerm 2.3.0：版本号、2.3.0 变更日志、内存对比图资产与生成脚本 | 文档 | ✅ | 不同步 | 三处不适用。**版本号**：`Cargo.toml`/`Cargo.lock` 改回 2.3.0，dev 自 `b770e7f4f` 起为 3.0.0，`git merge-tree` 预览在 `Cargo.toml`、`Cargo.lock` 冲突。**变更日志**：220 行 2.3.0 章节描述 main 已发布版本，含 dev 不存在的 BLE 终端（PR #731、#735），照搬会把 dev 不会发布的内容写进 dev 的发布说明；dev 最新章节为 2.2.6，3.0.0 章节应按 dev 实际内容另写。**资产与脚本**：`terminal-memory-2.3.0-comparison.{png,svg}` 与 `scripts/release/generate_terminal_memory_comparison.py` 服务于 main 的 v2.3.0 release 页面与固定 raw URL，数据取自 main 的基准；dev 若需要内存对比图，应按 dev 基准重新生成 | — |
+| 52 | `b1ec34ad7` | 更新贡献指南与 AI 辅助开发规范 | 文档 | ✅ | cherry-pick 合入 | 零冲突，单文件 60 行。属流程文档，与 dev 代码路径无依赖 | `b7cf71752` |
+| 53 | `948c5f4bb` | 背景色上保留透明 Powerline 分隔符 | 终端内核 | ✅ | cherry-pick 合入 | 零冲突。`terminal-view` 的 `element{,/layout,/paint,/style}` 增加分隔符切出与背景合成，`terminal-model`、`terminal/src/color.rs`、`local/pty.rs` 传递透明标志；新增 `layout_tests` 用例 | `cd0443c66` |
+| 54 | `538fea5de` | 采样字段裁剪与输出上限恢复：仅取被消费的 Docker / 系统 / 服务 / journal 字段，超限样本读到结束标记 | 协议 / 依赖底层 | ✅ | cherry-pick 合入 | 零冲突。`connection-monitor/{docker,profiler,log,gpu/sampler}` 改为按字段选择解析，`oxideterm-ssh/{monitor,transport}` 处理输出上限与 Windows 引号，新增 `transport/command/tests.rs`；11 个语言包的 `sidebar.docker.{incomplete,output_limit}` 同步补齐 | `30e142042` |
+| 55 | `995e4ac01` | AMD / Intel GPU 遥测按需选择字段 | 协议 / 依赖底层 | ✅ | cherry-pick 合入 | 零冲突，3 个文件。`gpu/provider/{amd,intel,mod}.rs` 收敛采样字段与解析分支，与 dev 的 GPU provider 布局一致 | `363643614` |
+| 56 | `c9c25ae62` | 命令面板纳入全部已保存连接类型，与会话管理器共用库存与打开路径 | 应用层 UI | ✅ | 手工移植 | 3 个文件。移植 `saved_session_manager_items` 共享库存、`PaletteAction::OpenSavedProfile` 分发与全类型前缀/图标匹配，dev 侧差异：无 BLE 分支（`Ble` 变体与 `ble-profile` 前缀删除）、`open_session_manager_target(target, window, cx)` 无 sftp 覆盖参数、`SessionManagerDisplayItem::name()` 保持 `Cow<'_, str>` 返回类型、本地终端行沿用 `local_profile_display_name` 派生的 shell 标签（面板标签与搜索文本同会话管理器一致）。测试 `all_saved_connection_types_are_searchable_with_distinct_open_targets` 一并移植并去掉 BLE 夹具 | `7751dca5f` |
