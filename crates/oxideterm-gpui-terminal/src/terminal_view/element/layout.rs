@@ -124,6 +124,7 @@ pub(crate) fn search_match_rects_for_rows(
                 col: start_col,
                 cells,
                 color: rgba(0xffcc6644).into(),
+                powerline_cutout: None,
             });
         }
     }
@@ -151,6 +152,7 @@ pub(crate) fn visible_search_match_rects(
                     row,
                     col: range.start_col,
                     cells: range.end_col.saturating_sub(range.start_col),
+                    powerline_cutout: None,
                     color: if selected_match == Some(index) {
                         rgba(0xffdd8899).into()
                     } else {
