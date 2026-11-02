@@ -501,6 +501,14 @@ impl WorkspaceApp {
                     settings.local_terminal.default_shell_id.hash(&mut hasher);
                     self.local_shells.len().hash(&mut hasher);
                 }
+                if route.terminal_page == TerminalSettingsPage::Highlight {
+                    // Expanding a rule changes the rules card height, so only
+                    // the highlight row needs a fresh measurement.
+                    self.settings_workspace
+                        .read(cx)
+                        .expanded_highlight_rule
+                        .hash(&mut hasher);
+                }
             }
             SettingsTab::Sftp => {
                 settings.sftp.speed_limit_enabled.hash(&mut hasher);

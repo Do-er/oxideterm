@@ -437,6 +437,9 @@ impl WorkspaceApp {
             );
         } else {
             for (index, rule) in rules.iter().enumerate() {
+                if index > 0 {
+                    rules_card = rules_card.child(self.card_separator());
+                }
                 rules_card =
                     rules_card.child(self.highlight_rule_row(index, rule, rules.len(), cx));
             }
@@ -1129,6 +1132,17 @@ impl WorkspaceApp {
         );
     }
 
+    fn toggle_highlight_rule(&mut self, id: String, cx: &mut Context<Self>) {
+        self.settings_workspace.update(cx, |state, cx| {
+            if state.expanded_highlight_rule.as_deref() == Some(id.as_str()) {
+                state.expanded_highlight_rule = None;
+            } else {
+                state.expanded_highlight_rule = Some(id);
+            }
+            cx.notify();
+        });
+    }
+
     pub(in crate::workspace) fn highlight_rule_row(
         &self,
         index: usize,
@@ -1136,12 +1150,19 @@ impl WorkspaceApp {
         total: usize,
         cx: &mut Context<Self>,
     ) -> AnyElement {
+        let rule_id = rule.id.clone();
+        let expanded = self
+            .settings_workspace
+            .read(cx)
+            .expanded_highlight_rule
+            .as_deref()
+            == Some(rule.id.as_str());
         let status_color = if rule.enabled {
             self.tokens.ui.accent
         } else {
             self.tokens.ui.text_muted
         };
-        let title = if rule.label.trim().is_empty() {
+        let title_text = if rule.label.trim().is_empty() {
             self.i18n
                 .t("settings_view.terminal.highlight_rules.untitled_rule")
         } else {
@@ -1151,188 +1172,285 @@ impl WorkspaceApp {
         let scope_label = highlight_match_scope_label(rule.match_scope, &self.i18n);
         let validation_error = highlight_rule_validation_error(rule);
 
-        div()
-            .w_full()
-            .min_w(px(0.0))
+        // Summary title: rule name plus its enabled/regex state so the row
+        // reads as one sentence instead of two unlabeled pills.
+        let title = div()
+            .min_w_0()
             .flex()
-            .flex_col()
-            .gap(px(12.0))
+            .flex_wrap()
+            .items_center()
+            .gap(px(8.0))
             .child(
                 div()
-                    .flex()
-                    .flex_row()
-                    .items_start()
-                    .justify_between()
-                    .gap(px(12.0))
-                    .child(
-                        div()
-                            .flex_1()
-                            .min_w(px(0.0))
-                            .flex()
-                            .flex_col()
-                            .gap(px(6.0))
-                            .child(
-                                div()
-                                    .flex()
-                                    .flex_row()
-                                    .flex_wrap()
-                                    .items_center()
-                                    .gap(px(8.0))
-                                    .child(
-                                        div()
-                                            .truncate()
-                                            .text_size(px(self.tokens.metrics.ui_text_sm))
-                                            .font_weight(gpui::FontWeight::MEDIUM)
-                                            .text_color(rgb(self.tokens.ui.text))
-                                            .child(title),
-                                    )
-                                    .child(self.text_badge(
-                                        if rule.enabled {
-                                            self.i18n
-                                                .t("settings_view.terminal.highlight_rules.enabled")
-                                        } else {
-                                            self.i18n.t(
-                                                "settings_view.terminal.highlight_rules.disabled",
-                                            )
-                                        },
-                                        status_color,
-                                    ))
-                                    .when(rule.is_regex, |row| {
-                                        row.child(
-                                            self.text_badge(
-                                                self.i18n.t(
-                                                    "settings_view.terminal.highlight_rules.regex",
-                                                ),
-                                                self.tokens.ui.text_muted,
-                                            ),
-                                        )
-                                    }),
-                            )
-                            .child(
-                                div()
-                                    .truncate()
-                                    .font_family(settings_mono_font_family(
-                                        self.settings_store.settings(),
-                                    ))
-                                    .text_size(px(self.tokens.metrics.ui_text_xs))
-                                    .text_color(rgb(self.tokens.ui.text_muted))
-                                    .child(summarize_highlight_pattern(&rule.pattern)),
-                            ),
-                    )
-                    .child(
-                        div()
-                            .flex()
-                            .flex_row()
-                            .flex_wrap()
-                            .gap(px(6.0))
-                            .child(self.highlight_small_button(
-                                "↑".to_string(),
-                                index > 0,
-                                move |this, cx| this.move_highlight_rule(index, -1, cx),
-                                cx,
-                            ))
-                            .child(self.highlight_small_button(
-                                "↓".to_string(),
-                                index + 1 < total,
-                                move |this, cx| this.move_highlight_rule(index, 1, cx),
-                                cx,
-                            ))
-                            .child(self.highlight_small_button(
-                                self.i18n.t("settings_view.terminal.highlight_rules.delete"),
-                                true,
-                                move |this, cx| this.remove_highlight_rule(index, cx),
-                                cx,
-                            )),
-                    ),
+                    .truncate()
+                    .text_size(px(self.tokens.metrics.ui_text_sm))
+                    .font_weight(gpui::FontWeight::MEDIUM)
+                    .text_color(rgb(self.tokens.ui.text))
+                    .child(title_text),
             )
-            .child(
-                div()
-                    .grid()
-                    .gap(px(12.0))
-                    .child(
-                        self.highlight_input_block(
+            .child(self.text_badge(
+                if rule.enabled {
+                    self.i18n
+                        .t("settings_view.terminal.highlight_rules.enabled")
+                } else {
+                    self.i18n
+                        .t("settings_view.terminal.highlight_rules.disabled")
+                },
+                status_color,
+            ))
+            .when(rule.is_regex, |row| {
+                row.child(self.text_badge(
+                    self.i18n.t("settings_view.terminal.highlight_rules.regex"),
+                    self.tokens.ui.text_muted,
+                ))
+            })
+            .into_any_element();
+
+        let subtitle = div()
+            .min_w_0()
+            .truncate()
+            .font_family(settings_mono_font_family(self.settings_store.settings()))
+            .text_size(px(self.tokens.metrics.ui_text_xs))
+            .text_color(rgb(self.tokens.ui.text_muted))
+            .child(summarize_highlight_pattern(&rule.pattern))
+            .into_any_element();
+
+        // Foreground/background previews use the shared theme swatch so the
+        // collapsed row still communicates the rule's colors at a glance.
+        let mut badges = Vec::new();
+        if let Some(foreground) = rule.foreground.as_deref().and_then(parse_color_hex) {
+            badges.push(
+                settings_theme_editor_color_swatch(&self.tokens, foreground)
+                    .size(px(16.0))
+                    .into_any_element(),
+            );
+        }
+        if rule.render_mode != HighlightRuleRenderMode::Background || !rule.preserve_background {
+            if let Some(background) = rule.background.as_deref().and_then(parse_color_hex) {
+                badges.push(
+                    settings_theme_editor_color_swatch(&self.tokens, background)
+                        .size(px(16.0))
+                        .into_any_element(),
+                );
+            }
+        }
+
+        let icon_size = 14.0;
+        let icon_color = rgb(self.tokens.ui.text_muted);
+        let move_up = self.workspace_tooltip_icon_button(
+            LucideIcon::ArrowUp,
+            icon_size,
+            icon_color,
+            IconButtonOptions {
+                disabled: index == 0,
+                hover_background: Some(rgb(self.tokens.ui.bg_hover)),
+                ..IconButtonOptions::compact(24.0)
+            },
+            self.i18n.t("settings_view.terminal.highlight_rules.move_up"),
+            "highlight-rule-move-up",
+            true,
+            cx.listener(move |this, _event, _window, cx| {
+                this.move_highlight_rule(index, -1, cx);
+                cx.stop_propagation();
+            }),
+            cx.entity(),
+        );
+        let move_down = self.workspace_tooltip_icon_button(
+            LucideIcon::ArrowDown,
+            icon_size,
+            icon_color,
+            IconButtonOptions {
+                disabled: index + 1 >= total,
+                hover_background: Some(rgb(self.tokens.ui.bg_hover)),
+                ..IconButtonOptions::compact(24.0)
+            },
+            self.i18n
+                .t("settings_view.terminal.highlight_rules.move_down"),
+            "highlight-rule-move-down",
+            true,
+            cx.listener(move |this, _event, _window, cx| {
+                this.move_highlight_rule(index, 1, cx);
+                cx.stop_propagation();
+            }),
+            cx.entity(),
+        );
+        let remove = self.workspace_tooltip_icon_button(
+            LucideIcon::Trash2,
+            icon_size,
+            rgb(self.tokens.ui.error),
+            IconButtonOptions {
+                hover_background: Some(rgb(self.tokens.ui.bg_hover)),
+                ..IconButtonOptions::compact(24.0)
+            },
+            self.i18n.t("settings_view.terminal.highlight_rules.delete"),
+            "highlight-rule-delete",
+            true,
+            cx.listener(move |this, _event, _window, cx| {
+                this.remove_highlight_rule(index, cx);
+                cx.stop_propagation();
+            }),
+            cx.entity(),
+        );
+
+        let toggle_id = rule_id.clone();
+        let keyboard_id = rule_id.clone();
+        let chevron_id = SharedString::from(format!("highlight-rule-chevron-{rule_id}"));
+        let row = entity_list_row(
+            &self.tokens,
+            EntityListRowOptions::new().has_background_image(self.settings_background_active()),
+            Some(self.render_animated_chevron(
+                (chevron_id, expanded as usize),
+                expanded,
+                14.0,
+                rgb(self.tokens.ui.text_muted),
+            )),
+            title,
+            Some(subtitle),
+            badges,
+            vec![move_up, move_down, remove],
+        )
+        .id(SharedString::from(format!("highlight-rule-row-{rule_id}")))
+        .role(gpui::Role::Button)
+        .aria_label(
+            self.i18n.t(if expanded {
+                "settings_view.terminal.highlight_rules.collapse_rule"
+            } else {
+                "settings_view.terminal.highlight_rules.expand_rule"
+            }),
+        )
+        .aria_expanded(expanded)
+        .focusable()
+        .tab_stop(true)
+        .focus_visible(|style| style.border_1().border_color(rgb(self.tokens.ui.accent)))
+        .cursor_pointer()
+        .on_mouse_down(
+            MouseButton::Left,
+            cx.listener(move |this, _event, _window, cx| {
+                this.toggle_highlight_rule(toggle_id.clone(), cx);
+                cx.stop_propagation();
+            }),
+        )
+        .on_key_down(cx.listener(move |this, event: &KeyDownEvent, _window, cx| {
+            if matches!(event.keystroke.key.as_str(), "enter" | "space") {
+                this.toggle_highlight_rule(keyboard_id.clone(), cx);
+                cx.stop_propagation();
+            }
+        }));
+
+        let mut content = div().w_full().min_w_0().child(row);
+        if expanded {
+            let details = div()
+                .w_full()
+                .min_w_0()
+                .px(px(12.0))
+                .pb(px(12.0))
+                .flex()
+                .flex_col()
+                .gap(px(12.0))
+                .child(
+                    div()
+                        .w_full()
+                        .min_w_0()
+                        .flex()
+                        .flex_col()
+                        .gap(px(8.0))
+                        .child(self.highlight_input_block_fill(
                             self.i18n.t("settings_view.terminal.highlight_rules.label"),
                             SettingsInput::HighlightLabel(index),
                             rule.label.clone(),
                             self.i18n
                                 .t("settings_view.terminal.highlight_rules.label_placeholder"),
-                            220.0,
                             cx,
-                        ),
-                    )
-                    .child(
-                        self.highlight_input_block(
+                        ))
+                        .child(self.highlight_input_block_fill(
                             self.i18n
                                 .t("settings_view.terminal.highlight_rules.pattern"),
                             SettingsInput::HighlightPattern(index),
                             rule.pattern.clone(),
                             self.i18n
                                 .t("settings_view.terminal.highlight_rules.pattern_placeholder"),
-                            360.0,
                             cx,
+                        ))
+                        .child(
+                            div()
+                                .flex()
+                                .flex_row()
+                                .flex_wrap()
+                                .gap(px(12.0))
+                                .child(self.highlight_checkbox(
+                                    self.i18n
+                                        .t("settings_view.terminal.highlight_rules.regex"),
+                                    rule.is_regex,
+                                    move |settings, value| {
+                                        if let Some(rule) = settings
+                                            .terminal
+                                            .effective_highlight_rules_mut()
+                                            .get_mut(index)
+                                        {
+                                            rule.is_regex = value;
+                                        }
+                                    },
+                                    cx,
+                                ))
+                                .child(self.highlight_checkbox(
+                                    self.i18n.t(
+                                        "settings_view.terminal.highlight_rules.case_sensitive",
+                                    ),
+                                    rule.case_sensitive,
+                                    move |settings, value| {
+                                        if let Some(rule) = settings
+                                            .terminal
+                                            .effective_highlight_rules_mut()
+                                            .get_mut(index)
+                                        {
+                                            rule.case_sensitive = value;
+                                        }
+                                    },
+                                    cx,
+                                )),
                         ),
-                    ),
-            )
-            .child(
-                div()
-                    .flex()
-                    .flex_row()
-                    .flex_wrap()
-                    .items_end()
-                    .gap(px(12.0))
-                    .child(
-                        self.highlight_input_block(
+                )
+                .child(
+                    div()
+                        .w_full()
+                        .min_w_0()
+                        .flex()
+                        .flex_row()
+                        .flex_wrap()
+                        .items_end()
+                        .gap(px(12.0))
+                        .child(self.highlight_input_block_fill(
                             self.i18n
                                 .t("settings_view.terminal.highlight_rules.foreground"),
                             SettingsInput::HighlightForeground(index),
                             rule.foreground.clone().unwrap_or_default(),
                             "#f8fafc".to_string(),
-                            150.0,
                             cx,
-                        ),
-                    )
-                    .when(
-                        rule.render_mode != HighlightRuleRenderMode::Background
-                            || !rule.preserve_background,
-                        |row| {
-                            row.child(
-                                self.highlight_input_block(
+                        ))
+                        .when(
+                            rule.render_mode != HighlightRuleRenderMode::Background
+                                || !rule.preserve_background,
+                            |row| {
+                                row.child(self.highlight_input_block_fill(
                                     self.i18n
                                         .t("settings_view.terminal.highlight_rules.background"),
                                     SettingsInput::HighlightBackground(index),
                                     rule.background.clone().unwrap_or_default(),
                                     "#991b1b".to_string(),
-                                    150.0,
                                     cx,
-                                ),
-                            )
-                        },
-                    )
-                    .child(self.highlight_render_mode_control(index, mode_label, cx))
-                    .child(self.highlight_match_scope_control(index, scope_label, cx))
-                    .when(
-                        rule.render_mode == HighlightRuleRenderMode::Background,
-                        |row| {
-                            row.child(self.highlight_checkbox(
-                                self.i18n.t(
-                                    "settings_view.terminal.highlight_rules.preserve_background",
-                                ),
-                                rule.preserve_background,
-                                move |settings, value| {
-                                    if let Some(rule) = settings
-                                        .terminal
-                                        .effective_highlight_rules_mut()
-                                        .get_mut(index)
-                                    {
-                                        rule.preserve_background = value;
-                                    }
-                                },
-                                cx,
-                            ))
-                        },
-                    )
-                    .child(
-                        self.highlight_checkbox(
+                                ))
+                            },
+                        )
+                        .child(self.highlight_render_mode_control(index, mode_label, cx))
+                        .child(self.highlight_match_scope_control(index, scope_label, cx)),
+                )
+                .child(
+                    div()
+                        .flex()
+                        .flex_row()
+                        .flex_wrap()
+                        .gap(px(12.0))
+                        .child(self.highlight_checkbox(
                             self.i18n
                                 .t("settings_view.terminal.highlight_rules.enabled"),
                             rule.enabled,
@@ -1346,65 +1464,56 @@ impl WorkspaceApp {
                                 }
                             },
                             cx,
-                        ),
-                    )
-                    .child(self.highlight_checkbox(
-                        self.i18n.t("settings_view.terminal.highlight_rules.regex"),
-                        rule.is_regex,
-                        move |settings, value| {
-                            if let Some(rule) = settings
-                                .terminal
-                                .effective_highlight_rules_mut()
-                                .get_mut(index)
-                            {
-                                rule.is_regex = value;
-                            }
-                        },
-                        cx,
-                    ))
-                    .child(
-                        self.highlight_checkbox(
-                            self.i18n
-                                .t("settings_view.terminal.highlight_rules.case_sensitive"),
-                            rule.case_sensitive,
-                            move |settings, value| {
-                                if let Some(rule) = settings
-                                    .terminal
-                                    .effective_highlight_rules_mut()
-                                    .get_mut(index)
-                                {
-                                    rule.case_sensitive = value;
-                                }
-                            },
-                            cx,
-                        ),
-                    ),
-            )
-            .child(
-                div()
-                    .text_size(px(self.tokens.metrics.ui_text_xs))
-                    .text_color(if validation_error.is_some() {
-                        rgb(self.tokens.ui.warning)
-                    } else {
-                        rgb(self.tokens.ui.text_muted)
-                    })
-                    .child(
-                        validation_error
-                            .map(|reason| {
-                                self.i18n.t(&format!(
-                                    "settings_view.terminal.highlight_rules.validation.{reason}"
+                        ))
+                        .when(
+                            rule.render_mode == HighlightRuleRenderMode::Background,
+                            |row| {
+                                row.child(self.highlight_checkbox(
+                                    self.i18n.t(
+                                        "settings_view.terminal.highlight_rules.preserve_background",
+                                    ),
+                                    rule.preserve_background,
+                                    move |settings, value| {
+                                        if let Some(rule) = settings
+                                            .terminal
+                                            .effective_highlight_rules_mut()
+                                            .get_mut(index)
+                                        {
+                                            rule.preserve_background = value;
+                                        }
+                                    },
+                                    cx,
                                 ))
-                            })
-                            .unwrap_or_else(|| {
-                                self.i18n.t(if rule.is_regex {
-                                    "settings_view.terminal.highlight_rules.mode_hint.regex"
-                                } else {
-                                    "settings_view.terminal.highlight_rules.mode_hint.literal"
+                            },
+                        ),
+                )
+                .child(
+                    div()
+                        .text_size(px(self.tokens.metrics.ui_text_xs))
+                        .text_color(if validation_error.is_some() {
+                            rgb(self.tokens.ui.warning)
+                        } else {
+                            rgb(self.tokens.ui.text_muted)
+                        })
+                        .child(
+                            validation_error
+                                .map(|reason| {
+                                    self.i18n.t(&format!(
+                                        "settings_view.terminal.highlight_rules.validation.{reason}"
+                                    ))
                                 })
-                            }),
-                    ),
-            )
-            .into_any_element()
+                                .unwrap_or_else(|| {
+                                    self.i18n.t(if rule.is_regex {
+                                        "settings_view.terminal.highlight_rules.mode_hint.regex"
+                                    } else {
+                                        "settings_view.terminal.highlight_rules.mode_hint.literal"
+                                    })
+                                }),
+                        ),
+                );
+            content = content.child(details);
+        }
+        content.into_any_element()
     }
 
     pub(in crate::workspace) fn highlight_small_button(
@@ -1456,6 +1565,32 @@ impl WorkspaceApp {
                     .child(label),
             )
             .child(self.settings_text_input_control(input, value, placeholder, width, cx))
+            .into_any_element()
+    }
+
+    pub(in crate::workspace) fn highlight_input_block_fill(
+        &self,
+        label: String,
+        input: SettingsInput,
+        value: String,
+        placeholder: String,
+        cx: &mut Context<Self>,
+    ) -> AnyElement {
+        // Expanded rule fields own their width inside the form column instead
+        // of hard-coding pixel widths that overflow narrow cards.
+        div()
+            .min_w(px(0.0))
+            .flex_1()
+            .flex()
+            .flex_col()
+            .gap(px(4.0))
+            .child(
+                div()
+                    .text_size(px(self.tokens.metrics.ui_text_xs))
+                    .text_color(rgb(self.tokens.ui.text))
+                    .child(label),
+            )
+            .child(self.settings_text_input_control_fill(input, value, placeholder, cx))
             .into_any_element()
     }
 

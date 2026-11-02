@@ -1813,6 +1813,13 @@ impl WorkspaceApp {
         index: usize,
         cx: &mut Context<Self>,
     ) {
+        let removed_id = self
+            .settings_store
+            .settings()
+            .terminal
+            .effective_highlight_rules()
+            .get(index)
+            .map(|rule| rule.id.clone());
         self.edit_settings(
             move |settings| {
                 let rules = settings.terminal.effective_highlight_rules_mut();
@@ -1823,6 +1830,16 @@ impl WorkspaceApp {
             },
             cx,
         );
+        // A removed rule can no longer own the expanded editor; fold it so the
+        // detail form does not linger against a row that no longer exists.
+        if let Some(removed_id) = removed_id {
+            self.settings_workspace.update(cx, |state, cx| {
+                if state.expanded_highlight_rule.as_deref() == Some(removed_id.as_str()) {
+                    state.expanded_highlight_rule = None;
+                    cx.notify();
+                }
+            });
+        }
     }
 
     pub(in crate::workspace) fn move_highlight_rule(

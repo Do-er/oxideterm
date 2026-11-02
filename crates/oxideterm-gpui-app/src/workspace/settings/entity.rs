@@ -433,6 +433,9 @@ pub(in crate::workspace) struct SettingsWorkspaceEntity {
     pub(super) managed_key_dialog_exit_task: Option<Task<()>>,
     pub(super) managed_key_file_picker_task: Option<Task<()>>,
     pub(super) expanded_mcp_client: Option<String>,
+    /// Rule id whose detail form is open. Rule ids, unlike list indexes, survive
+    /// insert, delete, and reorder so an open editor follows its own rule.
+    pub(super) expanded_highlight_rule: Option<String>,
     pub(super) new_mcp_client_mode: oxideterm_public_mcp::ClientApprovalMode,
     pub(super) network_proxy_password: Zeroizing<String>,
     pub(super) network_proxy_password_status: Option<String>,
@@ -612,6 +615,7 @@ impl SettingsWorkspaceEntity {
             managed_key_dialog_exit_task: None,
             managed_key_file_picker_task: None,
             expanded_mcp_client: None,
+            expanded_highlight_rule: None,
             new_mcp_client_mode: oxideterm_public_mcp::ClientApprovalMode::Standard,
             network_proxy_password: Zeroizing::new(String::new()),
             network_proxy_password_status: None,
