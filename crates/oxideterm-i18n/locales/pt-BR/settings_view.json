@@ -772,7 +772,12 @@
         "secrets_warning": "Não armazene senhas, tokens, chaves privadas ou outras credenciais nas regras de gatilho.",
         "validation_failed": "Corrija os campos de gatilho destacados antes de salvar.",
         "load_failed": "Não foi possível carregar as regras de gatilho do terminal.",
-        "save_failed": "Não foi possível salvar as regras de gatilho do terminal."
+        "save_failed": "Não foi possível salvar as regras de gatilho do terminal.",
+        "ssh_terminals": "Terminais SSH",
+        "connection_groups": "Grupos de conexão",
+        "ungrouped": "Sem grupo",
+        "select_rule_to_preview": "Selecione uma regra à esquerda para ver detalhes, ou adicione uma nova regra.",
+        "edit_rule_title": "Editar regra de gatilho"
       },
       "command_bar_focus_handoff": "Focar terminal para comandos TUI",
       "command_bar_focus_handoff_hint": "Escolha os comandos que devem transferir o foco do teclado para o terminal após iniciarem.",

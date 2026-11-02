@@ -772,7 +772,12 @@
         "secrets_warning": "트리거 규칙에 비밀번호, 토큰, 개인 키 또는 기타 자격 증명을 저장하지 마세요.",
         "validation_failed": "저장하기 전에 강조 표시된 트리거 필드를 수정하세요.",
         "load_failed": "터미널 트리거 규칙을 불러올 수 없습니다.",
-        "save_failed": "터미널 트리거 규칙을 저장할 수 없습니다."
+        "save_failed": "터미널 트리거 규칙을 저장할 수 없습니다.",
+        "ssh_terminals": "SSH 터미널",
+        "connection_groups": "연결 그룹",
+        "ungrouped": "미분류",
+        "select_rule_to_preview": "세부 정보를 보려면 왼쪽에서 규칙을 선택하거나 새 규칙을 추가하세요.",
+        "edit_rule_title": "트리거 규칙 편집"
       },
       "command_bar_focus_handoff": "TUI 명령 후 터미널 포커스",
       "command_bar_focus_handoff_hint": "실행 후 키보드 포커스를 터미널로 넘길 명령을 선택합니다.",

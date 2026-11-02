@@ -1,6 +1,7 @@
 // Hallmark · pre-emit critique: P5 H5 E5 S5 R5 V5
 use gpui::{
-    BoxShadow, CursorStyle, Div, ParentElement, Styled, div, point, prelude::*, px, rgb, rgba, svg,
+    AnyElement, BoxShadow, CursorStyle, Div, ParentElement, Styled, div, point, prelude::*, px,
+    rgb, rgba, svg,
 };
 use oxideterm_theme::ThemeTokens;
 
@@ -64,27 +65,23 @@ pub fn checkbox_with_state(
     let theme = tokens.ui;
     let has_label = !label.is_empty();
     let selected = state != CheckboxState::Unchecked;
-    let mark_animation_id = gpui::SharedString::from(format!("checkbox-mark-{label}"));
-    let mark = match state {
-        CheckboxState::Indeterminate => div()
-            .w(px(CHECKBOX_INDETERMINATE_MARK_WIDTH))
-            .h(px(CHECKBOX_INDETERMINATE_MARK_HEIGHT))
-            .rounded_full()
-            .bg(rgb(CHECKBOX_CHECKED_TEXT))
-            .into_any_element(),
-        CheckboxState::Checked | CheckboxState::Unchecked => {
-            // Keep the check mounted so both checking and unchecking can
-            // animate without delaying the input state transition.
-            crate::motion::animated_checkmark(
-                tokens,
-                mark_animation_id,
-                svg()
-                    .path(CHECKBOX_ICON_PATH)
-                    .size(px(tokens.metrics.ui_checkbox_icon_size))
-                    .text_color(rgb(CHECKBOX_CHECKED_TEXT)),
-                state == CheckboxState::Checked,
-            )
-        }
+    let mark: Option<AnyElement> = match state {
+        CheckboxState::Indeterminate => Some(
+            div()
+                .w(px(CHECKBOX_INDETERMINATE_MARK_WIDTH))
+                .h(px(CHECKBOX_INDETERMINATE_MARK_HEIGHT))
+                .rounded_full()
+                .bg(rgb(CHECKBOX_CHECKED_TEXT))
+                .into_any_element(),
+        ),
+        CheckboxState::Checked => Some(
+            svg()
+                .path(CHECKBOX_ICON_PATH)
+                .size(px(tokens.metrics.ui_checkbox_icon_size))
+                .text_color(rgb(CHECKBOX_CHECKED_TEXT))
+                .into_any_element(),
+        ),
+        CheckboxState::Unchecked => None,
     };
     let checkbox = div()
         .flex()
@@ -122,7 +119,7 @@ pub fn checkbox_with_state(
                 .when(options.focused, |box_el| {
                     box_el.shadow(checkbox_focus_ring(tokens))
                 })
-                .child(mark),
+                .when_some(mark, |box_el, mark| box_el.child(mark)),
         );
 
     if has_label {

@@ -772,7 +772,12 @@
         "secrets_warning": "不要在触发器规则中保存密码、令牌、私钥或其他凭据。",
         "validation_failed": "请先修正触发器字段后再保存。",
         "load_failed": "无法加载终端触发器规则。",
-        "save_failed": "无法保存终端触发器规则。"
+        "save_failed": "无法保存终端触发器规则。",
+        "ssh_terminals": "SSH 终端",
+        "connection_groups": "连接分组",
+        "ungrouped": "未分组",
+        "select_rule_to_preview": "从左侧选择一条规则查看详情，或新建一条规则。",
+        "edit_rule_title": "编辑触发器规则"
       },
       "command_bar_focus_handoff": "TUI 命令后聚焦终端",
       "command_bar_focus_handoff_hint": "选择启动后应将键盘焦点交给终端的命令。",

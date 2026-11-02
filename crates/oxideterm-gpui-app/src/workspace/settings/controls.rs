@@ -1109,21 +1109,24 @@ impl WorkspaceApp {
                 let draft = self.terminal_trigger_draft()?;
                 let current = match &draft.scope {
                     TerminalTriggerScope::AllTerminals => 0,
-                    TerminalTriggerScope::LocalTerminals => 1,
-                    TerminalTriggerScope::SavedConnections { .. } => 2,
+                    TerminalTriggerScope::SshTerminals => 1,
+                    TerminalTriggerScope::LocalTerminals => 2,
+                    TerminalTriggerScope::ConnectionGroups { .. } => 3,
+                    TerminalTriggerScope::SavedConnections { .. } => 3,
                 };
-                let saved_connections = match &draft.scope {
-                    TerminalTriggerScope::SavedConnections { connections } => connections.clone(),
+                let existing_groups = match &draft.scope {
+                    TerminalTriggerScope::ConnectionGroups { groups } => groups.clone(),
                     _ => Vec::new(),
                 };
                 let mut popup = select_overlay_popup(&self.tokens, width);
-                for scope_index in 0..3 {
+                for scope_index in 0..4 {
                     let label_key = match scope_index {
                         0 => "settings_view.terminal.triggers.all_terminals",
-                        1 => "settings_view.terminal.triggers.local_terminals",
-                        _ => "settings_view.terminal.triggers.saved_connections",
+                        1 => "settings_view.terminal.triggers.ssh_terminals",
+                        2 => "settings_view.terminal.triggers.local_terminals",
+                        _ => "settings_view.terminal.triggers.connection_groups",
                     };
-                    let existing_connections = saved_connections.clone();
+                    let saved_groups = existing_groups.clone();
                     popup = popup.child(select_option_action(
                         select_option(&self.tokens, self.i18n.t(label_key), scope_index == current),
                         false,
@@ -1132,9 +1135,10 @@ impl WorkspaceApp {
                             this.close_settings_select();
                             let scope = match scope_index {
                                 0 => TerminalTriggerScope::AllTerminals,
-                                1 => TerminalTriggerScope::LocalTerminals,
-                                _ => TerminalTriggerScope::SavedConnections {
-                                    connections: existing_connections.clone(),
+                                1 => TerminalTriggerScope::SshTerminals,
+                                2 => TerminalTriggerScope::LocalTerminals,
+                                _ => TerminalTriggerScope::ConnectionGroups {
+                                    groups: saved_groups.clone(),
                                 },
                             };
                             this.select_terminal_trigger_scope(scope);

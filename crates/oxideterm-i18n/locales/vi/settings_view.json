@@ -772,7 +772,12 @@
         "secrets_warning": "Không lưu mật khẩu, token, khóa riêng tư hoặc thông tin đăng nhập khác trong quy tắc kích hoạt.",
         "validation_failed": "Hãy sửa các trường trình kích hoạt được đánh dấu trước khi lưu.",
         "load_failed": "Không thể tải quy tắc kích hoạt terminal.",
-        "save_failed": "Không thể lưu quy tắc kích hoạt terminal."
+        "save_failed": "Không thể lưu quy tắc kích hoạt terminal.",
+        "ssh_terminals": "Thiết bị đầu cuối SSH",
+        "connection_groups": "Nhóm kết nối",
+        "ungrouped": "Chưa nhóm",
+        "select_rule_to_preview": "Chọn một quy tắc ở bên trái để xem chi tiết hoặc thêm quy tắc mới.",
+        "edit_rule_title": "Chỉnh sửa quy tắc trình kích hoạt"
       },
       "command_bar_focus_handoff": "Tập trung terminal cho lệnh TUI",
       "command_bar_focus_handoff_hint": "Chọn các lệnh sẽ chuyển tiêu điểm bàn phím sang terminal sau khi khởi chạy.",

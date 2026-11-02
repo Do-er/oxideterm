@@ -290,18 +290,26 @@ fn validate_process(
 }
 
 fn validate_scope(scope: &TerminalTriggerScope) -> Result<(), TerminalTriggerError> {
-    let TerminalTriggerScope::SavedConnections { connections } = scope else {
-        return Ok(());
-    };
-    ensure_collection_len("scope.connections", connections.len(), MAX_CONNECTION_IDS)?;
-    let mut unique_ids = HashSet::with_capacity(connections.len());
-    for connection in connections {
-        ensure_required("scope.connectionId", &connection.id, MAX_TRIGGER_ID_BYTES)?;
-        if !unique_ids.insert((&connection.kind, &connection.id)) {
-            return Err(TerminalTriggerError::DuplicateId);
+    match scope {
+        TerminalTriggerScope::SavedConnections { connections } => {
+            ensure_collection_len("scope.connections", connections.len(), MAX_CONNECTION_IDS)?;
+            let mut unique_ids = HashSet::with_capacity(connections.len());
+            for connection in connections {
+                ensure_required("scope.connectionId", &connection.id, MAX_TRIGGER_ID_BYTES)?;
+                if !unique_ids.insert((&connection.kind, &connection.id)) {
+                    return Err(TerminalTriggerError::DuplicateId);
+                }
+            }
+            Ok(())
         }
+        TerminalTriggerScope::ConnectionGroups { groups } => {
+            ensure_collection_len("scope.groups", groups.len(), MAX_CONNECTION_IDS)?;
+            Ok(())
+        }
+        TerminalTriggerScope::AllTerminals
+        | TerminalTriggerScope::SshTerminals
+        | TerminalTriggerScope::LocalTerminals => Ok(()),
     }
-    Ok(())
 }
 
 fn validate_template_field(

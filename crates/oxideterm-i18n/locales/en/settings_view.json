@@ -772,7 +772,12 @@
         "secrets_warning": "Do not store passwords, tokens, private keys, or other credentials in trigger rules.",
         "validation_failed": "Fix the highlighted trigger fields before saving.",
         "load_failed": "Terminal trigger rules could not be loaded.",
-        "save_failed": "Terminal trigger rules could not be saved."
+        "save_failed": "Terminal trigger rules could not be saved.",
+        "ssh_terminals": "SSH terminals",
+        "connection_groups": "Connection groups",
+        "ungrouped": "Ungrouped",
+        "select_rule_to_preview": "Select a rule on the left to view details, or add a new rule.",
+        "edit_rule_title": "Edit trigger rule"
       },
       "command_bar_focus_handoff": "Focus Terminal for TUI Commands",
       "command_bar_focus_handoff_hint": "Choose commands that should hand keyboard focus to the terminal after launch.",

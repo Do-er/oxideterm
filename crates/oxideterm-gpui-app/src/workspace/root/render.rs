@@ -86,6 +86,9 @@ impl WorkspaceApp {
                 if let Some(modal) = self.render_privilege_credential_dialog(cx) {
                     modals.push(modal);
                 }
+                if let Some(modal) = self.render_terminal_trigger_editor_dialog(cx) {
+                    modals.push(modal);
+                }
             }
             TabKind::Knowledge => {
                 if let Some(modal) = self.render_knowledge_create_collection_dialog(cx) {

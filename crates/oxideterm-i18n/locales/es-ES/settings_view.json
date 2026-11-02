@@ -772,7 +772,12 @@
         "secrets_warning": "No guarde contraseñas, tokens, claves privadas ni otras credenciales en las reglas de desencadenadores.",
         "validation_failed": "Corrija los campos resaltados del desencadenador antes de guardar.",
         "load_failed": "No se pudieron cargar las reglas de desencadenadores del terminal.",
-        "save_failed": "No se pudieron guardar las reglas de desencadenadores del terminal."
+        "save_failed": "No se pudieron guardar las reglas de desencadenadores del terminal.",
+        "ssh_terminals": "Terminales SSH",
+        "connection_groups": "Grupos de conexiones",
+        "ungrouped": "Sin agrupar",
+        "select_rule_to_preview": "Seleccione una regla a la izquierda para ver los detalles, o añada una nueva regla.",
+        "edit_rule_title": "Editar regla de disparador"
       },
       "command_bar_focus_handoff": "Enfocar terminal para comandos TUI",
       "command_bar_focus_handoff_hint": "Elige los comandos que deben ceder el foco del teclado al terminal al iniciarse.",

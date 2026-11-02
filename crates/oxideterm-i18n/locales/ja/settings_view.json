@@ -772,7 +772,12 @@
         "secrets_warning": "トリガールールにパスワード、トークン、秘密鍵、その他の認証情報を保存しないでください。",
         "validation_failed": "保存する前に、強調表示されたトリガーフィールドを修正してください。",
         "load_failed": "ターミナルトリガールールを読み込めませんでした。",
-        "save_failed": "ターミナルトリガールールを保存できませんでした。"
+        "save_failed": "ターミナルトリガールールを保存できませんでした。",
+        "ssh_terminals": "SSH ターミナル",
+        "connection_groups": "接続グループ",
+        "ungrouped": "未分類",
+        "select_rule_to_preview": "左側のルールを選択して詳細を表示するか、新しいルールを追加してください。",
+        "edit_rule_title": "トリガールールを編集"
       },
       "command_bar_focus_handoff": "TUI コマンド後に端末へフォーカス",
       "command_bar_focus_handoff_hint": "起動後にキーボードフォーカスを端末へ渡すコマンドを選択します。",

@@ -76,11 +76,17 @@ pub enum TerminalTriggerDispatch {
     AfterNextLineBreak,
 }
 
+pub const UNGROUPED_CONNECTION_GROUP: &str = "";
+
 #[derive(Clone, Debug, Eq, PartialEq, Serialize, Deserialize)]
 #[serde(tag = "type", rename_all = "snake_case")]
 pub enum TerminalTriggerScope {
     AllTerminals,
+    SshTerminals,
     LocalTerminals,
+    ConnectionGroups {
+        groups: Vec<String>,
+    },
     SavedConnections {
         connections: Vec<SavedConnectionRef>,
     },

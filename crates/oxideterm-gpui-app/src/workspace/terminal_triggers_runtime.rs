@@ -7,7 +7,7 @@ use oxideterm_terminal::TerminalSessionKind;
 use oxideterm_terminal_triggers::{
     ExpandedLocalProcessSpec, ExpandedTriggerAction, SavedConnectionKind, SavedConnectionRef,
     TerminalTrigger, TerminalTriggerAction, TerminalTriggerScope, TerminalTriggersSnapshot,
-    TriggerMatched, compile_active, expand_template,
+    TriggerMatched, UNGROUPED_CONNECTION_GROUP, compile_active, expand_template,
 };
 use tokio::process::Command;
 use zeroize::Zeroizing;
@@ -337,16 +337,21 @@ impl WorkspaceApp {
         trigger: &TerminalTrigger,
         cx: &App,
     ) -> bool {
-        let is_local = self
+        let session_kind = self
             .tab_host
             .read(cx)
             .panes()
             .get(&pane_id)
-            .is_some_and(|pane| pane.read(cx).session_kind() == TerminalSessionKind::LocalPty);
+            .map(|pane| pane.read(cx).session_kind());
+        let is_local = session_kind == Some(TerminalSessionKind::LocalPty);
+        let is_ssh = session_kind == Some(TerminalSessionKind::SshPty);
         let saved_connection = self
             .session_id_for_pane(pane_id, cx)
             .and_then(|session_id| self.terminal_saved_connection_refs.get(&session_id));
-        terminal_trigger_scope_applies(&trigger.scope, is_local, saved_connection)
+        let connection_group = saved_connection.and_then(|conn| {
+            self.connection_store.get(&conn.id).and_then(|c| c.group.as_deref())
+        });
+        terminal_trigger_scope_applies(&trigger.scope, is_local, is_ssh, saved_connection, connection_group)
     }
 
     pub(in crate::workspace) fn register_terminal_saved_connection(
@@ -733,11 +738,21 @@ impl WorkspaceApp {
 fn terminal_trigger_scope_applies(
     scope: &TerminalTriggerScope,
     is_local: bool,
+    is_ssh: bool,
     saved_connection: Option<&SavedConnectionRef>,
+    connection_group: Option<&str>,
 ) -> bool {
     match scope {
         TerminalTriggerScope::AllTerminals => true,
+        TerminalTriggerScope::SshTerminals => is_ssh,
         TerminalTriggerScope::LocalTerminals => is_local,
+        TerminalTriggerScope::ConnectionGroups { groups } => {
+            if saved_connection.is_none() {
+                return false;
+            }
+            let current = connection_group.unwrap_or(UNGROUPED_CONNECTION_GROUP);
+            groups.iter().any(|group| group == current)
+        }
         TerminalTriggerScope::SavedConnections { connections } => {
             saved_connection.is_some_and(|source| connections.contains(source))
         }
@@ -910,17 +925,35 @@ mod tests {
             connections: vec![ssh.clone()],
         };
 
-        assert!(terminal_trigger_scope_applies(&scope, false, Some(&ssh)));
+        assert!(terminal_trigger_scope_applies(&scope, false, false, Some(&ssh), None));
         assert!(!terminal_trigger_scope_applies(
             &scope,
             false,
-            Some(&telnet)
+            false,
+            Some(&telnet),
+            None
         ));
-        assert!(!terminal_trigger_scope_applies(&scope, true, None));
+        assert!(!terminal_trigger_scope_applies(&scope, true, false, None, None));
         assert!(terminal_trigger_scope_applies(
             &TerminalTriggerScope::LocalTerminals,
             true,
+            false,
+            None,
             None
         ));
+        assert!(terminal_trigger_scope_applies(
+            &TerminalTriggerScope::SshTerminals,
+            false,
+            true,
+            None,
+            None
+        ));
+        let group_scope = TerminalTriggerScope::ConnectionGroups {
+            groups: vec!["prod".to_string(), oxideterm_terminal_triggers::UNGROUPED_CONNECTION_GROUP.to_string()],
+        };
+        assert!(terminal_trigger_scope_applies(&group_scope, false, true, Some(&ssh), Some("prod")));
+        assert!(terminal_trigger_scope_applies(&group_scope, false, true, Some(&ssh), None));
+        assert!(!terminal_trigger_scope_applies(&group_scope, false, true, Some(&ssh), Some("dev")));
+        assert!(!terminal_trigger_scope_applies(&group_scope, false, true, None, Some("prod")));
     }
 }

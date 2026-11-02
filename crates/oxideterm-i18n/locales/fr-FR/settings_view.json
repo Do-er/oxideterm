@@ -772,7 +772,12 @@
         "secrets_warning": "Ne stockez aucun mot de passe, jeton, clé privée ou autre identifiant dans les règles de déclenchement.",
         "validation_failed": "Corrigez les champs de déclencheur en surbrillance avant d’enregistrer.",
         "load_failed": "Impossible de charger les règles de déclenchement du terminal.",
-        "save_failed": "Impossible d’enregistrer les règles de déclenchement du terminal."
+        "save_failed": "Impossible d’enregistrer les règles de déclenchement du terminal.",
+        "ssh_terminals": "Terminaux SSH",
+        "connection_groups": "Groupes de connexion",
+        "ungrouped": "Non groupé",
+        "select_rule_to_preview": "Sélectionnez une règle à gauche pour afficher les détails, ou ajoutez-en une nouvelle.",
+        "edit_rule_title": "Modifier la règle de déclencheur"
       },
       "command_bar_focus_handoff": "Focaliser le terminal pour les commandes TUI",
       "command_bar_focus_handoff_hint": "Choisissez les commandes qui doivent rendre le focus clavier au terminal après leur lancement.",

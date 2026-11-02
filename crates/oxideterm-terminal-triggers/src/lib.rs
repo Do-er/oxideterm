@@ -16,7 +16,7 @@ pub use model::{
     LocalProcessSpec, SavedConnectionKind, SavedConnectionRef, TERMINAL_TRIGGERS_SCHEMA_VERSION,
     TerminalTrigger, TerminalTriggerAction, TerminalTriggerDispatch, TerminalTriggerMatch,
     TerminalTriggerMatchMode, TerminalTriggerMenuItem, TerminalTriggerScope, TerminalTriggerTiming,
-    TerminalTriggersSnapshot,
+    TerminalTriggersSnapshot, UNGROUPED_CONNECTION_GROUP,
 };
 pub use scanner::{MAX_LOGICAL_LINE_BYTES, TerminalTriggerStream, TriggerMatched};
 pub use store::{

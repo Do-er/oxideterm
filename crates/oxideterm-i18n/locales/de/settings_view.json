@@ -772,7 +772,12 @@
         "secrets_warning": "Speichern Sie keine Passwörter, Token, privaten Schlüssel oder andere Anmeldedaten in Trigger-Regeln.",
         "validation_failed": "Korrigieren Sie vor dem Speichern die hervorgehobenen Trigger-Felder.",
         "load_failed": "Die Terminal-Trigger-Regeln konnten nicht geladen werden.",
-        "save_failed": "Die Terminal-Trigger-Regeln konnten nicht gespeichert werden."
+        "save_failed": "Die Terminal-Trigger-Regeln konnten nicht gespeichert werden.",
+        "ssh_terminals": "SSH-Terminals",
+        "connection_groups": "Verbindungsgruppen",
+        "ungrouped": "Ohne Gruppe",
+        "select_rule_to_preview": "Wählen Sie links eine Regel aus, um Details anzuzeigen, oder fügen Sie eine neue Regel hinzu.",
+        "edit_rule_title": "Triggerregel bearbeiten"
       },
       "command_bar_focus_handoff": "Terminal bei TUI-Befehlen fokussieren",
       "command_bar_focus_handoff_hint": "Wählen Sie Befehle, die nach dem Start den Tastaturfokus an das Terminal übergeben.",

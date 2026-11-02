@@ -772,7 +772,12 @@
         "secrets_warning": "請勿在觸發器規則中儲存密碼、權杖、私密金鑰或其他認證資料。",
         "validation_failed": "請先修正觸發器欄位再儲存。",
         "load_failed": "無法載入終端觸發器規則。",
-        "save_failed": "無法儲存終端觸發器規則。"
+        "save_failed": "無法儲存終端觸發器規則。",
+        "ssh_terminals": "SSH 終端",
+        "connection_groups": "連線分組",
+        "ungrouped": "未分組",
+        "select_rule_to_preview": "從左側選取一條規則檢視詳情，或新建一條規則。",
+        "edit_rule_title": "編輯觸發器規則"
       },
       "command_bar_focus_handoff": "TUI 指令後聚焦終端",
       "command_bar_focus_handoff_hint": "選擇啟動後應將鍵盤焦點交給終端的指令。",

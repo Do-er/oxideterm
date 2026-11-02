@@ -772,7 +772,12 @@
         "secrets_warning": "Non archiviare password, token, chiavi private o altre credenziali nelle regole trigger.",
         "validation_failed": "Correggi i campi del trigger evidenziati prima di salvare.",
         "load_failed": "Impossibile caricare le regole trigger del terminale.",
-        "save_failed": "Impossibile salvare le regole trigger del terminale."
+        "save_failed": "Impossibile salvare le regole trigger del terminale.",
+        "ssh_terminals": "Terminali SSH",
+        "connection_groups": "Gruppi di connessione",
+        "ungrouped": "Non raggruppati",
+        "select_rule_to_preview": "Seleziona una regola a sinistra per visualizzare i dettagli, oppure aggiungine una nuova.",
+        "edit_rule_title": "Modifica regola di trigger"
       },
       "command_bar_focus_handoff": "Focalizza terminale per comandi TUI",
       "command_bar_focus_handoff_hint": "Scegli i comandi che devono trasferire il focus della tastiera al terminale dopo l'avvio.",

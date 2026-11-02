@@ -17,6 +17,7 @@ pub(in crate::workspace) enum ActiveTabWindowModalKind {
     ManagedKey,
     PortablePassword,
     PrivilegeCredential,
+    TerminalTriggerEditor,
     SessionManagerGroupManager,
     SessionManagerDelete,
     ForwardEdit,
@@ -837,6 +838,11 @@ impl WorkspaceApp {
                         kind: ActiveTabWindowModalKind::PrivilegeCredential,
                         phase: visible,
                     })
+                } else if self.terminal_triggers.modal_open {
+                    Some(ActiveTabWindowModalSnapshot {
+                        kind: ActiveTabWindowModalKind::TerminalTriggerEditor,
+                        phase: visible,
+                    })
                 } else if settings.managed_key_dialog_open() {
                     Some(ActiveTabWindowModalSnapshot {
                         kind: ActiveTabWindowModalKind::ManagedKey,
@@ -1287,6 +1293,21 @@ impl WorkspaceApp {
                 }
                 if event.keystroke.key.as_str() == "escape" {
                     self.reset_settings_privilege_credential_draft(cx);
+                }
+                true
+            }
+            ActiveTabWindowModalKind::TerminalTriggerEditor => {
+                if self.open_settings_select.is_some() {
+                    if event.keystroke.key.as_str() == "escape" {
+                        self.close_settings_select();
+                        cx.notify();
+                    }
+                    return true;
+                }
+                if event.keystroke.key.as_str() == "escape" {
+                    self.terminal_triggers.cancel_edit();
+                    self.clear_terminal_trigger_input_focus();
+                    cx.notify();
                 }
                 true
             }
