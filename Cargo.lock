@@ -7102,6 +7102,7 @@ dependencies = [
 name = "oxideterm-connection-monitor"
 version = "3.0.0"
 dependencies = [
+ "base64 0.22.1",
  "chrono",
  "serde",
  "serde_json",
