@@ -22,7 +22,7 @@ impl Render for SessionManagerDrag {
 }
 
 #[derive(Clone)]
-pub(super) enum SessionManagerDisplayItem {
+pub(in crate::workspace) enum SessionManagerDisplayItem {
     Tunnel(TunnelDisplayItem),
     Plugin(oxideterm_connections::PluginConnectionProfile),
     Connection(ConnectionInfo),
@@ -37,14 +37,14 @@ pub(super) enum SessionManagerDisplayItem {
 }
 
 #[derive(Clone)]
-pub(super) struct TunnelDisplayItem {
+pub(in crate::workspace) struct TunnelDisplayItem {
     forward: oxideterm_forwarding::PersistedForward,
     profile: oxideterm_forwarding::SshTunnelProfile,
     host: Option<ConnectionInfo>,
 }
 
 #[derive(Clone)]
-pub(super) struct SessionManagerSshConfigDisplayItem {
+pub(in crate::workspace) struct SessionManagerSshConfigDisplayItem {
     alias: String,
     hostname: Option<String>,
     user: Option<String>,
@@ -65,8 +65,8 @@ impl From<&SshConfigHost> for SessionManagerSshConfigDisplayItem {
     }
 }
 
-#[derive(Clone)]
-pub(super) enum SessionManagerOpenTarget {
+#[derive(Clone, Debug, Eq, PartialEq)]
+pub(in crate::workspace) enum SessionManagerOpenTarget {
     Tunnel(String),
     Plugin(String),
     Connection(String),
@@ -129,7 +129,7 @@ pub(super) fn session_manager_item_pointer_action(
 }
 
 impl SessionManagerDisplayItem {
-    pub(super) fn id(&self) -> &str {
+    pub(in crate::workspace) fn id(&self) -> &str {
         match self {
             Self::Tunnel(item) => &item.forward.id,
             Self::Connection(connection) => &connection.id,
@@ -191,9 +191,9 @@ impl SessionManagerDisplayItem {
             Self::Connection(connection) => Some(SessionManagerRowActionTarget::Connection(
                 connection.id.clone(),
             )),
-            Self::SshConfig(host) => Some(SessionManagerRowActionTarget::SshConfig(
-                host.alias.clone(),
-            )),
+            Self::SshConfig(host) => {
+                Some(SessionManagerRowActionTarget::SshConfig(host.alias.clone()))
+            }
             Self::Serial(profile) => {
                 Some(SessionManagerRowActionTarget::Serial(profile.id.clone()))
             }
@@ -214,7 +214,7 @@ impl SessionManagerDisplayItem {
         }
     }
 
-    pub(super) fn open_target(&self) -> SessionManagerOpenTarget {
+    pub(in crate::workspace) fn open_target(&self) -> SessionManagerOpenTarget {
         match self {
             Self::Tunnel(item) => SessionManagerOpenTarget::Tunnel(item.forward.id.clone()),
             Self::Plugin(profile) => SessionManagerOpenTarget::Plugin(profile.id.clone()),
@@ -238,7 +238,7 @@ impl SessionManagerDisplayItem {
         }
     }
 
-    pub(super) fn name(&self) -> Cow<'_, str> {
+    pub(in crate::workspace) fn name(&self) -> Cow<'_, str> {
         match self {
             Self::Tunnel(item) => Cow::Borrowed(&item.profile.name),
             Self::Plugin(profile) => Cow::Borrowed(&profile.name),
@@ -254,7 +254,7 @@ impl SessionManagerDisplayItem {
         }
     }
 
-    pub(super) fn group(&self) -> Option<&str> {
+    pub(in crate::workspace) fn group(&self) -> Option<&str> {
         match self {
             Self::Tunnel(item) => item.profile.group.as_deref(),
             Self::Plugin(profile) => profile.group.as_deref(),
@@ -349,7 +349,7 @@ impl SessionManagerDisplayItem {
         }
     }
 
-    pub(super) fn subtitle(&self) -> String {
+    pub(in crate::workspace) fn subtitle(&self) -> String {
         match self {
             Self::Tunnel(item) => {
                 let rule = &item.forward.rule;
@@ -407,7 +407,7 @@ impl SessionManagerDisplayItem {
         }
     }
 
-    pub(super) fn search_text(&self) -> String {
+    pub(in crate::workspace) fn search_text(&self) -> String {
         match self {
             Self::Tunnel(item) => format!(
                 "{}\n{}\n{}\n{}\nssh tunnel",
@@ -549,6 +549,85 @@ impl SessionManagerDisplayItem {
     }
 }
 
+pub(in crate::workspace) fn saved_session_manager_items(
+    store: &ConnectionStore,
+    tunnels: Vec<PersistedForward>,
+) -> Vec<SessionManagerDisplayItem> {
+    let tunnel_hosts = store.connection_infos();
+    store
+        .connection_infos()
+        .into_iter()
+        .map(SessionManagerDisplayItem::Connection)
+        .chain(tunnels.into_iter().filter_map(|forward| {
+            let profile = forward.tunnel.clone()?;
+            let host = tunnel_hosts
+                .iter()
+                .find(|host| Some(host.id.as_str()) == forward.owner_connection_id.as_deref());
+            Some(SessionManagerDisplayItem::Tunnel(TunnelDisplayItem {
+                forward,
+                profile,
+                host: host.cloned(),
+            }))
+        }))
+        .chain(
+            store
+                .plugin_profiles()
+                .iter()
+                .cloned()
+                .map(SessionManagerDisplayItem::Plugin),
+        )
+        .chain(
+            store
+                .serial_profiles()
+                .iter()
+                .cloned()
+                .map(SessionManagerDisplayItem::Serial),
+        )
+        .chain(
+            store
+                .local_terminal_profiles()
+                .iter()
+                .cloned()
+                .map(SessionManagerDisplayItem::LocalTerminal),
+        )
+        .chain(
+            store
+                .telnet_profiles()
+                .iter()
+                .cloned()
+                .map(SessionManagerDisplayItem::Telnet),
+        )
+        .chain(
+            store
+                .ftp_profiles()
+                .iter()
+                .cloned()
+                .map(SessionManagerDisplayItem::Ftp),
+        )
+        .chain(
+            store
+                .mosh_profiles()
+                .iter()
+                .cloned()
+                .map(SessionManagerDisplayItem::Mosh),
+        )
+        .chain(
+            store
+                .standalone_sftp_profiles()
+                .iter()
+                .cloned()
+                .map(SessionManagerDisplayItem::StandaloneSftp),
+        )
+        .chain(
+            store
+                .remote_desktop_profiles()
+                .iter()
+                .cloned()
+                .map(SessionManagerDisplayItem::RemoteDesktop),
+        )
+        .collect()
+}
+
 impl WorkspaceApp {
     fn session_manager_card_surface(&self, radius: f32, has_background: bool) -> Div {
         let surface = oxideterm_gpui_ui::semantic_surface(
@@ -578,9 +657,9 @@ impl WorkspaceApp {
             let rows = session_manager_tree_rows(&items, &roots, &children, &expanded_groups);
             rows.into_iter()
                 .filter_map(|row| match row {
-                    SessionManagerTreeRow::Item { item_index, .. } => {
-                        items.get(item_index).and_then(|item| item.selection_target())
-                    }
+                    SessionManagerTreeRow::Item { item_index, .. } => items
+                        .get(item_index)
+                        .and_then(|item| item.selection_target()),
                     SessionManagerTreeRow::Group { .. } => None,
                 })
                 .collect()
@@ -593,102 +672,35 @@ impl WorkspaceApp {
     }
 
     pub(super) fn session_manager_display_items(&self, cx: &App) -> Vec<SessionManagerDisplayItem> {
-        let tunnel_hosts = self.connection_store.connection_infos();
         let query = self
             .session_manager
             .read(cx)
             .search_query
             .trim()
             .to_lowercase();
-        let mut items = self
-            .connection_store
-            .connection_infos()
-            .into_iter()
-            .map(SessionManagerDisplayItem::Connection)
-            .chain(self.saved_ssh_tunnels().into_iter().filter_map(|forward| {
-                let profile = forward.tunnel.clone()?;
-                let host = tunnel_hosts
-                    .iter()
-                    .find(|host| Some(host.id.as_str()) == forward.owner_connection_id.as_deref());
-                Some(SessionManagerDisplayItem::Tunnel(TunnelDisplayItem {
-                    forward,
-                    profile,
-                    host: host.cloned(),
-                }))
-            }))
-            .chain(
-                self.connection_store
-                    .plugin_profiles()
-                    .iter()
-                    .cloned()
-                    .map(SessionManagerDisplayItem::Plugin),
-            )
-            .chain(
-                self.connection_store
-                    .serial_profiles()
-                    .iter()
-                    .cloned()
-                    .map(SessionManagerDisplayItem::Serial),
-            )
-            .chain(
-                self.connection_store
-                    .local_terminal_profiles()
-                    .iter()
-                    .cloned()
-                    .map(|mut profile| {
+        let mut items =
+            saved_session_manager_items(&self.connection_store, self.saved_ssh_tunnels())
+                .into_iter()
+                .map(|mut item| {
+                    if let SessionManagerDisplayItem::LocalTerminal(profile) = &mut item {
                         // The row label follows the shell while the name stays empty.
-                        profile.name = self.local_profile_display_name(&profile);
-                        SessionManagerDisplayItem::LocalTerminal(profile)
-                    }),
-            )
-            .chain(
-                self.connection_store
-                    .telnet_profiles()
-                    .iter()
-                    .cloned()
-                    .map(SessionManagerDisplayItem::Telnet),
-            )
-            .chain(
-                self.connection_store
-                    .ftp_profiles()
-                    .iter()
-                    .cloned()
-                    .map(SessionManagerDisplayItem::Ftp),
-            )
-            .chain(
-                self.connection_store
-                    .mosh_profiles()
-                    .iter()
-                    .cloned()
-                    .map(SessionManagerDisplayItem::Mosh),
-            )
-            .chain(
-                self.connection_store
-                    .standalone_sftp_profiles()
-                    .iter()
-                    .cloned()
-                    .map(SessionManagerDisplayItem::StandaloneSftp),
-            )
-            .chain(
-                self.connection_store
-                    .remote_desktop_profiles()
-                    .iter()
-                    .cloned()
-                    .map(SessionManagerDisplayItem::RemoteDesktop),
-            )
-            .chain(
-                self.session_manager
-                    .read(cx)
-                    .ssh_config_hosts
-                    .iter()
-                    .filter(|host| !host.already_imported)
-                    .map(SessionManagerSshConfigDisplayItem::from)
-                    .map(SessionManagerDisplayItem::SshConfig),
-            )
-            .filter(|item| {
-                query.is_empty() || item.search_text().to_lowercase().contains(query.as_str())
-            })
-            .collect::<Vec<_>>();
+                        profile.name = self.local_profile_display_name(profile);
+                    }
+                    item
+                })
+                .chain(
+                    self.session_manager
+                        .read(cx)
+                        .ssh_config_hosts
+                        .iter()
+                        .filter(|host| !host.already_imported)
+                        .map(SessionManagerSshConfigDisplayItem::from)
+                        .map(SessionManagerDisplayItem::SshConfig),
+                )
+                .filter(|item| {
+                    query.is_empty() || item.search_text().to_lowercase().contains(query.as_str())
+                })
+                .collect::<Vec<_>>();
         self.sort_session_manager_display_items(&mut items, cx);
         items
     }
@@ -1034,10 +1046,11 @@ impl WorkspaceApp {
                     .items_center()
                     .justify_center()
                     .bg(rgba((theme.accent << 8) | 0x1a))
-                    .child(
-                        item.icon()
-                            .render(MANAGER_RECENT_ICON_GLYPH_SIZE, rgb(theme.accent), cx),
-                    ),
+                    .child(item.icon().render(
+                        MANAGER_RECENT_ICON_GLYPH_SIZE,
+                        rgb(theme.accent),
+                        cx,
+                    )),
             )
             .child(
                 div()
@@ -2808,24 +2821,26 @@ impl WorkspaceApp {
                     },
                     cx,
                 ))
-                .child(self.render_session_manager_menu_action(
-                    dropdown_menu_item(
-                        &self.tokens,
-                        self.i18n.t("sessionManager.batch.delete"),
-                        DropdownMenuItemKind::Plain,
+                .child(
+                    self.render_session_manager_menu_action(
+                        dropdown_menu_item(
+                            &self.tokens,
+                            self.i18n.t("sessionManager.batch.delete"),
+                            DropdownMenuItemKind::Plain,
+                            false,
+                            false,
+                        )
+                        .text_color(rgb(self.tokens.ui.error)),
                         false,
                         false,
-                    )
-                    .text_color(rgb(self.tokens.ui.error)),
-                    false,
-                    false,
-                    has_background,
-                    move |this, _event, _window, cx| {
-                        this.request_delete_selected_connections(cx);
-                        cx.stop_propagation();
-                    },
-                    cx,
-                ))
+                        has_background,
+                        move |this, _event, _window, cx| {
+                            this.request_delete_selected_connections(cx);
+                            cx.stop_propagation();
+                        },
+                        cx,
+                    ),
+                )
                 .child(dropdown_menu_separator(&self.tokens))
                 .child(self.render_session_manager_menu_action(
                     dropdown_menu_item(
@@ -3081,8 +3096,7 @@ impl WorkspaceApp {
                 group.clone(),
                 self.i18n.t("sessionManager.folder_tree.delete_group"),
             )),
-            SessionManagerRowActionTarget::GroupRoot
-            | SessionManagerRowActionTarget::Batch => None,
+            SessionManagerRowActionTarget::GroupRoot | SessionManagerRowActionTarget::Batch => None,
         };
         if let Some((delete_id, delete_label)) = delete_action {
             let delete_target = menu.target;
@@ -3218,7 +3232,7 @@ impl WorkspaceApp {
         )
     }
 
-    pub(super) fn open_session_manager_target(
+    pub(in crate::workspace) fn open_session_manager_target(
         &mut self,
         target: SessionManagerOpenTarget,
         window: &mut Window,
