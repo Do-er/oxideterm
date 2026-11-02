@@ -2030,6 +2030,7 @@
         "terminal.copy": "從終端機複製",
         "terminal.cut": "剪下終端機選取範圍",
         "terminal.paste": "貼入終端機",
+        "terminal.selectAll": "全選",
         "terminal.clearScreen": "清除終端機畫面",
         "terminal.aiPanel": "OxideSens 面板",
         "terminal.recording": "切換錄製",

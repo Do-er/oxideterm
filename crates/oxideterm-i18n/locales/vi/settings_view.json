@@ -2030,6 +2030,7 @@
         "terminal.copy": "Sao chép từ terminal",
         "terminal.cut": "Cắt vùng chọn trong terminal",
         "terminal.paste": "Dán vào terminal",
+        "terminal.selectAll": "Chọn tất cả",
         "terminal.clearScreen": "Xóa màn hình terminal",
         "terminal.aiPanel": "Bảng OxideSens",
         "terminal.recording": "Bật/tắt ghi hình",

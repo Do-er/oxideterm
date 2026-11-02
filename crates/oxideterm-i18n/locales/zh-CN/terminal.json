@@ -206,6 +206,7 @@
       "copy": "复制",
       "copy_title": "复制命令输出",
       "copy_command": "复制命令",
+      "select_all": "全选",
       "send_to_ai": "发送到 OxideSens",
       "fill_command_bar": "填入命令栏",
       "insert_selection_into_command": "在此插入选区",
@@ -652,8 +653,7 @@
     "no_results": "无结果",
     "match_case": "区分大小写",
     "use_regex": "使用正则表达式",
-    "invalid_regex": "正则表达式无效",
-    "visible_terminal_hint": "搜索当前可见的终端滚动缓冲。"
+    "invalid_regex": "正则表达式无效"
   },
   "workspace": {
     "new_local_terminal": "新建本地终端"

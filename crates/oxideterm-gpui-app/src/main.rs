@@ -80,6 +80,7 @@ actions!(
         SplitNavRight,
         TerminalAiPanel,
         TerminalClearScreen,
+        TerminalSelectAll,
         TerminalRecording,
         TerminalFreeTypeMode,
         PaletteEventLog,

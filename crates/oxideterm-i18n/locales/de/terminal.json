@@ -118,6 +118,7 @@
       "copy": "Kopieren",
       "copy_title": "Befehlsausgabe kopieren",
       "copy_command": "Befehl kopieren",
+      "select_all": "Alles auswählen",
       "send_to_ai": "An OxideSens senden",
       "fill_command_bar": "Befehlsleiste füllen",
       "insert_selection_into_command": "Auswahl hier einfügen",
@@ -652,8 +653,7 @@
     "no_results": "Keine Ergebnisse",
     "match_case": "Groß-/Kleinschreibung beachten",
     "use_regex": "Regulären Ausdruck verwenden",
-    "invalid_regex": "Ungültiger regulärer Ausdruck",
-    "visible_terminal_hint": "Durchsucht den sichtbaren Terminal-Scrollback."
+    "invalid_regex": "Ungültiger regulärer Ausdruck"
   },
   "workspace": {
     "new_local_terminal": "Neues lokales Terminal"

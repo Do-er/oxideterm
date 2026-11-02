@@ -118,6 +118,7 @@
       "copy": "Sao chép",
       "copy_title": "Sao chép đầu ra lệnh",
       "copy_command": "Sao chép lệnh",
+      "select_all": "Chọn tất cả",
       "send_to_ai": "Gửi tới OxideSens",
       "fill_command_bar": "Điền vào thanh lệnh",
       "insert_selection_into_command": "Chèn vùng chọn tại đây",
@@ -652,8 +653,7 @@
     "no_results": "Không có kết quả",
     "match_case": "Phân biệt chữ hoa và chữ thường",
     "use_regex": "Dùng biểu thức chính quy",
-    "invalid_regex": "Biểu thức chính quy không hợp lệ",
-    "visible_terminal_hint": "Tìm trong vùng cuộn hiện đang hiển thị của terminal."
+    "invalid_regex": "Biểu thức chính quy không hợp lệ"
   },
   "workspace": {
     "new_local_terminal": "Terminal cục bộ mới"

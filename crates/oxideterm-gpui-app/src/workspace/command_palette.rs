@@ -2315,6 +2315,7 @@ impl WorkspaceApp {
                 self.i18n.t("settings_view.help.category_terminal"),
                 [
                     registry_row("terminal.search", "settings_view.help.shortcut_find"),
+                    registry_row("terminal.selectAll", "settings_view.help.shortcut_select_all"),
                     registry_row("terminal.paste", "settings_view.help.shortcut_paste"),
                     registry_row("terminal.aiPanel", "settings_view.help.shortcut_ai_panel"),
                     registry_row(

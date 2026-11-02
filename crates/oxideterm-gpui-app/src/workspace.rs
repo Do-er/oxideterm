@@ -329,7 +329,8 @@ use crate::{
     SwitchLocaleEnglish, SwitchLocaleFrench, SwitchLocaleGerman, SwitchLocaleItalian,
     SwitchLocaleJapanese, SwitchLocaleKorean, SwitchLocalePortugueseBrazil, SwitchLocaleSpanish,
     SwitchLocaleTraditionalChinese, SwitchLocaleVietnamese, TerminalAiPanel, TerminalClearScreen,
-    TerminalFreeTypeMode, TerminalRecording, ToggleFullscreen, ToggleSidebar, ZenMode,
+    TerminalFreeTypeMode, TerminalRecording, TerminalSelectAll, ToggleFullscreen, ToggleSidebar,
+    ZenMode,
 };
 use crate::{assets::LucideIcon, bundled_fonts};
 use oxideterm_gpui_markdown::{

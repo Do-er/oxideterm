@@ -2063,6 +2063,16 @@ impl TerminalPane {
             .command_selection_labels
             .copy_command
             .clone();
+        let select_all_label = self
+            .preferences
+            .command_selection_labels
+            .select_all
+            .clone();
+        let select_all_shortcut = self
+            .preferences
+            .command_selection_labels
+            .select_all_shortcut
+            .clone();
         let send_to_ai_label = self.preferences.command_selection_labels.send_to_ai.clone();
         let fill_command_bar_label = self
             .preferences
@@ -2203,6 +2213,16 @@ impl TerminalPane {
                         |this, _event, _window, cx| {
                             this.dismiss_terminal_context_menu(cx);
                             this.paste_from_clipboard(cx);
+                        },
+                        cx,
+                    ))
+                    .child(self.render_terminal_context_menu_item_with_shortcut(
+                        select_all_label,
+                        select_all_shortcut,
+                        false,
+                        |this, _event, _window, cx| {
+                            this.dismiss_terminal_context_menu(cx);
+                            this.select_all(cx);
                         },
                         cx,
                     ))

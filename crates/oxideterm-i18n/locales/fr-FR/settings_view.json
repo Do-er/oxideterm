@@ -2030,6 +2030,7 @@
         "terminal.copy": "Copier depuis le terminal",
         "terminal.cut": "Couper la sélection du terminal",
         "terminal.paste": "Coller dans le terminal",
+        "terminal.selectAll": "Tout sélectionner",
         "terminal.clearScreen": "Effacer l’écran du terminal",
         "terminal.aiPanel": "Panneau OxideSens",
         "terminal.recording": "Basculer l'enregistrement",

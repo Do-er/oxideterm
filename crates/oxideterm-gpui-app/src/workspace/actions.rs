@@ -815,6 +815,12 @@ impl WorkspaceApp {
         }
     }
 
+    pub(super) fn select_all(&mut self, cx: &mut Context<Self>) {
+        if let Some(pane) = self.active_pane(cx) {
+            pane.update(cx, |pane, cx| pane.select_all(cx));
+        }
+    }
+
     pub(super) fn clear_active_terminal_screen(&mut self, cx: &mut Context<Self>) -> bool {
         let terminal_active = self.active_tab(cx).is_some_and(|tab| {
             matches!(
@@ -1015,6 +1021,7 @@ impl WorkspaceApp {
                 let _ = self.cut(cx);
             }
             "terminal.paste" => self.paste(cx),
+            "terminal.selectAll" => self.select_all(cx),
             "terminal.clearScreen" => {
                 self.clear_active_terminal_screen(cx);
             }
@@ -3322,8 +3329,6 @@ impl WorkspaceApp {
             .on_mouse_down(MouseButton::Left, |_, _, cx| cx.stop_propagation())
             .child(
                 search_row()
-                    .border_b_1()
-                    .border_color(rgba((theme.border << 8) | 0x99))
                     .child(Self::render_lucide_icon(
                         LucideIcon::Search,
                         15.0,
@@ -3459,14 +3464,6 @@ impl WorkspaceApp {
                             }),
                         ),
                     ),
-            )
-            .child(
-                div()
-                    .px(px(12.0))
-                    .py(px(7.0))
-                    .text_size(px(11.0))
-                    .text_color(rgb(theme.text_muted))
-                    .child(self.i18n.t("search.visible_terminal_hint")),
             )
             .into_any_element()
     }

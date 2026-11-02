@@ -9,7 +9,8 @@ use crate::{
     GoToTab9, NewConnection, NewTerminal, NextTab, OpenSettings, PaletteAiSidebar,
     PaletteBroadcast, PaletteEventLog, Paste, PrevTab, Quit, ShellLauncher, ShowShortcuts,
     SplitHorizontal, SplitNavLeft, SplitNavRight, SplitVertical, TerminalAiPanel,
-    TerminalClearScreen, TerminalFreeTypeMode, TerminalRecording, ToggleFullscreen, ToggleSidebar,
+    TerminalClearScreen, TerminalFreeTypeMode, TerminalRecording, TerminalSelectAll,
+    ToggleFullscreen, ToggleSidebar,
     ZenMode,
 };
 
@@ -370,7 +371,13 @@ pub(crate) static ACTION_DEFINITIONS: LazyLock<Vec<ActionDefinition>> = LazyLock
             "terminal.search",
             ActionScope::Terminal,
             KeyCombo::cmd("f"),
-            KeyCombo::ctrl_shift("f"),
+            KeyCombo::ctrl("f"),
+        ),
+        def(
+            "terminal.selectAll",
+            ActionScope::Terminal,
+            KeyCombo::cmd("a"),
+            KeyCombo::ctrl_shift("a"),
         ),
         def(
             "terminal.copy",
@@ -965,6 +972,9 @@ fn effective_combos(
                 combos.push(KeyCombo::cmd("y"));
             }
         }
+        if definition.id == "terminal.selectAll" && side == KeybindingSide::Mac {
+            combos.push(KeyCombo::cmd_shift("a"));
+        }
     }
     combos
 }
@@ -1508,6 +1518,7 @@ fn push_action_binding(bindings: &mut Vec<KeyBinding>, action_id: &str, combo: &
         "terminal.copy" => push_binding!(Copy),
         "terminal.cut" => push_binding!(Cut),
         "terminal.paste" => push_binding!(Paste),
+        "terminal.selectAll" => push_binding!(TerminalSelectAll),
         "terminal.clearScreen" => push_binding!(TerminalClearScreen),
         "terminal.aiPanel" => push_binding!(TerminalAiPanel),
         "terminal.recording" => push_binding!(TerminalRecording),

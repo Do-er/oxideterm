@@ -2030,6 +2030,7 @@
         "terminal.copy": "터미널에서 복사",
         "terminal.cut": "터미널 선택 영역 잘라내기",
         "terminal.paste": "터미널에 붙여넣기",
+        "terminal.selectAll": "모두 선택",
         "terminal.clearScreen": "터미널 화면 지우기",
         "terminal.aiPanel": "OxideSens 패널",
         "terminal.recording": "녹화 전환",

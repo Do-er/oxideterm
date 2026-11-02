@@ -2809,6 +2809,44 @@ impl TerminalPane {
         self.copy_from_platform_shortcut(cx);
     }
 
+    pub fn select_all(&mut self, cx: &mut Context<Self>) {
+        let scrollback = self.snapshot.scrollback_lines;
+        let rows = self.snapshot.rows;
+        let cols = self.snapshot.cols;
+        if rows == 0 || cols == 0 {
+            return;
+        }
+        let start_line = -(scrollback as i32);
+        let (screen_lines, cursor_row) = {
+            let term = self.terminal.lock();
+            let screen = term.snapshot_with_display_offset(0, rows);
+            (screen.lines, screen.cursor_row)
+        };
+        let last_active_row = screen_lines
+            .iter()
+            .rposition(|row| !row.text().trim().is_empty())
+            .unwrap_or(cursor_row)
+            .max(cursor_row);
+        let end_line = (last_active_row as i32).min((rows as i32).saturating_sub(1));
+        let end_col = screen_lines
+            .get(last_active_row)
+            .and_then(|row| row.cells.iter().rposition(|c| c.ch != ' '))
+            .map(|col| col.saturating_add(1).min(cols.saturating_sub(1)))
+            .unwrap_or(cols.saturating_sub(1));
+        self.set_selection(Some(TerminalSelection {
+            anchor: TerminalGridPoint {
+                line: start_line,
+                col: 0,
+            },
+            head: TerminalGridPoint {
+                line: end_line,
+                col: end_col,
+            },
+            mode: TerminalSelectionMode::Simple,
+        }));
+        cx.notify();
+    }
+
     pub fn has_selection(&self) -> bool {
         self.selection
             .is_some_and(|selection| !selection.is_empty())

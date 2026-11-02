@@ -118,6 +118,7 @@
       "copy": "複製",
       "copy_title": "複製命令輸出",
       "copy_command": "複製命令",
+      "select_all": "全選",
       "send_to_ai": "傳送到 OxideSens",
       "fill_command_bar": "填入命令欄",
       "insert_selection_into_command": "在此插入選取內容",
@@ -652,8 +653,7 @@
     "no_results": "無結果",
     "match_case": "區分大小寫",
     "use_regex": "使用正規表示式",
-    "invalid_regex": "正規表示式無效",
-    "visible_terminal_hint": "搜尋目前可見的終端機捲動緩衝。"
+    "invalid_regex": "正規表示式無效"
   },
   "workspace": {
     "new_local_terminal": "新增本機終端機"

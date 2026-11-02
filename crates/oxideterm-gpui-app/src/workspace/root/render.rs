@@ -985,6 +985,9 @@ impl WorkspaceApp {
                     this.paste(cx);
                 }
             }))
+            .on_action(cx.listener(|this, _: &TerminalSelectAll, _window, cx| {
+                this.select_all(cx);
+            }))
             .on_action(cx.listener(|this, _: &Find, window, cx| {
                 if this.open_active_ide_search(cx) {
                     return;

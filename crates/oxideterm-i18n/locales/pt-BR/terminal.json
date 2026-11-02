@@ -118,6 +118,7 @@
       "copy": "Copiar",
       "copy_title": "Copiar saída do comando",
       "copy_command": "Copiar comando",
+      "select_all": "Selecionar tudo",
       "send_to_ai": "Enviar para OxideSens",
       "fill_command_bar": "Preencher barra de comandos",
       "insert_selection_into_command": "Inserir seleção aqui",
@@ -652,8 +653,7 @@
     "no_results": "Nenhum resultado",
     "match_case": "Diferenciar maiúsculas e minúsculas",
     "use_regex": "Usar expressão regular",
-    "invalid_regex": "Expressão regular inválida",
-    "visible_terminal_hint": "Pesquisa o scrollback visível do terminal."
+    "invalid_regex": "Expressão regular inválida"
   },
   "workspace": {
     "new_local_terminal": "Novo terminal local"

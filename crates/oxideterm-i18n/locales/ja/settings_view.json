@@ -2030,6 +2030,7 @@
         "terminal.copy": "ターミナルからコピー",
         "terminal.cut": "ターミナルの選択範囲を切り取り",
         "terminal.paste": "ターミナルに貼り付ける",
+        "terminal.selectAll": "すべて選択",
         "terminal.clearScreen": "ターミナル画面をクリア",
         "terminal.aiPanel": "OxideSensパネル",
         "terminal.recording": "録画切替",

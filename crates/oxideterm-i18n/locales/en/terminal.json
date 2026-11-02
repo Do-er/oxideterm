@@ -206,6 +206,7 @@
       "copy": "Copy",
       "copy_title": "Copy command output",
       "copy_command": "Copy command",
+      "select_all": "Select all",
       "send_to_ai": "Send to OxideSens",
       "fill_command_bar": "Fill command bar",
       "insert_selection_into_command": "Insert selection here",
@@ -652,8 +653,7 @@
     "no_results": "No results",
     "match_case": "Match case",
     "use_regex": "Use regular expression",
-    "invalid_regex": "Invalid regular expression",
-    "visible_terminal_hint": "Search the visible terminal scrollback."
+    "invalid_regex": "Invalid regular expression"
   },
   "workspace": {
     "new_local_terminal": "New Local Terminal"
