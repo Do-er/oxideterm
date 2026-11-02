@@ -155,8 +155,9 @@ impl ClientTitlebarIcon {
     }
 }
 
-/// Pages that used to have an entry in the left activity rail. Each one now
-/// owns a single title-bar entry, so the rail must not keep a second copy.
+/// Global page entries. Runtime and Notifications render on the title-bar
+/// right side; Files, Knowledge, and Settings render in the bottom group of
+/// the context activity rail. Each entry opens a singleton tab.
 #[derive(Clone, Copy, Debug, Eq, PartialEq)]
 enum TitlebarEntry {
     Files,
@@ -167,34 +168,11 @@ enum TitlebarEntry {
 }
 
 impl TitlebarEntry {
-    // Left-to-right order of the title-bar feature entries.
-    const ALL: [Self; 5] = [
-        Self::Files,
-        Self::Runtime,
-        Self::Knowledge,
-        Self::Notifications,
-        Self::Settings,
-    ];
+    // Left-to-right order on the title-bar right side, before the divider.
+    const TITLEBAR_RIGHT: [Self; 2] = [Self::Runtime, Self::Notifications];
 
-    fn element_id(self) -> &'static str {
-        match self {
-            Self::Files => "titlebar-feature-files",
-            Self::Runtime => "titlebar-feature-runtime",
-            Self::Knowledge => "titlebar-feature-knowledge",
-            Self::Notifications => "titlebar-feature-notifications",
-            Self::Settings => "titlebar-feature-settings",
-        }
-    }
-
-    fn wrapper_id(self) -> &'static str {
-        match self {
-            Self::Files => "titlebar-feature-files-button",
-            Self::Runtime => "titlebar-feature-runtime-button",
-            Self::Knowledge => "titlebar-feature-knowledge-button",
-            Self::Notifications => "titlebar-feature-notifications-button",
-            Self::Settings => "titlebar-feature-settings-button",
-        }
-    }
+    // Top-to-bottom order of the context activity rail's bottom group.
+    const ACTIVITY_BOTTOM: [Self; 3] = [Self::Files, Self::Knowledge, Self::Settings];
 
     fn icon(self) -> LucideIcon {
         match self {
@@ -341,11 +319,11 @@ impl WorkspaceApp {
             .into_any_element()
     }
 
-    /// Renders the six page entries that live next to the left caption
-    /// controls. Selected state follows the active content tab, and the
-    /// notification entry keeps the unread badge that the activity rail owned
-    /// before the migration.
-    fn render_feature_entries(
+    /// Renders the title-bar page entries on the right side, before the
+    /// divider that separates them from the command palette. Selected state
+    /// follows the active content tab, and the notification entry keeps the
+    /// unread badge that the activity rail owned before the migration.
+    fn render_titlebar_page_entries(
         &self,
         action_button_size: f32,
         text_color: u32,
@@ -369,7 +347,16 @@ impl WorkspaceApp {
             .h_full()
             .flex()
             .items_center()
-            .children(TitlebarEntry::ALL.into_iter().map(|entry| {
+            .children(TitlebarEntry::TITLEBAR_RIGHT.into_iter().map(|entry| {
+                let (element_id, wrapper_id) = match entry {
+                    TitlebarEntry::Runtime => {
+                        ("titlebar-page-runtime", "titlebar-page-runtime-button")
+                    }
+                    TitlebarEntry::Notifications => {
+                        ("titlebar-page-notifications", "titlebar-page-notifications-button")
+                    }
+                    _ => unreachable!("title-bar right side only hosts runtime and notifications"),
+                };
                 let label = self.i18n.t(entry.tooltip_key());
                 let active = entry.is_active(active_tab_kind.as_ref());
                 let workspace = cx.entity().downgrade();
@@ -418,7 +405,7 @@ impl WorkspaceApp {
                     });
 
                 div()
-                    .id(entry.wrapper_id())
+                    .id(wrapper_id)
                     .relative()
                     .flex_none()
                     .px(px(self.tokens.spacing.one / 2.0))
@@ -433,7 +420,7 @@ impl WorkspaceApp {
                         rgb(if active { theme.accent } else { text_color }),
                         options,
                         label.clone(),
-                        entry.element_id(),
+                        element_id,
                         true,
                         cx.listener(move |this, _, window, cx| {
                             this.clear_workspace_tooltip(&label, cx);
@@ -443,6 +430,92 @@ impl WorkspaceApp {
                         cx.entity(),
                     ))
                     .when_some(badge, |button, badge| button.child(badge))
+                    .into_any_element()
+            }))
+            .into_any_element()
+    }
+
+    /// Renders the page entries pinned to the bottom of the context activity
+    /// rail, below the app-lock icon. Files, Knowledge, and Settings stay off
+    /// the title bar so the top chrome only hosts runtime and notifications.
+    pub(in crate::workspace) fn render_activity_page_entries(
+        &self,
+        cx: &mut Context<Self>,
+    ) -> AnyElement {
+        let theme = self.tokens.ui;
+        let active_tab_kind = self.active_content_tab(cx).map(|tab| tab.kind.clone());
+
+        div()
+            .flex_none()
+            .w_full()
+            .flex()
+            .flex_col()
+            .items_center()
+            .pt(px(self.tokens.spacing.two))
+            .pb(px(self.tokens.spacing.two))
+            .children(TitlebarEntry::ACTIVITY_BOTTOM.into_iter().map(|entry| {
+                let element_id = match entry {
+                    TitlebarEntry::Files => "activity-page-files",
+                    TitlebarEntry::Knowledge => "activity-page-knowledge",
+                    TitlebarEntry::Settings => "activity-page-settings",
+                    _ => unreachable!(
+                        "activity bottom group only hosts files, knowledge, and settings"
+                    ),
+                };
+                let label = self.i18n.t(entry.tooltip_key());
+                let active = entry.is_active(active_tab_kind.as_ref());
+
+                let button = oxideterm_gpui_ui::button::icon_button(
+                    &self.tokens,
+                    Self::render_lucide_icon(
+                        entry.icon(),
+                        self.tokens.metrics.activity_icon_glyph_size,
+                        rgb(if active { theme.accent } else { theme.text }),
+                    ),
+                    oxideterm_gpui_ui::button::IconButtonOptions {
+                        size: self.tokens.metrics.activity_icon_size,
+                        radius: oxideterm_gpui_ui::button::ButtonRadius::Md,
+                        has_background: active,
+                        background: active.then(|| self.settings_panel_background(theme.bg_panel)),
+                        border: active.then(|| rgb(theme.border)),
+                        hover_background: Some(rgb(theme.bg_hover)),
+                        idle_opacity: 1.0,
+                        ..oxideterm_gpui_ui::button::IconButtonOptions::compact(
+                            self.tokens.metrics.activity_icon_size,
+                        )
+                    },
+                );
+                let button = if active {
+                    oxideterm_gpui_ui::theme_card_surface_shadow(button, &self.tokens)
+                } else {
+                    button
+                };
+
+                button
+                    .id(element_id)
+                    .relative()
+                    .mb(px(self.tokens.metrics.activity_icon_gap))
+                    .on_mouse_move(cx.listener(move |this, event: &MouseMoveEvent, _window, cx| {
+                        this.queue_workspace_tooltip(
+                            element_id,
+                            label.clone(),
+                            f32::from(event.position.x) + 12.0,
+                            f32::from(event.position.y) + 16.0,
+                            cx,
+                        );
+                    }))
+                    .on_hover(cx.listener(move |this, hovered: &bool, _window, cx| {
+                        if !*hovered {
+                            this.clear_workspace_tooltip(element_id, cx);
+                        }
+                    }))
+                    .on_mouse_down(
+                        MouseButton::Left,
+                        cx.listener(move |this, _event, window, cx| {
+                            entry.open(this, window, cx);
+                            cx.stop_propagation();
+                        }),
+                    )
                     .into_any_element()
             }))
             .into_any_element()
@@ -490,12 +563,19 @@ impl WorkspaceApp {
         } else {
             0.0
         };
-        // Feature entries share the left side with the platform caption
-        // controls, so their width must join the left minimum. Otherwise the
-        // centered scope filter can be squeezed or overlapped on narrow windows.
-        let feature_entries_width = TitlebarEntry::ALL.len() as f32 * action_button_width;
-        let side_min_width = (left_controls_width + feature_entries_width)
-            .max(right_controls_width + action_button_width * 3.0 + background_width);
+        // The right side now owns the page entries plus a divider before the
+        // command palette, so its minimum must cover those widths to keep the
+        // centered scope filter from being squeezed on narrow windows.
+        let right_feature_entries_width =
+            TitlebarEntry::TITLEBAR_RIGHT.len() as f32 * action_button_width;
+        let titlebar_divider_width = 1.0 + action_button_padding * 2.0;
+        let side_min_width = left_controls_width.max(
+            right_controls_width
+                + action_button_width * 3.0
+                + right_feature_entries_width
+                + titlebar_divider_width
+                + background_width,
+        );
         let scope_available_width = f32::from(window.viewport_size().width)
             - side_min_width * 2.0
             - self.tokens.spacing.two * 2.0;
@@ -565,9 +645,8 @@ impl WorkspaceApp {
                             cx,
                         ))
                     })
-                    .child(self.render_feature_entries(action_button_size, text_color, cx))
-                    // Feature entries are interactive chrome, so the drag
-                    // filler stays after them and never wraps a button.
+                    // The left side only hosts caption controls and inert drag
+                    // filler now that the page entries moved out of the top bar.
                     .child(self.render_window_drag_region("workspace-titlebar-drag-left", cx)),
             )
             .child(self.render_tab_scope_trigger(window, scope_available_width, cx))
@@ -626,6 +705,18 @@ impl WorkspaceApp {
                                 .child(background_count_label),
                         )
                     })
+                    .child(self.render_titlebar_page_entries(action_button_size, text_color, cx))
+                    .child(
+                        oxideterm_gpui_ui::separator::separator(
+                            &self.tokens,
+                            oxideterm_gpui_ui::separator::SeparatorOrientation::Vertical,
+                        )
+                        // Half the bar height leaves symmetric breathing room,
+                        // so the divider groups the icons without cutting the
+                        // title bar into separate bands.
+                        .h(px(self.tokens.metrics.titlebar_height / 2.0))
+                        .mx(px(action_button_padding)),
+                    )
                     .child(
                         div()
                             .id("titlebar-command-palette-button")

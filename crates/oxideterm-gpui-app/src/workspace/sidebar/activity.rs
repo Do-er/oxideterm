@@ -55,7 +55,8 @@ impl WorkspaceApp {
                                     )),
                             )
                         },
-                    ),
+                    )
+                    .child(self.render_activity_page_entries(cx)),
             )
             .into_any_element()
     }
