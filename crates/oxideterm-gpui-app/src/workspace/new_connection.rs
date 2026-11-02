@@ -18,6 +18,7 @@ pub(super) use form_state::{
     NewConnectionField, NewConnectionForm, NewConnectionProxyHop, NewConnectionSelect,
     NewConnectionSubmitAction, NewConnectionTransport, NewConnectionUpstreamProxyAuth,
     NewConnectionUpstreamProxyPolicy, SavedConnectionPromptAction, SshAuthTab,
+    connection_secret_field_visible,
     form_from_mosh_profile, form_from_remote_desktop_profile, form_from_serial_profile,
     form_from_telnet_profile, identity_agent_from_form, identity_agent_selector,
     password_draft_mut, refresh_connection_timeout_seconds, refresh_identity_agent_availability,

@@ -892,6 +892,9 @@ impl TerminalElement {
             )
         };
 
+        let max_lines = (self.snapshot.scrollback_lines + self.snapshot.rows).max(1);
+        let line_digits = max_lines.to_string().len();
+
         for row_index in visible_rows {
             let Some(row) = self.snapshot.lines.get(row_index) else {
                 continue;
@@ -947,7 +950,7 @@ impl TerminalElement {
                 );
             }
             if let Some(timestamp_run) =
-                self.timestamp_run_for_row(row_index, terminal_row_timestamp_identity(row))
+                self.timestamp_run_for_row(row_index, terminal_row_timestamp_identity(row), line_digits)
             {
                 timestamp_runs.push(timestamp_run);
             }
@@ -989,14 +992,27 @@ impl TerminalElement {
         }
     }
 
-    fn timestamp_run_for_row(&self, row_index: usize, index: u64) -> Option<BatchedTextRun> {
-        let label = self.row_timestamps.as_ref()?.get(index)?.label.clone();
+    fn timestamp_run_for_row(
+        &self,
+        row_index: usize,
+        index: u64,
+        line_digits: usize,
+    ) -> Option<BatchedTextRun> {
+        let time_label = &self.row_timestamps.as_ref()?.get(index)?.label;
+        let line_number = self
+            .snapshot
+            .scrollback_lines
+            .saturating_sub(self.snapshot.display_offset)
+            + row_index
+            + 1;
+        let combined_label = format!("{time_label} {line_number:>line_digits$}");
+        let cells = TERMINAL_TIMESTAMP_TIME_CELLS + 1 + line_digits;
         Some(BatchedTextRun {
             row: row_index,
             col: 0,
-            cells: TERMINAL_TIMESTAMP_LABEL_CELLS,
-            style: timestamp_text_run(&label, &self.theme, &self.metrics),
-            text: SharedString::from(label),
+            cells,
+            style: timestamp_text_run(&combined_label, &self.theme, &self.metrics),
+            text: SharedString::from(combined_label),
             cache: None,
         })
     }
@@ -2286,8 +2302,10 @@ impl Element for TerminalElement {
         if !self.transparent_background {
             window.paint_quad(fill(bounds, rgb(self.theme.background)));
         }
+        let max_lines = (self.snapshot.scrollback_lines + self.snapshot.rows).max(1);
+        let timestamp_cells = terminal_timestamp_label_cells(max_lines);
         let timestamp_gutter_width =
-            terminal_timestamp_gutter_width(&self.metrics, self.row_timestamps.is_some());
+            terminal_timestamp_gutter_width(&self.metrics, self.row_timestamps.is_some(), timestamp_cells);
         let viewport_timestamp_origin =
             bounds.origin + point(px(TERMINAL_CONTENT_PADDING), px(TERMINAL_CONTENT_PADDING));
         let timestamp_origin = viewport_timestamp_origin + point(px(0.0), self.scroll_y_offset);
@@ -2316,7 +2334,7 @@ impl Element for TerminalElement {
                         paint_text_run(run, timestamp_origin, &self.metrics, window, cx);
                     }
                     let divider_x = viewport_timestamp_origin.x
-                        + px((TERMINAL_TIMESTAMP_LABEL_CELLS as f32
+                        + px((timestamp_cells as f32
                             + TERMINAL_TIMESTAMP_GUTTER_GAP_CELLS / 2.0)
                             * self.metrics.cell_width_f32());
                     let divider_bounds = Bounds::new(

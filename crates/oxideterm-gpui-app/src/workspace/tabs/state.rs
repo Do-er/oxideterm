@@ -223,6 +223,32 @@ impl WorkspaceApp {
             .unwrap_or_default()
     }
 
+    pub(in crate::workspace) fn terminal_tab_title_for_pane(
+        &self,
+        pane_id: PaneId,
+        cx: &App,
+    ) -> String {
+        if let Some(node) = self
+            .session_id_for_pane(pane_id, cx)
+            .and_then(|id| self.workspace_runtime.read(cx).ssh_terminal_node_id(id))
+            .and_then(|id| self.ssh_nodes.get(&id))
+        {
+            return node.title.clone();
+        }
+        let pane_title = self
+            .tab_host
+            .read(cx)
+            .panes()
+            .get(&pane_id)
+            .map(|pane| pane.read(cx).title().to_string())
+            .unwrap_or_default();
+        if pane_title.trim().is_empty() {
+            self.local_terminal_tab_title()
+        } else {
+            pane_title
+        }
+    }
+
     pub(in crate::workspace) fn terminal_tab_kind_for_pane(
         &self,
         pane_id: PaneId,

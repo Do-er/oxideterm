@@ -870,6 +870,22 @@ impl WorkspaceApp {
             })
             .is_some()
         {
+            if let Some(remaining_pane_id) = self.tab_by_id(tab_id, cx).and_then(|tab| {
+                tab.root_pane.as_ref().and_then(|root| {
+                    if root.pane_count() == 1 {
+                        Some(root.first_pane_id())
+                    } else {
+                        None
+                    }
+                })
+            }) {
+                let remaining_title = self.terminal_tab_title_for_pane(remaining_pane_id, cx);
+                if !remaining_title.is_empty() {
+                    self.tab_host.update(cx, |host, _| {
+                        host.update_tab_title(tab_id, remaining_title);
+                    });
+                }
+            }
             if self.active_tab_id(cx) == Some(tab_id) {
                 self.sync_active_tab_surface(cx);
             }

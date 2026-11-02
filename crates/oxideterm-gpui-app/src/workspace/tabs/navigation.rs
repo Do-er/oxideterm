@@ -1343,13 +1343,8 @@ impl WorkspaceApp {
 
     fn tabbar_outer_width(&self, window: &Window, cx: &App) -> f32 {
         let window_width = f32::from(window.inner_window_bounds().get_bounds().size.width);
-        let sidebar_width = if self.sidebar_collapsed {
-            self.tokens.metrics.activity_bar_width
-        } else {
-            self.sidebar_width
-        };
         let context_sidebar_width = self.context_sidebar_occupied_width(cx);
-        (window_width - sidebar_width - context_sidebar_width).max(0.0)
+        (window_width - context_sidebar_width).max(0.0)
     }
 
     pub(in crate::workspace) fn tabbar_scroll_viewport_width(
@@ -1365,11 +1360,11 @@ impl WorkspaceApp {
     }
 
     pub(in crate::workspace) fn tabbar_left_x(&self) -> f32 {
-        if self.sidebar_collapsed {
-            self.tokens.metrics.activity_bar_width
-        } else {
-            self.sidebar_width
+        let bounds = self.main_window_tabs.scroll_handle.bounds();
+        if f32::from(bounds.size.width) > 1.0 {
+            return f32::from(bounds.origin.x);
         }
+        0.0
     }
 
     pub(in crate::workspace) fn tabbar_max_scroll(&self, window: &Window, cx: &App) -> f32 {

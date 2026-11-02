@@ -22,7 +22,8 @@ use super::forwards::ForwardInput;
 use super::graphics::GraphicsInput;
 use super::new_connection::{
     CONNECTION_NOTES_LINE_HEIGHT, CONNECTION_NOTES_VERTICAL_PADDING, NewConnectionField,
-    refresh_connection_timeout_seconds, refresh_identity_agent_availability,
+    connection_secret_field_visible, refresh_connection_timeout_seconds,
+    refresh_identity_agent_availability,
 };
 use super::quick_commands::{
     QUICK_COMMAND_TEXTAREA_LINE_HEIGHT, QUICK_COMMAND_TEXTAREA_VERTICAL_PADDING, QuickCommandInput,
@@ -914,7 +915,7 @@ impl InputHandler for WorkspaceInputHandler {
             };
             if let Some(viewport) = viewport {
                 let visible_text = view.ime_text_with_marked_text_for_target(target, cx)?;
-                let secret = ime_target_is_secret(target);
+                let secret = view.is_ime_target_secret_masked(target, cx);
                 let visual_offset = text_input_visual_range(
                     &visible_text,
                     secret,
@@ -1049,6 +1050,42 @@ impl WorkspaceApp {
         self.text_input_anchors.update(anchor);
         if edit_width_changed {
             cx.notify();
+        }
+    }
+
+    /// Indicates whether a secret target is actively masked with proxy characters.
+    /// Revealing a password or token through the UI makes it readable as plaintext
+    /// for accurate hit-testing, selection, and copy-paste.
+    pub(super) fn is_ime_target_secret_masked(&self, target: WorkspaceImeTarget, cx: &App) -> bool {
+        if !ime_target_is_secret(target) {
+            return false;
+        }
+        match target {
+            WorkspaceImeTarget::Settings(SettingsInput::AccountCredentialPassword) => {
+                self.settings_workspace
+                    .read(cx)
+                    .account_credential_password_masked()
+            }
+            WorkspaceImeTarget::Settings(SettingsInput::AiMcpAuthToken) => {
+                !self.ai_entity.read(cx).mcp_auth_token_visible()
+            }
+            WorkspaceImeTarget::NewConnection(field) => {
+                if let Some(form) = self.connection_form_state(cx).form.as_ref() {
+                    if let Some(visible) = connection_secret_field_visible(form, field) {
+                        return !visible;
+                    }
+                }
+                true
+            }
+            _ => true,
+        }
+    }
+
+    fn ime_text_snapshot(&self, target: WorkspaceImeTarget, value: &str, cx: &App) -> String {
+        if self.is_ime_target_secret_masked(target, cx) {
+            secret_ime_proxy(value)
+        } else {
+            value.to_owned()
         }
     }
 
@@ -1854,7 +1891,7 @@ impl WorkspaceApp {
                 let visible_text = self
                     .ime_text_with_marked_text_for_target(target, cx)
                     .unwrap_or_else(|| text.clone());
-                if ime_target_is_secret(target) {
+                if viewport.is_secret() || self.is_ime_target_secret_masked(target, cx) {
                     let display = text_input_secret_mask(&visible_text);
                     let count = display
                         [..floor_char_boundary(&display, byte_index.min(display.len()))]
@@ -1911,7 +1948,7 @@ impl WorkspaceApp {
                 target, &text, bounds, position, relative_x, window, cx,
             ));
         }
-        Some(self.ime_index_for_relative_x(target, &text, relative_x, window))
+        Some(self.ime_index_for_relative_x(target, &text, relative_x, window, cx))
     }
 
     fn ime_index_for_selection_start(
@@ -1982,7 +2019,7 @@ impl WorkspaceApp {
             ((relative_y / line_height).floor() as usize).min(lines.len().saturating_sub(1));
         let line_range = lines[line_index].clone();
         let line_text = utf16_slice(text, line_range.clone());
-        line_range.start + self.ime_index_for_relative_x(target, &line_text, relative_x, window)
+        line_range.start + self.ime_index_for_relative_x(target, &line_text, relative_x, window, cx)
     }
 
     fn ime_target_line_height(
@@ -2090,7 +2127,7 @@ impl WorkspaceApp {
     ) -> Option<String> {
         let mut text = self.text_for_ime_target(target, cx)?;
         if let Some(marked) = self.marked_text_state_for_target(target, cx) {
-            let marked_projection = ime_text_snapshot(target, &marked.text);
+            let marked_projection = self.ime_text_snapshot(target, &marked.text, cx);
             replace_utf16(
                 &mut text,
                 Some(marked.replacement_range.clone()),
@@ -2145,13 +2182,14 @@ impl WorkspaceApp {
         text: &str,
         relative_x: Pixels,
         window: &mut Window,
+        cx: &App,
     ) -> usize {
         let text_len = text.encode_utf16().count();
         if text_len == 0 {
             return 0;
         }
 
-        if ime_target_is_secret(target) {
+        if self.is_ime_target_secret_masked(target, cx) {
             return self.secret_ime_index_for_relative_x(target, text, relative_x, window);
         }
 
@@ -2343,7 +2381,7 @@ impl WorkspaceApp {
                 .read(cx)
                 .ui
                 .input_value(HostToolsTextInput::TmuxDialog)
-                .map(|value| ime_text_snapshot(target, value)),
+                .map(|value| self.ime_text_snapshot(target, value, cx)),
             WorkspaceImeTarget::HostPortSearch => self
                 .host_tools
                 .read(cx)
@@ -2379,16 +2417,16 @@ impl WorkspaceApp {
                     self.settings_workspace
                         .read(cx)
                         .settings_entity_input_value(input)
-                        .map(|value| ime_text_snapshot(target, value))
+                        .map(|value| self.ime_text_snapshot(target, value, cx))
                 } else if self.ai_entity.read(cx).focused_settings_input() == Some(input) {
                     // Platform IME receives only a length-preserving projection
                     // for secrets; the Entity remains the sole plaintext owner.
                     self.ai_entity
                         .read(cx)
                         .settings_input_value(input)
-                        .map(|value| ime_text_snapshot(target, value))
+                        .map(|value| self.ime_text_snapshot(target, value, cx))
                 } else if self.focused_settings_input == Some(input) {
-                    Some(ime_text_snapshot(target, &self.settings_input_draft))
+                    Some(self.ime_text_snapshot(target, &self.settings_input_draft, cx))
                 } else {
                     None
                 }
@@ -2493,13 +2531,13 @@ impl WorkspaceApp {
             WorkspaceImeTarget::NewConnection(field) => {
                 let form = self.connection_form_state(cx).form.as_ref()?;
                 new_connection_field_value(form, field)
-                    .map(|value| ime_text_snapshot(target, value))
+                    .map(|value| self.ime_text_snapshot(target, value, cx))
             }
             WorkspaceImeTarget::KeyboardInteractive(index) => self
                 .connection_flow
                 .read(cx)
                 .keyboard_interactive_response(index)
-                .map(|value| ime_text_snapshot(target, value)),
+                .map(|value| self.ime_text_snapshot(target, value, cx)),
         }
     }
 

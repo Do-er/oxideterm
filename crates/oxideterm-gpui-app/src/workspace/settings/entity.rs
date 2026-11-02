@@ -2377,6 +2377,14 @@ impl SettingsWorkspaceEntity {
         }
     }
 
+    /// Indicates whether the active account credential draft obscures its password.
+    pub(in crate::workspace) fn account_credential_password_masked(&self) -> bool {
+        self.account_credential_draft
+            .as_ref()
+            .map(|draft| !draft.show_password)
+            .unwrap_or(true)
+    }
+
     pub(in crate::workspace) fn focus_settings_entity_input(
         &mut self,
         input: SettingsInput,

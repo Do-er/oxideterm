@@ -48,9 +48,15 @@ struct TextInputViewportState {
     scroll_x: Pixels,
     layout: Option<TextLayout>,
     align: TextInputContentAlign,
+    secret: bool,
 }
 
 impl TextInputViewport {
+    /// Indicates whether the viewport was laid out with secret masking.
+    pub fn is_secret(&self) -> bool {
+        self.state.borrow().secret
+    }
+
     /// Maps a screen position through the currently visible text layout.
     pub fn byte_index_for_position(&self, position: Point<Pixels>) -> Option<usize> {
         let state = self.state.borrow();
@@ -106,6 +112,7 @@ impl TextInputViewport {
         let mut state = self.state.borrow_mut();
         state.scroll_x = px(0.0);
         state.layout = None;
+        state.secret = false;
     }
 }
 
@@ -283,7 +290,9 @@ fn text_input_with_content_align_and_viewport(
     ghost_text: Option<&str>,
 ) -> Div {
     if let Some(viewport) = viewport {
-        viewport.state.borrow_mut().align = align;
+        let mut state = viewport.state.borrow_mut();
+        state.align = align;
+        state.secret = view.secret;
     }
     if !view.focused
         && let Some(viewport) = viewport

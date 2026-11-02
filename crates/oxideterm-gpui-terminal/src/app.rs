@@ -4793,7 +4793,9 @@ impl TerminalPane {
     }
 
     fn timestamp_gutter_width(&self) -> f32 {
-        terminal_timestamp_gutter_width(&self.metrics, self.terminal_timestamps_enabled)
+        let max_lines = (self.snapshot.scrollback_lines + self.snapshot.rows).max(1);
+        let cells = terminal_timestamp_label_cells(max_lines);
+        terminal_timestamp_gutter_width(&self.metrics, self.terminal_timestamps_enabled, cells)
     }
 
     fn terminal_content_padding_x(&self) -> f32 {
@@ -4877,18 +4879,13 @@ fn graphics_options_from_preferences(preferences: &TerminalUiPreferences) -> Gra
 
 fn current_terminal_timestamp_label() -> String {
     let now = chrono::Local::now();
-    terminal_timestamp_label(
-        now.hour(),
-        now.minute(),
-        now.second(),
-        now.timestamp_subsec_millis(),
-    )
+    terminal_timestamp_label(now.hour(), now.minute(), now.second())
 }
 
-fn terminal_timestamp_label(hour: u32, minute: u32, second: u32, millis: u32) -> String {
+fn terminal_timestamp_label(hour: u32, minute: u32, second: u32) -> String {
     // Bracketed fixed-width labels separate timestamp metadata from terminal
     // output while keeping the paint-only gutter stable.
-    format!("[{hour:02}:{minute:02}:{second:02}.{millis:03}]")
+    format!("[{hour:02}:{minute:02}:{second:02}]")
 }
 
 fn record_timestampable_snapshot_rows(
@@ -6623,9 +6620,12 @@ mod tests {
             "the cheap invalidation key still follows the snapshot"
         );
 
-        let label = terminal_timestamp_label(1, 2, 3, 4);
-        assert_eq!(label, "[01:02:03.004]");
-        assert_eq!(label.chars().count(), TERMINAL_TIMESTAMP_LABEL_CELLS);
+        let label = terminal_timestamp_label(1, 2, 3);
+        assert_eq!(label, "[01:02:03]");
+        assert_eq!(label.chars().count(), TERMINAL_TIMESTAMP_TIME_CELLS);
+        assert_eq!(terminal_timestamp_label_cells(1), 12);
+        assert_eq!(terminal_timestamp_label_cells(99), 13);
+        assert_eq!(terminal_timestamp_label_cells(999_999), 17);
 
         let cleared_snapshot = timestamp_test_snapshot(timestamp_test_row(42, ""));
         record_timestampable_snapshot_rows(&mut store, &cleared_snapshot, "10:00:05");

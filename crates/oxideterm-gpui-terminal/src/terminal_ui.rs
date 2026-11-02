@@ -43,8 +43,13 @@ pub(crate) const SCROLLBAR_WIDTH: f32 = 10.0;
 pub(crate) const SCROLLBAR_GAP: f32 = 0.0;
 pub(crate) const SCROLLBAR_RESERVED_WIDTH: f32 = SCROLLBAR_WIDTH;
 pub(crate) const SCROLLBAR_MIN_THUMB: f32 = 24.0;
-pub(crate) const TERMINAL_TIMESTAMP_LABEL_CELLS: usize = 14;
+pub(crate) const TERMINAL_TIMESTAMP_TIME_CELLS: usize = 10;
 pub(crate) const TERMINAL_TIMESTAMP_GUTTER_GAP_CELLS: f32 = 1.0;
+
+pub(crate) fn terminal_timestamp_label_cells(max_lines: usize) -> usize {
+    let digits = max_lines.max(1).to_string().len();
+    TERMINAL_TIMESTAMP_TIME_CELLS + 1 + digits
+}
 pub(crate) const TERMINAL_SCROLL_MULTIPLIER: f32 = 1.0;
 pub(crate) const CURSOR_BLINK_INTERVAL: Duration = Duration::from_millis(500);
 pub(crate) const TERMINAL_PASTE_PROTECTION: bool = true;
@@ -1145,10 +1150,13 @@ impl TerminalMetrics {
     }
 }
 
-pub(crate) fn terminal_timestamp_gutter_width(metrics: &TerminalMetrics, enabled: bool) -> f32 {
+pub(crate) fn terminal_timestamp_gutter_width(
+    metrics: &TerminalMetrics,
+    enabled: bool,
+    cells: usize,
+) -> f32 {
     if enabled {
-        (TERMINAL_TIMESTAMP_LABEL_CELLS as f32 + TERMINAL_TIMESTAMP_GUTTER_GAP_CELLS)
-            * metrics.cell_width_f32()
+        (cells as f32 + TERMINAL_TIMESTAMP_GUTTER_GAP_CELLS) * metrics.cell_width_f32()
     } else {
         0.0
     }

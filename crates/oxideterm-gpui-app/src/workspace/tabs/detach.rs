@@ -134,16 +134,11 @@ impl WorkspaceApp {
         } else {
             0.0
         };
-        let left_offset = if self.sidebar_collapsed {
-            self.tokens.metrics.activity_bar_width
-        } else {
-            self.sidebar_width
-        };
         let right_offset = self.context_sidebar_occupied_width(cx);
-        let width = (f32::from(window_bounds.size.width) - left_offset - right_offset).max(0.0);
+        let width = (f32::from(window_bounds.size.width) - right_offset).max(0.0);
         self.main_window_tabbar_drop_bounds = Some(Bounds::new(
             gpui::point(
-                window_bounds.origin.x + px(left_offset),
+                window_bounds.origin.x,
                 window_bounds.origin.y + px(titlebar_height),
             ),
             gpui::size(px(width), px(self.tokens.metrics.tabbar_height)),
@@ -268,7 +263,7 @@ impl WorkspaceApp {
         let tab = Tab {
             id: tab_id,
             kind,
-            title: self.terminal_pane_label(pane_id, cx),
+            title: self.terminal_tab_title_for_pane(pane_id, cx),
             title_source: TabTitleSource::Static,
             root_pane: Some(PaneNode::leaf(pane_id, session_id)),
             active_pane_id: Some(pane_id),
@@ -277,6 +272,22 @@ impl WorkspaceApp {
             host.move_terminal_pane_to_tab(source_id, pane_id, tab.clone(), main_window)
         }) {
             return;
+        }
+        if let Some(remaining_pane_id) = self.tab_by_id(source_id, cx).and_then(|tab| {
+            tab.root_pane.as_ref().and_then(|root| {
+                if root.pane_count() == 1 {
+                    Some(root.first_pane_id())
+                } else {
+                    None
+                }
+            })
+        }) {
+            let remaining_title = self.terminal_tab_title_for_pane(remaining_pane_id, cx);
+            if !remaining_title.is_empty() {
+                self.tab_host.update(cx, |host, _| {
+                    host.update_tab_title(source_id, remaining_title);
+                });
+            }
         }
         self.register_tab_surface(&tab, cx);
         self.set_main_window_active_tab(Some(tab_id), cx);

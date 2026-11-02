@@ -261,6 +261,16 @@ impl WorkspaceTabHostEntity {
         true
     }
 
+    pub(in crate::workspace) fn update_tab_title(&mut self, tab_id: TabId, title: String) -> bool {
+        if let Some(tab) = self.tab_mut_by_id(tab_id) {
+            tab.title = title;
+            tab.title_source = TabTitleSource::Static;
+            true
+        } else {
+            false
+        }
+    }
+
     fn tab_mut_by_id(&mut self, tab_id: TabId) -> Option<&mut Tab> {
         let index = self.tab_index_by_id(tab_id)?;
         self.tabs.get_mut(index)
