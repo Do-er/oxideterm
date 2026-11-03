@@ -411,10 +411,6 @@ impl TerminalCommandSenderEntity {
             .map(|document| document.compact_viewport.clone())
     }
 
-    pub(super) fn compact_placeholder(&self) -> &str {
-        &self.compact_editor_placeholder
-    }
-
     pub(super) fn replace_active_compact_text(
         &mut self,
         text: String,
@@ -744,6 +740,27 @@ impl TerminalCommandSenderEntity {
             if !document.selected_targets.remove(&pane_id) {
                 document.selected_targets.insert(pane_id);
             }
+            document.target_scope = TerminalCommandSenderTargetScope::Selected;
+            document.failure = None;
+            cx.notify();
+        }
+    }
+
+    pub(super) fn set_selected_targets(
+        &mut self,
+        sender_id: TerminalCommandSenderId,
+        targets: &[PaneId],
+        cx: &mut Context<Self>,
+    ) {
+        if self
+            .document(sender_id)
+            .is_some_and(|document| document.status == TerminalCommandSenderStatus::Running)
+        {
+            return;
+        }
+        if let Some(document) = self.document_mut(sender_id) {
+            document.selected_targets.clear();
+            document.selected_targets.extend(targets.iter().copied());
             document.target_scope = TerminalCommandSenderTargetScope::Selected;
             document.failure = None;
             cx.notify();

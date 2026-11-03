@@ -286,15 +286,18 @@ fn settings_search_specs() -> Vec<SettingsSearchEntrySpec> {
         terminal_search_entry(
             TerminalSettingsPage::CommandBar,
             2,
-            "settings_view.terminal.command_bar_focus_handoff",
-            &["settings_view.terminal.command_bar_focus_handoff_hint"],
+            "settings_view.terminal.command_bar_composer_title",
+            &[
+                "settings_view.terminal.command_bar_dispatch_follow_broadcast",
+                "settings_view.terminal.command_bar_focus_handoff",
+                "settings_view.terminal.command_bar_focus_handoff_hint",
+            ],
         ),
         terminal_search_entry(
             TerminalSettingsPage::CommandBar,
             3,
             "settings_view.terminal.quick_commands",
             &[
-                "settings_view.terminal.quick_bar",
                 "settings_view.terminal.quick_commands_confirm",
                 "settings_view.terminal.quick_commands_toast",
                 "settings_view.terminal.command_specs",

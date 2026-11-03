@@ -77,51 +77,6 @@ impl WorkspaceApp {
             .into_any_element()
     }
 
-    pub(super) fn render_terminal_target_indicator(
-        &self,
-        target_label: String,
-        is_local_terminal: bool,
-        cx: &mut Context<Self>,
-    ) -> AnyElement {
-        let theme = self.tokens.ui;
-        let tooltip_id = "terminal-command-target-indicator";
-        let icon = if is_local_terminal {
-            LucideIcon::Terminal
-        } else {
-            LucideIcon::Server
-        };
-
-        div()
-            .h(px(20.0))
-            .min_w(px(28.0))
-            .flex_none()
-            .px(px(6.0))
-            .flex()
-            .items_center()
-            .justify_center()
-            .text_color(rgb(theme.text_muted))
-            .id(tooltip_id)
-            .on_mouse_move({
-                let title = target_label;
-                cx.listener(move |this, event: &MouseMoveEvent, _window, cx| {
-                    this.queue_workspace_tooltip(
-                        tooltip_id,
-                        title.clone(),
-                        f32::from(event.position.x) + 12.0,
-                        f32::from(event.position.y) + 16.0,
-                        cx,
-                    );
-                })
-            })
-            .on_hover(cx.listener(move |this, hovered: &bool, _window, cx| {
-                if !*hovered {
-                    this.clear_workspace_tooltip(tooltip_id, cx);
-                }
-            }))
-            .child(Self::render_lucide_icon(icon, 12.0, rgb(theme.text_muted)))
-            .into_any_element()
-    }
-
     pub(super) fn render_terminal_cwd_chip(
         &self,
         snapshot: Option<CurrentDirectorySnapshot>,

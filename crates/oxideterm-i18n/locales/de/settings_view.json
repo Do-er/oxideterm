@@ -796,7 +796,6 @@
       "gpu_canvas_experiments": "WebGPU canvas experiments",
       "gpu_canvas_experiments_hint": "Experimental GPU-backed visualizations. Does not replace the terminal renderer.",
       "quick_commands": "Quick Commands",
-      "quick_commands_hint": "Show a built-in quick command library in the Command Bar.",
       "quick_bar": "Schnellbefehlsleiste",
       "quick_bar_hint": "Gespeicherte Schnellbefehle optional als horizontale Leiste über der Befehlsleiste anzeigen.",
       "quick_commands_confirm": "Confirm Quick Command Run",
@@ -847,7 +846,11 @@
       "page_local": "Lokal",
       "font_hint": "Schriftfamilien, Größe, Stärke, Ligaturen und Zeilenhöhe des Terminals einstellen.",
       "display_behavior": "Anzeigeverhalten",
-      "display_behavior_hint": "Terminalabstände, Scrollen und Zeichenkodierung einstellen."
+      "display_behavior_hint": "Terminalabstände, Scrollen und Zeichenkodierung einstellen.",
+      "command_bar_dispatch_follow_broadcast": "Sendeziel folgt Broadcast-Gruppe",
+      "command_bar_dispatch_follow_broadcast_hint": "Wenn eine Broadcast-Gruppe aktiv ist, senden Composer und Schnellbefehle standardmäßig an alle Gruppenmitglieder.",
+      "command_bar_composer_title": "Befehls-Composer & Ausführung",
+      "command_bar_composer_description": "Mehrzeiliger Notizblock, Zeichen-/Zeilenschrittintervalle und Mehrterminal-Verteilungsrichtlinien."
     },
     "appearance": {
       "mode": "Darstellungsmodus",
@@ -2273,8 +2276,5 @@
       "title": "Cloud-Synchronisierung",
       "description": "Einstellungen, Verbindungen und Sitzungen mit Remotespeicher synchronisieren."
     }
-  },
-  "terminal": {
-    "bg_tab_remote_desktop": "Remote-Desktop"
   }
 }

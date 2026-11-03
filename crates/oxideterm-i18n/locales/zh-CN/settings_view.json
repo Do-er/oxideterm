@@ -796,7 +796,6 @@
       "gpu_canvas_experiments": "WebGPU Canvas 实验",
       "gpu_canvas_experiments_hint": "启用实验性 GPU 可视化。不替换主终端渲染器。",
       "quick_commands": "快捷命令",
-      "quick_commands_hint": "在命令栏中显示内置快捷命令库。",
       "quick_bar": "快捷命令条",
       "quick_bar_hint": "在命令栏上方以可选横向工具条显示已保存的快捷命令。",
       "quick_commands_confirm": "执行快捷命令前确认",
@@ -847,7 +846,11 @@
       "page_local": "本地",
       "font_hint": "配置终端字体、字号、字重、连字和行高。",
       "display_behavior": "显示行为",
-      "display_behavior_hint": "配置终端边距、滚动和字符编码。"
+      "display_behavior_hint": "配置终端边距、滚动和字符编码。",
+      "command_bar_dispatch_follow_broadcast": "多端调度跟随广播目标",
+      "command_bar_dispatch_follow_broadcast_hint": "底栏开启广播组时，命令发送器和快捷命令默认同步发往组内所有终端；未开启广播时仅发往当前终端。",
+      "command_bar_composer_title": "命令编写与批处理台",
+      "command_bar_composer_description": "多行脚本暂存、字符/行延时步进调度与多终端分发策略。"
     },
     "appearance": {
       "mode": "外观模式",
@@ -2273,8 +2276,5 @@
       "title": "云同步",
       "description": "同步设置、连接和会话配置到远程云端存储。"
     }
-  },
-  "terminal": {
-    "bg_tab_remote_desktop": "远程桌面"
   }
 }

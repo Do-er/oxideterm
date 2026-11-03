@@ -796,7 +796,6 @@
       "gpu_canvas_experiments": "WebGPU canvas experiments",
       "gpu_canvas_experiments_hint": "Experimental GPU-backed visualizations. Does not replace the terminal renderer.",
       "quick_commands": "Quick Commands",
-      "quick_commands_hint": "Show a built-in quick command library in the Command Bar.",
       "quick_bar": "クイックコマンドバー",
       "quick_bar_hint": "保存したクイックコマンドをコマンドバー上部の任意の横向きバーに表示します。",
       "quick_commands_confirm": "Confirm Quick Command Run",
@@ -847,7 +846,11 @@
       "page_local": "ローカル",
       "font_hint": "端末のフォント、サイズ、ウェイト、合字、行の高さを設定します。",
       "display_behavior": "表示動作",
-      "display_behavior_hint": "端末の余白、スクロール、文字エンコーディングを設定します。"
+      "display_behavior_hint": "端末の余白、スクロール、文字エンコーディングを設定します。",
+      "command_bar_dispatch_follow_broadcast": "送信先をブロードキャスト同期グループに連動",
+      "command_bar_dispatch_follow_broadcast_hint": "コマンドバーでブロードキャスト同期が有効な場合、コマンド送信とクイックコマンドは自動的にグループ内の全端末へ送信されます。",
+      "command_bar_composer_title": "コマンド作成と一括送信",
+      "command_bar_composer_description": "複数行スクリプトの下書き、行/文字ごとの遅延送信、および複数端末への送信ポリシー。"
     },
     "appearance": {
       "mode": "外観モード",
@@ -2273,8 +2276,5 @@
       "title": "クラウド同期",
       "description": "設定、接続、セッションをリモートクラウドストレージと同期します。"
     }
-  },
-  "terminal": {
-    "bg_tab_remote_desktop": "リモートデスクトップ"
   }
 }

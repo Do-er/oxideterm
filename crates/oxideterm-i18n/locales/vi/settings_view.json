@@ -796,7 +796,6 @@
       "gpu_canvas_experiments": "WebGPU canvas experiments",
       "gpu_canvas_experiments_hint": "Experimental GPU-backed visualizations. Does not replace the terminal renderer.",
       "quick_commands": "Quick Commands",
-      "quick_commands_hint": "Show a built-in quick command library in the Command Bar.",
       "quick_bar": "Thanh lệnh nhanh",
       "quick_bar_hint": "Hiển thị các lệnh nhanh đã lưu trong thanh ngang tùy chọn phía trên thanh lệnh.",
       "quick_commands_confirm": "Confirm Quick Command Run",
@@ -847,7 +846,11 @@
       "page_local": "Cục bộ",
       "font_hint": "Cấu hình phông chữ, kích thước, độ đậm, chữ ghép và chiều cao dòng của terminal.",
       "display_behavior": "Hành vi hiển thị",
-      "display_behavior_hint": "Cấu hình lề, cuộn và mã hóa ký tự của terminal."
+      "display_behavior_hint": "Cấu hình lề, cuộn và mã hóa ký tự của terminal.",
+      "command_bar_dispatch_follow_broadcast": "Đích gửi lệnh đồng bộ theo nhóm phát sóng",
+      "command_bar_dispatch_follow_broadcast_hint": "Khi nhóm phát sóng đang hoạt động, bộ soạn lệnh và lệnh nhanh sẽ mặc định gửi đến tất cả terminal trong nhóm.",
+      "command_bar_composer_title": "Bộ soạn lệnh và gửi hàng loạt",
+      "command_bar_composer_description": "Bản nháp nhiều dòng, khoảng nghỉ dòng/ký tự và chính sách gửi lệnh đa terminal."
     },
     "appearance": {
       "mode": "Chế độ giao diện",
@@ -2273,8 +2276,5 @@
       "title": "Đồng bộ đám mây",
       "description": "Đồng bộ hóa cài đặt, kết nối và phiên làm việc với lưu trữ đám mây từ xa."
     }
-  },
-  "terminal": {
-    "bg_tab_remote_desktop": "Máy tính từ xa"
   }
 }

@@ -908,14 +908,6 @@ impl WorkspaceApp {
                         surface.child(self.render_terminal_recording_controls(recording_status, cx))
                     }),
             )
-            .when(
-                self.settings_store
-                    .settings()
-                    .terminal
-                    .command_bar
-                    .quick_bar_enabled,
-                |surface| surface.child(self.render_terminal_quick_bar(window, cx)),
-            )
             .child(self.render_terminal_command_bar(cx))
             .child(self.render_terminal_quick_commands_panel(cx))
             // The toolbar is the sender header. Hidden, compact, and expanded

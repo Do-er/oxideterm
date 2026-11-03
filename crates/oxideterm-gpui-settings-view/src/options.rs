@@ -473,6 +473,10 @@ pub fn set_command_bar_enabled(settings: &mut PersistedSettings, value: bool) {
     settings.terminal.command_bar.enabled = value;
 }
 
+pub fn set_command_bar_dispatch_follow_broadcast(settings: &mut PersistedSettings, value: bool) {
+    settings.terminal.command_bar.dispatch_follow_broadcast = value;
+}
+
 pub fn set_command_bar_git_status(settings: &mut PersistedSettings, value: bool) {
     settings.terminal.command_bar.git_status = value;
 }
@@ -487,10 +491,6 @@ pub fn set_command_bar_current_directory_awareness(settings: &mut PersistedSetti
 
 pub fn set_command_bar_show_current_directory(settings: &mut PersistedSettings, value: bool) {
     settings.terminal.command_bar.show_current_directory = value;
-}
-
-pub fn set_quick_commands_enabled(settings: &mut PersistedSettings, value: bool) {
-    settings.terminal.command_bar.quick_commands_enabled = value;
 }
 
 pub fn set_quick_bar_enabled(settings: &mut PersistedSettings, value: bool) {

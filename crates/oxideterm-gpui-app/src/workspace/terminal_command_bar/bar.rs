@@ -22,10 +22,6 @@ impl WorkspaceApp {
             rgba((theme.bg << 8) | COMMAND_BAR_BG_ALPHA)
         };
         let workspace = cx.entity();
-        // The visible chip and completion providers share Tauri's target-label
-        // inference so local shells that are currently inside SSH show the
-        // remote identity consistently in both places.
-        let target_label = self.terminal_command_active_target_label(cx);
         let cwd_display_enabled = self.terminal_current_directory_awareness_enabled()
             && self
                 .settings_store
@@ -44,8 +40,6 @@ impl WorkspaceApp {
             .then(|| self.active_terminal_project_snapshot(cx))
             .flatten();
         let active_pane_id = self.active_pane_id(cx);
-        let is_local_terminal = self.active_terminal_kind(cx)
-            == Some(oxideterm_terminal::TerminalSessionKind::LocalPty);
         let split_controls_visible = matches!(
             self.active_terminal_kind(cx),
             Some(
@@ -59,8 +53,6 @@ impl WorkspaceApp {
         let remote_integration_tooltip_title = self
             .i18n
             .t("settings_view.connections.shell_integration.toolbar_action");
-        let target_indicator_is_local =
-            is_local_terminal && target_label == self.i18n.t("terminal.command_bar.local_shell");
         let can_split = self.can_split_active_pane(cx);
         let broadcast_targets =
             self.terminal_broadcast_target_panes(active_pane_id.unwrap_or(PaneId(0)), cx);
@@ -74,17 +66,10 @@ impl WorkspaceApp {
         } else {
             String::new()
         };
-        let quick_commands_enabled = self
-            .settings_store
-            .settings()
-            .terminal
-            .command_bar
-            .quick_commands_enabled;
         let quick_commands_open = self.terminal.read(cx).quick_commands.is_open();
-        let (command_sender_visible, command_sender_expanded, command_sender_running_count) = {
+        let (command_sender_expanded, command_sender_running_count) = {
             let sender = self.terminal_command_sender.read(cx);
             (
-                sender.is_visible(),
                 sender.is_expanded(),
                 sender.running_count(),
             )
@@ -153,48 +138,6 @@ impl WorkspaceApp {
                             .flex_1()
                             .min_w(px(0.0))
                             .overflow_hidden()
-                            .child(self.terminal_command_action_button(
-                                if command_sender_visible {
-                                    LucideIcon::ChevronDown
-                                } else {
-                                    LucideIcon::ChevronRight
-                                },
-                                rgb(theme.text_muted),
-                                false,
-                                Some(if command_sender_visible {
-                                    rgba(0x00000000)
-                                } else {
-                                    rgba((theme.bg_hover << 8) | 0x99)
-                                }),
-                                "terminal-command-sender-visibility",
-                                if command_sender_visible {
-                                    self.i18n.t("terminal.sender.hide")
-                                } else {
-                                    self.i18n.t("terminal.sender.show")
-                                },
-                                |this, _event, window, cx| {
-                                    let visible = this
-                                        .terminal_command_sender
-                                        .update(cx, |sender, cx| sender.toggle_visible(cx));
-                                    if visible {
-                                        this.blur_terminal_quick_commands_input(cx);
-                                        this.terminal_command_sender.update(cx, |sender, cx| {
-                                            sender.set_compact_focused(true, cx);
-                                        });
-                                        this.clear_ime_selection();
-                                        window.focus(&this.focus_handle, cx);
-                                    } else {
-                                        this.focus_active_pane(window, cx);
-                                    }
-                                    cx.stop_propagation();
-                                },
-                                cx,
-                            ))
-                            .child(self.render_terminal_target_indicator(
-                                target_label,
-                                target_indicator_is_local,
-                                cx,
-                            ))
                             .when(cwd_supported, |row| {
                                 row.child(self.terminal_command_context_chip_slot(
                                     TERMINAL_COMMAND_CONTEXT_CHIP_MAX_WIDTH,
@@ -344,11 +287,7 @@ impl WorkspaceApp {
                                             sender_id, window, cx,
                                         );
                                     } else {
-                                        this.terminal_command_sender.update(cx, |sender, cx| {
-                                            sender.set_compact_focused(true, cx);
-                                        });
-                                        this.clear_ime_selection();
-                                        window.focus(&this.focus_handle, cx);
+                                        this.focus_active_pane(window, cx);
                                     }
                                     cx.stop_propagation();
                                 },
@@ -370,33 +309,27 @@ impl WorkspaceApp {
                                         .child(command_sender_running_count.to_string()),
                                 )
                             })
-                            .when(
-                                quick_commands_enabled
-                                    && (!command_sender_visible || command_sender_expanded),
-                                |actions| {
-                                    actions.child(self.terminal_command_action_button(
-                                        LucideIcon::Zap,
-                                        if quick_commands_open {
-                                            rgb(theme.accent)
-                                        } else {
-                                            rgb(theme.text_muted)
-                                        },
-                                        false,
-                                        Some(if quick_commands_open {
-                                            rgba((theme.accent << 8) | 0x26)
-                                        } else {
-                                            rgba(0x00000000)
-                                        }),
-                                        "terminal-command-quick-commands",
-                                        self.i18n.t("terminal.quick_commands.title"),
-                                        |this, _event, window, cx| {
-                                            this.toggle_terminal_quick_commands_panel(window, cx);
-                                            cx.stop_propagation();
-                                        },
-                                        cx,
-                                    ))
+                            .child(self.terminal_command_action_button(
+                                LucideIcon::Zap,
+                                if quick_commands_open {
+                                    rgb(theme.accent)
+                                } else {
+                                    rgb(theme.text_muted)
                                 },
-                            )
+                                false,
+                                Some(if quick_commands_open {
+                                    rgba((theme.accent << 8) | 0x26)
+                                } else {
+                                    rgba(0x00000000)
+                                }),
+                                "terminal-command-quick-commands",
+                                self.i18n.t("terminal.quick_commands.title"),
+                                |this, _event, window, cx| {
+                                    this.toggle_terminal_quick_commands_panel(window, cx);
+                                    cx.stop_propagation();
+                                },
+                                cx,
+                            ))
                             .when_some(active_pane_id, |actions, pane_id| {
                                 // Capture the visible pane so the shortcut cannot retarget after a tab switch.
                                 actions.child(self.terminal_command_action_button(

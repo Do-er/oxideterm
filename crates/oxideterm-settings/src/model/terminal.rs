@@ -105,6 +105,10 @@ pub struct TerminalCommandBarSettings {
     #[serde(default = "default_command_bar_show_current_directory")]
     pub show_current_directory: bool,
     pub smart_completion: bool,
+    #[serde(default = "default_command_bar_compact_input_enabled")]
+    pub compact_input_enabled: bool,
+    #[serde(default = "default_command_bar_dispatch_follow_broadcast")]
+    pub dispatch_follow_broadcast: bool,
     pub quick_commands_enabled: bool,
     #[serde(default)]
     pub quick_bar_enabled: bool,
@@ -154,6 +158,8 @@ impl Default for TerminalCommandBarSettings {
             current_directory_awareness: true,
             show_current_directory: true,
             smart_completion: true,
+            compact_input_enabled: false,
+            dispatch_follow_broadcast: true,
             quick_commands_enabled: true,
             quick_bar_enabled: false,
             quick_bar_category: None,
@@ -177,6 +183,14 @@ fn default_command_bar_current_directory_awareness() -> bool {
 }
 
 fn default_command_bar_show_current_directory() -> bool {
+    true
+}
+
+fn default_command_bar_compact_input_enabled() -> bool {
+    false
+}
+
+fn default_command_bar_dispatch_follow_broadcast() -> bool {
     true
 }
 
@@ -754,6 +768,8 @@ mod tests {
         assert!(settings.command_bar.current_directory_awareness);
         assert!(settings.command_bar.project_tasks);
         assert!(!settings.command_bar.quick_bar_enabled);
+        assert!(!settings.command_bar.compact_input_enabled);
+        assert!(settings.command_bar.dispatch_follow_broadcast);
         assert_eq!(settings.command_bar.quick_bar_category, None);
         assert!(settings.autosuggest.enabled);
         let disabled: TerminalAutosuggestSettings =

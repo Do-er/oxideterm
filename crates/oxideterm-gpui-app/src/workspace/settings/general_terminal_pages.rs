@@ -1125,30 +1125,24 @@ impl WorkspaceApp {
                 ],
             ),
             (TerminalSettingsPage::CommandBar, 1) => self.settings_card(
-                "settings_view.terminal.command_bar_focus_handoff",
-                "settings_view.terminal.command_bar_focus_handoff_hint",
-                vec![self.focus_handoff_commands_row(settings, cx)],
+                "settings_view.terminal.command_bar_composer_title",
+                "settings_view.terminal.command_bar_composer_description",
+                vec![
+                    self.bool_row(
+                        "settings_view.terminal.command_bar_dispatch_follow_broadcast",
+                        "settings_view.terminal.command_bar_dispatch_follow_broadcast_hint",
+                        settings.terminal.command_bar.dispatch_follow_broadcast,
+                        set_command_bar_dispatch_follow_broadcast,
+                        cx,
+                    ),
+                    self.card_separator(),
+                    self.focus_handoff_commands_row(settings, cx),
+                ],
             ),
             (TerminalSettingsPage::CommandBar, 2) => self.settings_card(
                 "settings_view.terminal.quick_commands",
                 "",
                 vec![
-                    self.bool_row(
-                        "settings_view.terminal.quick_commands",
-                        "settings_view.terminal.quick_commands_hint",
-                        settings.terminal.command_bar.quick_commands_enabled,
-                        set_quick_commands_enabled,
-                        cx,
-                    ),
-                    self.card_separator(),
-                    self.bool_row(
-                        "settings_view.terminal.quick_bar",
-                        "settings_view.terminal.quick_bar_hint",
-                        settings.terminal.command_bar.quick_bar_enabled,
-                        set_quick_bar_enabled,
-                        cx,
-                    ),
-                    self.card_separator(),
                     self.bool_row(
                         "settings_view.terminal.quick_commands_confirm",
                         "settings_view.terminal.quick_commands_confirm_hint",

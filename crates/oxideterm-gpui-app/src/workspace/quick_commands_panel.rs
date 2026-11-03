@@ -119,13 +119,7 @@ impl WorkspaceApp {
         cx: &mut Context<Self>,
     ) -> AnyElement {
         let commands = &self.terminal.read(cx).quick_commands;
-        let open = commands.is_open()
-            && self
-                .settings_store
-                .settings()
-                .terminal
-                .command_bar
-                .quick_commands_enabled;
+        let open = commands.is_open();
         let height = commands.panel.height();
         let resizing = commands.panel.is_resizing();
         let mut tokens = self.tokens;

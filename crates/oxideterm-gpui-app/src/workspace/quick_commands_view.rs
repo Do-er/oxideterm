@@ -411,39 +411,6 @@ impl TerminalQuickCommandsState {
         self.store.visible_commands_for_targets(target)
     }
 
-    pub(in crate::workspace) fn quick_bar_snapshot(
-        &self,
-        target: Option<&QuickCommandTargetContext>,
-        category_id: Option<&str>,
-    ) -> (Vec<QuickCommandCategory>, Vec<QuickCommand>) {
-        // QuickBar is a read-only projection of the existing persisted store.
-        // Preserve category and command order instead of creating a second model.
-        let category_id =
-            category_id.filter(|id| self.store.categories.iter().any(|c| c.id == *id));
-        (
-            self.store.categories.clone(),
-            self.store
-                .commands
-                .iter()
-                .filter(|command| {
-                    category_id.is_none_or(|id| command.category == id)
-                        && target.map_or_else(
-                            || {
-                                command.availability.protocols.is_empty()
-                                    && command.availability.host_patterns.is_empty()
-                            },
-                            |target| {
-                                oxideterm_quick_commands::quick_command_available_for_target(
-                                    command, target,
-                                )
-                            },
-                        )
-                })
-                .cloned()
-                .collect(),
-        )
-    }
-
     pub(in crate::workspace) fn is_open(&self) -> bool {
         self.open
     }

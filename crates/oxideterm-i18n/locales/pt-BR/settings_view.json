@@ -796,7 +796,6 @@
       "gpu_canvas_experiments": "WebGPU canvas experiments",
       "gpu_canvas_experiments_hint": "Experimental GPU-backed visualizations. Does not replace the terminal renderer.",
       "quick_commands": "Quick Commands",
-      "quick_commands_hint": "Show a built-in quick command library in the Command Bar.",
       "quick_bar": "Barra de comandos rápidos",
       "quick_bar_hint": "Exibe comandos rápidos salvos em uma barra horizontal opcional acima da barra de comandos.",
       "quick_commands_confirm": "Confirm Quick Command Run",
@@ -847,7 +846,11 @@
       "page_local": "Local",
       "font_hint": "Configure fontes, tamanho, peso, ligaduras e altura da linha do terminal.",
       "display_behavior": "Comportamento de exibição",
-      "display_behavior_hint": "Configure margens, rolagem e codificação do terminal."
+      "display_behavior_hint": "Configure margens, rolagem e codificação do terminal.",
+      "command_bar_dispatch_follow_broadcast": "Destino de envio segue o grupo de transmissão",
+      "command_bar_dispatch_follow_broadcast_hint": "Quando um grupo de transmissão está ativo, o compositor e comandos rápidos enviam por padrão a todos os terminais do grupo.",
+      "command_bar_composer_title": "Compositor e despacho de comandos",
+      "command_bar_composer_description": "Rascunho multilinha, intervalos de passo por linha/caractere e políticas de despacho multiterminal."
     },
     "appearance": {
       "mode": "Modo de aparência",
@@ -2273,8 +2276,5 @@
       "title": "Sincronização em nuvem",
       "description": "Sincronizar configurações, conexões e sessões com o armazenamento em nuvem remoto."
     }
-  },
-  "terminal": {
-    "bg_tab_remote_desktop": "Área de trabalho remota"
   }
 }

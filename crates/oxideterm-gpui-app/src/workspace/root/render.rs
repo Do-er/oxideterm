@@ -637,14 +637,24 @@ impl WorkspaceApp {
                 } else if this.handle_privilege_prompt_helper_key(event, window, cx) {
                     window.prevent_default();
                     cx.stop_propagation();
-                } else if this.terminal_command_sender_editor_focused(window, cx)
-                    || (window.context_stack().iter().any(|context| {
-                        context
-                            .primary()
-                            .is_some_and(|entry| entry.key == "TextEditor")
-                    }) && cx
-                        .try_global::<oxideterm_gpui_editor::EditorKeybindings>()
-                        .is_some_and(|bindings| bindings.resolve(&event.keystroke).is_some()))
+                } else if this.terminal_command_sender_editor_focused(window, cx) {
+                    if event.keystroke.key == "enter"
+                        && (event.keystroke.modifiers.control || event.keystroke.modifiers.platform)
+                    {
+                        let sender_id = this.terminal_command_sender.read(cx).active_document_id();
+                        this.start_terminal_command_sender(sender_id, cx);
+                        window.prevent_default();
+                        cx.stop_propagation();
+                    }
+                    // The editor owns its complete key model, including Tab and
+                    // navigation keys that otherwise fall through to the pane.
+                } else if window.context_stack().iter().any(|context| {
+                    context
+                        .primary()
+                        .is_some_and(|entry| entry.key == "TextEditor")
+                }) && cx
+                    .try_global::<oxideterm_gpui_editor::EditorKeybindings>()
+                    .is_some_and(|bindings| bindings.resolve(&event.keystroke).is_some())
                 {
                     // The editor owns its complete key model, including Tab and
                     // navigation keys that otherwise fall through to the pane.

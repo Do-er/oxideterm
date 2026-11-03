@@ -796,7 +796,6 @@
       "gpu_canvas_experiments": "WebGPU canvas experiments",
       "gpu_canvas_experiments_hint": "Experimental GPU-backed visualizations. Does not replace the terminal renderer.",
       "quick_commands": "Quick Commands",
-      "quick_commands_hint": "Show a built-in quick command library in the Command Bar.",
       "quick_bar": "QuickBar",
       "quick_bar_hint": "Show saved quick commands as an optional horizontal bar above the Command Bar.",
       "quick_commands_confirm": "Confirm Quick Command Run",
@@ -847,7 +846,11 @@
       "page_local": "Local",
       "font_hint": "Configure terminal font families, size, weight, ligatures, and line height.",
       "display_behavior": "Display Behavior",
-      "display_behavior_hint": "Configure terminal padding, scrolling, and character encoding."
+      "display_behavior_hint": "Configure terminal padding, scrolling, and character encoding.",
+      "command_bar_dispatch_follow_broadcast": "Follow broadcast group target",
+      "command_bar_dispatch_follow_broadcast_hint": "When a broadcast sync group is active in the command bar, composer and quick commands dispatch to all group members by default.",
+      "command_bar_composer_title": "Command Composer & Dispatch",
+      "command_bar_composer_description": "Multiline scratchpad, character/line pacing intervals, and multi-terminal dispatch policies."
     },
     "appearance": {
       "mode": "Appearance mode",
@@ -2273,8 +2276,5 @@
       "title": "Cloud Sync",
       "description": "Synchronize settings, connections, and sessions with remote cloud storage."
     }
-  },
-  "terminal": {
-    "bg_tab_remote_desktop": "Remote Desktop"
   }
 }

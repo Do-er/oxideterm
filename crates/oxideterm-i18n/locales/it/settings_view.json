@@ -796,7 +796,6 @@
       "gpu_canvas_experiments": "WebGPU canvas experiments",
       "gpu_canvas_experiments_hint": "Experimental GPU-backed visualizations. Does not replace the terminal renderer.",
       "quick_commands": "Quick Commands",
-      "quick_commands_hint": "Show a built-in quick command library in the Command Bar.",
       "quick_bar": "Barra comandi rapidi",
       "quick_bar_hint": "Mostra i comandi rapidi salvati in una barra orizzontale facoltativa sopra la barra dei comandi.",
       "quick_commands_confirm": "Confirm Quick Command Run",
@@ -847,7 +846,11 @@
       "page_local": "Locale",
       "font_hint": "Configura caratteri, dimensione, peso, legature e altezza delle righe del terminale.",
       "display_behavior": "Comportamento della visualizzazione",
-      "display_behavior_hint": "Configura margini, scorrimento e codifica del terminale."
+      "display_behavior_hint": "Configura margini, scorrimento e codifica del terminale.",
+      "command_bar_dispatch_follow_broadcast": "La destinazione di invio segue il gruppo broadcast",
+      "command_bar_dispatch_follow_broadcast_hint": "Quando un gruppo broadcast è attivo, il compositore e i comandi rapidi inviano per impostazione predefinita a tutti i terminali del gruppo.",
+      "command_bar_composer_title": "Compositore e invio comandi",
+      "command_bar_composer_description": "Bozza multilinea, intervalli di passo per riga/carattere e criteri di distribuzione multiterminale."
     },
     "appearance": {
       "mode": "Modalità aspetto",
@@ -2273,8 +2276,5 @@
       "title": "Sincronizzazione cloud",
       "description": "Sincronizza impostazioni, connessioni e sessioni con lo storage cloud remoto."
     }
-  },
-  "terminal": {
-    "bg_tab_remote_desktop": "Desktop remoto"
   }
 }
