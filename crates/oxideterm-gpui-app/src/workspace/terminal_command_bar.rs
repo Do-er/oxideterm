@@ -616,10 +616,6 @@ fn detect_custom_prompt_from_credentials<'a>(
     })
 }
 
-fn terminal_broadcast_menu_left_for_trigger_right(trigger_right: f32) -> f32 {
-    (trigger_right - TERMINAL_BROADCAST_MENU_WIDTH).max(12.0)
-}
-
 fn terminal_cwd_browse_element_id(path: &str) -> u64 {
     // GPUI ElementId supports numeric tuple keys here; hashing keeps path-based
     // row identity stable without forcing a String into the element id type.

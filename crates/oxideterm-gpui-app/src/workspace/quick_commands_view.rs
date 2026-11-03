@@ -447,6 +447,7 @@ impl TerminalQuickCommandsState {
             false
         } else {
             self.open = true;
+            self.pinned = true;
             true
         }
     }
@@ -455,11 +456,9 @@ impl TerminalQuickCommandsState {
         // Confirmation text may contain shell parameters, so dropping the
         // zeroizing owner is part of every completion path.
         self.pending_execution = None;
-        self.open = self.pinned;
+        self.open = true;
+        self.pinned = true;
         self.store.focused_input = None;
-        if !self.open {
-            self.panel.finish_resize();
-        }
     }
 
     pub(in crate::workspace) fn request_execution(&mut self, command: QuickCommand) {
@@ -482,28 +481,17 @@ impl TerminalQuickCommandsState {
         self.pending_execution.take().is_some()
     }
 
-    fn prepare_insertion(&mut self, command: String, keep_open: bool) -> String {
-        if keep_open {
-            self.open = true;
-            self.pinned = true;
-            self.store.focused_input = None;
-            self.store.highlighted_command = None;
-        } else {
-            self.close();
-        }
+    fn prepare_insertion(&mut self, command: String, _keep_open: bool) -> String {
+        self.open = true;
+        self.pinned = true;
+        self.store.focused_input = None;
+        self.store.highlighted_command = None;
         command
     }
 
-    fn toggle_pinned(&mut self) {
-        self.pinned = !self.pinned;
-    }
-
     fn open_manager(&mut self) {
-        // The manager is a workspace modal with an independent lifecycle, so
-        // opening it must release the dock and its pending execution first.
-        self.open = false;
+        // Retain the drawer dock and its pinned status when opening the manager modal.
         self.panel.finish_resize();
-        self.pinned = false;
         self.pending_execution = None;
         self.pending_category_delete = None;
         self.manager_open = true;
@@ -1843,54 +1831,37 @@ impl WorkspaceApp {
             .flex()
             .flex_col()
             .gap(px(6.0))
-            .child(
-                div()
-                    .mb(px(2.0))
-                    .flex()
-                    .items_center()
-                    .justify_between()
-                    .child(
-                        div()
-                            .text_size(px(self.tokens.metrics.ui_text_xs))
-                            .font_weight(gpui::FontWeight::MEDIUM)
-                            .text_color(rgb(theme.text_muted))
-                            .child(
-                                self.render_display_text_with_role(
-                                    SelectableTextRole::PlainDocument,
-                                    "quick-commands",
-                                    "title",
-                                    self.i18n
-                                        .t(if snapshot.managing {
-                                            "terminal.quick_commands.groups"
-                                        } else {
-                                            "terminal.quick_commands.title"
-                                        })
-                                        .to_uppercase(),
-                                    theme.text_muted,
-                                    cx,
+            .when(snapshot.managing, |sidebar| {
+                sidebar.child(
+                    div()
+                        .mb(px(2.0))
+                        .flex()
+                        .items_center()
+                        .justify_between()
+                        .child(
+                            div()
+                                .text_size(px(self.tokens.metrics.ui_text_xs))
+                                .font_weight(gpui::FontWeight::MEDIUM)
+                                .text_color(rgb(theme.text_muted))
+                                .child(
+                                    self.render_display_text_with_role(
+                                        SelectableTextRole::PlainDocument,
+                                        "quick-commands",
+                                        "title",
+                                        self.i18n
+                                            .t("terminal.quick_commands.groups")
+                                            .to_uppercase(),
+                                        theme.text_muted,
+                                        cx,
+                                    ),
                                 ),
-                            ),
-                    )
-                    .child(
-                        div()
-                            .flex()
-                            .items_center()
-                            .gap(px(4.0))
-                            .when(!snapshot.managing, |actions| {
-                                actions.child(self.quick_command_pin_button(
-                                    snapshot.pinned,
-                                    |this, _event, _window, cx| {
-                                        this.terminal.update(cx, |terminal, _cx| {
-                                            terminal.quick_commands.toggle_pinned()
-                                        });
-                                        cx.stop_propagation();
-                                        cx.notify();
-                                    },
-                                    cx,
-                                ))
-                            })
-                            .when(snapshot.managing, |actions| {
-                                actions.child(self.quick_command_icon_button(
+                        )
+                        .child(
+                            div()
+                                .flex()
+                                .items_center()
+                                .gap(px(4.0))
+                                .child(self.quick_command_icon_button(
                                     LucideIcon::Plus,
                                     |this, _event, window, cx| {
                                         this.start_quick_command_category_create(cx);
@@ -1898,22 +1869,10 @@ impl WorkspaceApp {
                                         cx.stop_propagation();
                                     },
                                     cx,
-                                ))
-                            })
-                            .when(!snapshot.managing, |actions| {
-                                actions.child(self.quick_command_icon_button(
-                                    LucideIcon::X,
-                                    |this, _event, window, cx| {
-                                        this.close_terminal_quick_commands_panel(cx);
-                                        this.focus_active_pane(window, cx);
-                                        cx.stop_propagation();
-                                        cx.notify();
-                                    },
-                                    cx,
-                                ))
-                            }),
-                    ),
-            );
+                                )),
+                        ),
+                )
+            });
 
         let mut category_list = div().flex().flex_col().gap(px(6.0));
         for category in &snapshot.categories {
@@ -2608,7 +2567,7 @@ impl WorkspaceApp {
     fn render_quick_command_row(
         &self,
         command: QuickCommand,
-        pinned: bool,
+        _pinned: bool,
         managing: bool,
         highlighted_command: Option<&str>,
         cx: &mut Context<Self>,
@@ -2622,7 +2581,7 @@ impl WorkspaceApp {
         let command_id_for_move_down = command.id.clone();
         let command_id_for_delete = command.id.clone();
         let command_id_for_hover = command.id.clone();
-        let keep_open_for_insert = pinned;
+        let keep_open_for_insert = true;
         let highlighted = highlighted_command == Some(command.id.as_str());
         let selection_group_id = crate::workspace::selectable_text::selectable_text_id(
             "quick-command-row",
@@ -4039,7 +3998,7 @@ mod terminal_command_bar_quick_command_tests {
                 commands.prepare_insertion("printf 'hello'".into(), pinned),
                 "printf 'hello'"
             );
-            assert_eq!(commands.is_open(), pinned);
+            assert_eq!(commands.is_open(), true);
             assert_eq!(commands.focused_input(), None);
             commands.request_execution(command.clone());
             commands.set_focused_input(super::QuickCommandInput::Search);
@@ -4052,7 +4011,7 @@ mod terminal_command_bar_quick_command_tests {
             );
             commands.set_focused_input(super::QuickCommandInput::ParameterDefault(0));
             commands.finish_execution();
-            assert_eq!(commands.is_open(), pinned);
+            assert_eq!(commands.is_open(), true);
             assert_eq!(commands.focused_input(), None);
             assert!(commands.pending_execution.is_none());
             commands.request_execution(command.clone());

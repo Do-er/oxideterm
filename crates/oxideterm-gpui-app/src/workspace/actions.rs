@@ -1133,7 +1133,7 @@ impl WorkspaceApp {
     pub(super) fn handle_terminal_command_overlay_escape(
         &mut self,
         event: &KeyDownEvent,
-        window: &mut Window,
+        _window: &mut Window,
         cx: &mut Context<Self>,
     ) -> bool {
         if event.keystroke.key.as_str() != "escape" || event.keystroke.modifiers.platform {
@@ -1141,13 +1141,6 @@ impl WorkspaceApp {
         }
 
         if self.close_terminal_command_overlays(cx) {
-            return true;
-        }
-        // A dock must not consume Escape from a focused shell or terminal application.
-        if self.focus_handle.is_focused(window) && self.terminal.read(cx).quick_commands.is_open() {
-            self.close_terminal_quick_commands_panel(cx);
-            self.focus_active_pane(window, cx);
-            cx.notify();
             return true;
         }
         false

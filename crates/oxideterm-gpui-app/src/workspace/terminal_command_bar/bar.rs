@@ -64,7 +64,16 @@ impl WorkspaceApp {
         let broadcast_label = if broadcast_enabled {
             broadcast_targets.len().to_string()
         } else {
-            String::new()
+            "0".to_string()
+        };
+        let broadcast_tooltip_title = if broadcast_enabled {
+            format!(
+                "{} ({})",
+                self.i18n.t("terminal.broadcast.select_targets"),
+                broadcast_targets.len()
+            )
+        } else {
+            self.i18n.t("terminal.broadcast.select_targets")
         };
         let quick_commands_open = self.terminal.read(cx).quick_commands.is_open();
         let (command_sender_expanded, command_sender_running_count) = {
@@ -134,10 +143,201 @@ impl WorkspaceApp {
                         div()
                             .flex()
                             .items_center()
-                            .gap(px(4.0))
+                            .gap(px(6.0))
                             .flex_1()
                             .min_w(px(0.0))
                             .overflow_hidden()
+                            .child(
+                                div()
+                                    .relative()
+                                    .child(self.terminal_command_action_button(
+                                        LucideIcon::ListChecks,
+                                        if command_sender_expanded {
+                                            rgb(theme.accent)
+                                        } else if command_sender_running_count > 0 {
+                                            rgb(theme.warning)
+                                        } else {
+                                            rgb(theme.text_muted)
+                                        },
+                                        false,
+                                        Some(if command_sender_expanded {
+                                            rgba((theme.accent << 8) | 0x26)
+                                        } else {
+                                            rgba(0x00000000)
+                                        }),
+                                        "terminal-command-sender-toggle",
+                                        if command_sender_expanded {
+                                            self.i18n.t("terminal.sender.collapse")
+                                        } else if command_sender_running_count > 0 {
+                                            format!(
+                                                "{} ({})",
+                                                self.i18n.t("terminal.sender.running"),
+                                                command_sender_running_count
+                                            )
+                                        } else {
+                                            self.i18n.t("terminal.sender.expand")
+                                        },
+                                        move |this, _event, window, cx| {
+                                            let expanding =
+                                                !this.terminal_command_sender.read(cx).is_expanded();
+                                            if expanding {
+                                                this.close_terminal_quick_commands_panel(cx);
+                                                this.close_terminal_command_overlays(cx);
+                                                this.ime_marked_text = None;
+                                            }
+                                            this.terminal_command_sender.update(cx, |sender, cx| {
+                                                sender.toggle_expanded(cx);
+                                            });
+                                            let sender_id =
+                                                this.terminal_command_sender.read(cx).active_document_id();
+                                            if expanding {
+                                                this.focus_terminal_command_sender_editor(
+                                                    sender_id, window, cx,
+                                                );
+                                            } else {
+                                                this.focus_active_pane(window, cx);
+                                            }
+                                            cx.stop_propagation();
+                                        },
+                                        cx,
+                                    ))
+                                    .when(command_sender_running_count > 0, |container| {
+                                        container.child(
+                                            div()
+                                                .absolute()
+                                                .top(px(-3.0))
+                                                .right(px(-3.0))
+                                                .h(px(14.0))
+                                                .min_w(px(14.0))
+                                                .px(px(3.0))
+                                                .flex()
+                                                .items_center()
+                                                .justify_center()
+                                                .rounded_full()
+                                                .bg(rgb(theme.warning))
+                                                .text_size(px(9.0))
+                                                .font_weight(gpui::FontWeight::BOLD)
+                                                .text_color(rgb(theme.bg))
+                                                .child(command_sender_running_count.to_string()),
+                                        )
+                                    }),
+                            )
+                            .child(self.terminal_command_action_button(
+                                LucideIcon::Zap,
+                                if quick_commands_open {
+                                    rgb(theme.accent)
+                                } else {
+                                    rgb(theme.text_muted)
+                                },
+                                false,
+                                Some(if quick_commands_open {
+                                    rgba((theme.accent << 8) | 0x26)
+                                } else {
+                                    rgba(0x00000000)
+                                }),
+                                "terminal-command-quick-commands",
+                                self.i18n.t("terminal.quick_commands.title"),
+                                |this, _event, window, cx| {
+                                    this.toggle_terminal_quick_commands_panel(window, cx);
+                                    cx.stop_propagation();
+                                },
+                                cx,
+                            ))
+                            .child(select_anchor_probe(
+                                SelectAnchorId::TerminalBroadcastMenu,
+                                div()
+                                    .id("terminal-command-broadcast")
+                                    .h(px(22.0))
+                                    .px(px(6.0))
+                                    .flex()
+                                    .items_center()
+                                    .gap(px(4.0))
+                                    .rounded(px(self.tokens.radii.md))
+                                    .border_1()
+                                    .border_color(if broadcast_enabled {
+                                        rgba((theme.accent << 8) | 0x4d)
+                                    } else {
+                                        rgba((theme.border << 8) | 0x80)
+                                    })
+                                    .bg(if broadcast_enabled {
+                                        rgba((theme.accent << 8) | 0x1a)
+                                    } else {
+                                        rgba(0x00000000)
+                                    })
+                                    .hover(|style| {
+                                        style.bg(if broadcast_enabled {
+                                            rgba((theme.accent << 8) | 0x2e)
+                                        } else {
+                                            rgba((theme.bg_hover << 8) | 0x80)
+                                        })
+                                    })
+                                    .cursor_pointer()
+                                    .text_size(px(11.0))
+                                    .text_color(if broadcast_enabled {
+                                        rgb(theme.accent)
+                                    } else {
+                                        rgb(theme.text_muted)
+                                    })
+                                    .child(Self::render_lucide_icon(
+                                        LucideIcon::Radio,
+                                        12.0,
+                                        if broadcast_enabled {
+                                            rgb(theme.accent)
+                                        } else {
+                                            rgb(theme.text_muted)
+                                        },
+                                    ))
+                                    .child(
+                                        div()
+                                            .font_weight(gpui::FontWeight::MEDIUM)
+                                            .child(broadcast_label),
+                                    )
+                                    .on_mouse_down(
+                                        MouseButton::Left,
+                                        cx.listener(|this, _event: &MouseDownEvent, _window, cx| {
+                                            this.terminal_highlight_popover_open = false;
+                                            this.toggle_terminal_broadcast_menu(cx);
+                                            cx.stop_propagation();
+                                            cx.notify();
+                                        }),
+                                    )
+                                    .on_mouse_move(
+                                        cx.listener(move |this, event: &MouseMoveEvent, _window, cx| {
+                                            this.queue_workspace_tooltip(
+                                                "terminal-command-broadcast",
+                                                broadcast_tooltip_title.clone(),
+                                                f32::from(event.position.x) + 12.0,
+                                                f32::from(event.position.y) + 16.0,
+                                                cx,
+                                            );
+                                        }),
+                                    )
+                                    .on_hover(cx.listener(|this, hovered: &bool, _window, cx| {
+                                        if !*hovered {
+                                            this.clear_workspace_tooltip("terminal-command-broadcast", cx);
+                                        }
+                                    })),
+                                {
+                                    let workspace = workspace.clone();
+                                    move |anchor, _window, cx| {
+                                        let _ = workspace.update(cx, |this, cx| {
+                                            this.update_select_anchor(anchor, cx);
+                                        });
+                                    }
+                                },
+                            ))
+                            .when(
+                                cwd_supported || git_snapshot.is_some() || project_snapshot.is_some(),
+                                |row| {
+                                    row.child(
+                                        div()
+                                            .w(px(1.0))
+                                            .h(px(14.0))
+                                            .bg(rgba((theme.border << 8) | 0x80))
+                                            .mx(px(2.0)),
+                                    )
+                                },
+                            )
                             .when(cwd_supported, |row| {
                                 row.child(self.terminal_command_context_chip_slot(
                                     TERMINAL_COMMAND_CONTEXT_CHIP_MAX_WIDTH,
@@ -163,31 +363,6 @@ impl WorkspaceApp {
                             .flex_none()
                             .items_center()
                             .gap(px(4.0))
-                            .when(
-                                broadcast_enabled && !broadcast_label.is_empty(),
-                                |actions| {
-                                    actions.child(
-                                        div()
-                                            .h(px(20.0))
-                                            .px(px(6.0))
-                                            .flex()
-                                            .items_center()
-                                            .gap(px(4.0))
-                                            .rounded(px(self.tokens.radii.md))
-                                            .border_1()
-                                            .border_color(rgba((theme.accent << 8) | 0x4d))
-                                            .bg(rgba((theme.accent << 8) | 0x1a))
-                                            .text_size(px(11.0))
-                                            .text_color(rgb(theme.accent))
-                                            .child(Self::render_lucide_icon(
-                                                LucideIcon::Radio,
-                                                12.0,
-                                                rgb(theme.accent),
-                                            ))
-                                            .child(broadcast_label),
-                                    )
-                                },
-                            )
                             .when(split_controls_visible, |actions| {
                                 // Transport readiness controls the disabled state; keeping SSH
                                 // actions visible makes their placement match local terminals.
@@ -242,94 +417,6 @@ impl WorkspaceApp {
                                     cx,
                                 ))
                             })
-                            .child(self.terminal_command_action_button(
-                                LucideIcon::ListChecks,
-                                if command_sender_expanded {
-                                    rgb(theme.accent)
-                                } else if command_sender_running_count > 0 {
-                                    rgb(theme.warning)
-                                } else {
-                                    rgb(theme.text_muted)
-                                },
-                                false,
-                                Some(if command_sender_expanded {
-                                    rgba((theme.accent << 8) | 0x26)
-                                } else {
-                                    rgba(0x00000000)
-                                }),
-                                "terminal-command-sender-toggle",
-                                if command_sender_expanded {
-                                    self.i18n.t("terminal.sender.collapse")
-                                } else if command_sender_running_count > 0 {
-                                    format!(
-                                        "{} ({})",
-                                        self.i18n.t("terminal.sender.running"),
-                                        command_sender_running_count
-                                    )
-                                } else {
-                                    self.i18n.t("terminal.sender.expand")
-                                },
-                                move |this, _event, window, cx| {
-                                    let expanding =
-                                        !this.terminal_command_sender.read(cx).is_expanded();
-                                    if expanding {
-                                        this.close_terminal_quick_commands_panel(cx);
-                                        this.close_terminal_command_overlays(cx);
-                                        this.ime_marked_text = None;
-                                    }
-                                    this.terminal_command_sender.update(cx, |sender, cx| {
-                                        sender.toggle_expanded(cx);
-                                    });
-                                    let sender_id =
-                                        this.terminal_command_sender.read(cx).active_document_id();
-                                    if expanding {
-                                        this.focus_terminal_command_sender_editor(
-                                            sender_id, window, cx,
-                                        );
-                                    } else {
-                                        this.focus_active_pane(window, cx);
-                                    }
-                                    cx.stop_propagation();
-                                },
-                                cx,
-                            ))
-                            .when(command_sender_running_count > 0, |actions| {
-                                actions.child(
-                                    div()
-                                        .h(px(20.0))
-                                        .min_w(px(20.0))
-                                        .px(px(5.0))
-                                        .flex()
-                                        .items_center()
-                                        .justify_center()
-                                        .rounded_full()
-                                        .bg(rgba((theme.warning << 8) | 0x24))
-                                        .text_size(px(10.0))
-                                        .text_color(rgb(theme.warning))
-                                        .child(command_sender_running_count.to_string()),
-                                )
-                            })
-                            .child(self.terminal_command_action_button(
-                                LucideIcon::Zap,
-                                if quick_commands_open {
-                                    rgb(theme.accent)
-                                } else {
-                                    rgb(theme.text_muted)
-                                },
-                                false,
-                                Some(if quick_commands_open {
-                                    rgba((theme.accent << 8) | 0x26)
-                                } else {
-                                    rgba(0x00000000)
-                                }),
-                                "terminal-command-quick-commands",
-                                self.i18n.t("terminal.quick_commands.title"),
-                                |this, _event, window, cx| {
-                                    this.toggle_terminal_quick_commands_panel(window, cx);
-                                    cx.stop_propagation();
-                                },
-                                cx,
-                            ))
                             .when_some(active_pane_id, |actions, pane_id| {
                                 // Capture the visible pane so the shortcut cannot retarget after a tab switch.
                                 actions.child(self.terminal_command_action_button(
@@ -348,41 +435,6 @@ impl WorkspaceApp {
                                     cx,
                                 ))
                             })
-                            .child(select_anchor_probe(
-                                SelectAnchorId::TerminalBroadcastMenu,
-                                self.terminal_command_action_button(
-                                    LucideIcon::Radio,
-                                    if broadcast_enabled {
-                                        rgb(theme.accent)
-                                    } else {
-                                        rgb(theme.text_muted)
-                                    },
-                                    false,
-                                    Some(if broadcast_enabled {
-                                        rgba((theme.accent << 8) | 0x26)
-                                    } else {
-                                        rgba(theme.bg_hover << 8)
-                                    }),
-                                    "terminal-command-broadcast",
-                                    self.i18n.t("terminal.broadcast.select_targets"),
-                                    |this, _event, _window, cx| {
-                                        this.terminal_highlight_popover_open = false;
-                                        this.toggle_terminal_broadcast_menu(cx);
-                                        cx.stop_propagation();
-                                        cx.notify();
-                                    },
-                                    cx,
-                                )
-                                .relative(),
-                                {
-                                    let workspace = workspace.clone();
-                                    move |anchor, _window, cx| {
-                                        let _ = workspace.update(cx, |this, cx| {
-                                            this.update_select_anchor(anchor, cx);
-                                        });
-                                    }
-                                },
-                            ))
                             .child(select_anchor_probe(
                                 SelectAnchorId::TerminalHighlightRuleSet,
                                 self.terminal_command_action_button(
@@ -814,13 +866,7 @@ impl WorkspaceApp {
         let anchor_left = self
             .select_anchors
             .get(&SelectAnchorId::TerminalBroadcastMenu)
-            .map(|anchor| {
-                // Tauri uses Radix DropdownMenuContent with `align="end"`.
-                // Align to the trigger instead of the workspace root, because
-                // the AI sidebar changes the root width but not the terminal
-                // command-bar button's visual anchor.
-                terminal_broadcast_menu_left_for_trigger_right(f32::from(anchor.bounds.right()))
-            });
+            .map(|anchor| f32::from(anchor.bounds.origin.x).max(12.0));
 
         let mut menu = context_menu_event_boundary({
             let menu = div()

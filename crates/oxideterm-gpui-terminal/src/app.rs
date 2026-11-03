@@ -5036,7 +5036,6 @@ fn whole_cells_in_span(span: f32, cell_span: f32) -> usize {
     }
 }
 
-
 #[cfg(test)]
 mod tests {
     use super::*;
