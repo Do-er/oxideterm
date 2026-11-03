@@ -1596,8 +1596,13 @@ impl TerminalPane {
         self.terminal_timestamps_enabled = !self.terminal_timestamps_enabled;
         self.horizontal_scroll_offset_px = px(0.0);
         self.horizontal_scrollbar_drag = None;
-        // Timestamp visibility is paint-only. Do not restamp or resize here:
-        // both would make old scrollback look like it was modified at toggle time.
+        if let Some(bounds) = self.bounds {
+            let scale_factor = self
+                .viewport_scale_factor_bits
+                .map(f32::from_bits)
+                .unwrap_or(1.0);
+            self.apply_viewport_bounds(bounds, scale_factor, cx);
+        }
         cx.notify();
     }
 
@@ -4689,7 +4694,7 @@ impl TerminalPane {
         let width = terminal_grid_span_for_viewport(
             bounds.size.width,
             cell_width,
-            self.command_mark_gutter_width(),
+            self.timestamp_gutter_width() + self.command_mark_gutter_width(),
         );
         let height =
             (f32::from(bounds.size.height) - TERMINAL_CONTENT_PADDING * 2.0).max(line_height * 2.0);
@@ -4698,6 +4703,11 @@ impl TerminalPane {
         let cell_width_px = (cell_width * scale_factor).ceil().max(1.0) as u16;
         let cell_height_px = (line_height * scale_factor).ceil().max(1.0) as u16;
         let resize = (cols, rows, cell_width_px, cell_height_px);
+
+        let max_scroll = self.terminal_horizontal_scroll_limit();
+        if self.horizontal_scroll_offset_px > max_scroll {
+            self.horizontal_scroll_offset_px = max_scroll;
+        }
 
         if self.last_pty_resize == Some(resize) {
             // Returning to the settled viewport must discard any intermediate animation size.
@@ -4777,6 +4787,10 @@ impl TerminalPane {
             }
             self.clear_smooth_scroll_remainder();
             self.snapshot = self.stamp_snapshot(snapshot);
+            let max_scroll = self.terminal_horizontal_scroll_limit();
+            if self.horizontal_scroll_offset_px > max_scroll {
+                self.horizontal_scroll_offset_px = max_scroll;
+            }
             self.mark_terminal_content_changed(cx);
             if grid_changed {
                 // Keep collapse identities while the parser publishes rebased boundaries.
@@ -4803,7 +4817,16 @@ impl TerminalPane {
     }
 
     fn terminal_horizontal_scroll_limit(&self) -> Pixels {
-        px(self.timestamp_gutter_width())
+        let bounds = match self.bounds {
+            Some(bounds) => bounds,
+            None => return px(0.0),
+        };
+        let cell_width = self.metrics.cell_width_f32();
+        let gutter_width = self.timestamp_gutter_width() + self.command_mark_gutter_width();
+        let available_width =
+            terminal_grid_span_for_viewport(bounds.size.width, cell_width, gutter_width);
+        let content_width = self.snapshot.cols as f32 * cell_width;
+        px((content_width - available_width).max(0.0))
     }
 
     fn command_mark_gutter_width(&self) -> f32 {
@@ -5013,22 +5036,6 @@ fn whole_cells_in_span(span: f32, cell_span: f32) -> usize {
     }
 }
 
-fn terminal_grid_span_for_viewport(
-    viewport_width: Pixels,
-    cell_width: f32,
-    left_gutter_width: f32,
-) -> f32 {
-    // Browser terminals reserve right-side scrollbar chrome outside the grid.
-    // Keep that gutter stable even before scrollback exists so history growth
-    // does not resize the PTY and push the scrollbar outside the viewport.
-    // Timestamp labels are a visual overlay and must not change PTY columns;
-    // toggling them should never reflow scrollback or restamp old rows.
-    (f32::from(viewport_width)
-        - TERMINAL_CONTENT_PADDING * 2.0
-        - left_gutter_width
-        - SCROLLBAR_RESERVED_WIDTH)
-        .max(cell_width * 2.0)
-}
 
 #[cfg(test)]
 mod tests {

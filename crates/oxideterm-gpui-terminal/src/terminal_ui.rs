@@ -1162,6 +1162,20 @@ pub(crate) fn terminal_timestamp_gutter_width(
     }
 }
 
+/// Calculates the available horizontal span for terminal grid columns, reserving
+/// space for left gutters (timestamps, command marks) and right-side scrollbar chrome.
+pub(crate) fn terminal_grid_span_for_viewport(
+    viewport_width: Pixels,
+    cell_width: f32,
+    left_gutter_width: f32,
+) -> f32 {
+    (f32::from(viewport_width)
+        - TERMINAL_CONTENT_PADDING * 2.0
+        - left_gutter_width
+        - SCROLLBAR_RESERVED_WIDTH)
+        .max(cell_width * 2.0)
+}
+
 /// Emulator-owned identity is stable across scrolling, eviction and local row movement.
 pub(crate) fn terminal_row_timestamp_identity(row: &TerminalRow) -> u64 {
     row.source_id as u64

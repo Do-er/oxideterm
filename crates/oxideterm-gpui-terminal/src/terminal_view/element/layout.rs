@@ -39,8 +39,8 @@ pub(crate) fn terminal_horizontal_scrollbar_for_viewport(
     max_scroll: f32,
     scroll_offset: f32,
 ) -> Option<TerminalHorizontalScrollbar> {
-    // Only the timestamp overlay width is scrollable; the PTY grid remains
-    // fixed while this geometry exposes the otherwise clipped columns.
+    // Returns horizontal scrollbar metrics when the terminal grid content width
+    // exceeds the available viewport width.
     if viewport_width <= 0.0 || max_scroll <= 0.0 {
         return None;
     }

@@ -2527,15 +2527,24 @@ impl Element for TerminalElement {
                 window,
             );
         }
+        let track_width = (f32::from(grid_viewport_width) - SCROLLBAR_RESERVED_WIDTH).max(0.0);
+        let cell_width = self.metrics.cell_width_f32();
+        let available_grid_width = terminal_grid_span_for_viewport(
+            bounds.size.width,
+            cell_width,
+            grid_gutter_width,
+        );
+        let content_width = self.snapshot.cols as f32 * cell_width;
+        let max_scroll = (content_width - available_grid_width).max(0.0);
         if let Some(horizontal_scrollbar) = terminal_horizontal_scrollbar_for_viewport(
-            f32::from(grid_viewport_width) - SCROLLBAR_RESERVED_WIDTH,
-            timestamp_gutter_width,
+            track_width,
+            max_scroll,
             f32::from(self.scroll_x_offset),
         ) {
             paint_horizontal_scrollbar(
                 horizontal_scrollbar,
                 viewport_origin,
-                grid_viewport_width - px(SCROLLBAR_RESERVED_WIDTH),
+                px(track_width),
                 bounds.size.height,
                 window,
             );
