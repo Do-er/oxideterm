@@ -463,11 +463,51 @@ impl WorkspaceApp {
                     .child(div().truncate().child(current_target_label))
                     .into_any_element()
             });
+        let broadcast_context = (snapshot.target_scope == TerminalCommandSenderTargetScope::Broadcast)
+            .then(|| {
+                let active_pane = self.active_pane_id(cx);
+                let broadcast_targets = active_pane
+                    .map(|pane| self.terminal_broadcast_target_panes(pane, cx))
+                    .unwrap_or_default();
+                let broadcast_enabled = active_pane
+                    .and_then(|pane| self.terminal.read(cx).sync_groups().member(pane))
+                    .is_some_and(|member| {
+                        !member.isolated && self.terminal.read(cx).sync_groups().enabled(member.group)
+                    });
+                let (icon_color, label) = if broadcast_enabled && !broadcast_targets.is_empty() {
+                    (
+                        self.tokens.ui.accent,
+                        format!(
+                            "{} ({})",
+                            self.i18n.t("terminal.sender.broadcast_active"),
+                            broadcast_targets.len() + 1
+                        ),
+                    )
+                } else {
+                    (
+                        self.tokens.ui.text_muted,
+                        self.i18n.t("terminal.sender.fallback_current"),
+                    )
+                };
+                div()
+                    .flex_none()
+                    .max_w(px(TERMINAL_SENDER_TARGET_CONTEXT_MAX_WIDTH + 100.0))
+                    .flex()
+                    .items_center()
+                    .gap(px(4.0))
+                    .text_size(px(self.tokens.metrics.ui_text_xs))
+                    .text_color(rgb(icon_color))
+                    .child(Self::render_lucide_icon(
+                        LucideIcon::Radio,
+                        12.0,
+                        rgb(icon_color),
+                    ))
+                    .child(div().truncate().child(label))
+                    .into_any_element()
+            });
         let selected_targets = (snapshot.target_scope
             == TerminalCommandSenderTargetScope::Selected)
             .then(|| self.render_terminal_sender_target_list(snapshot, targets, cx));
-        let selected_group = (snapshot.target_scope == TerminalCommandSenderTargetScope::Group)
-            .then(|| self.render_terminal_sender_group_list(snapshot, cx));
         let target_controls = div()
             .w_full()
             .flex()
@@ -484,6 +524,7 @@ impl WorkspaceApp {
             )
             .child(self.render_terminal_sender_scope_control(snapshot, selected_target_count, cx))
             .when_some(target_context, |row, context| row.child(context))
+            .when_some(broadcast_context, |row, context| row.child(context))
             .when_some(selected_targets, |row, target_list| {
                 row.child(
                     div()
@@ -492,15 +533,8 @@ impl WorkspaceApp {
                         .child(target_list),
                 )
             })
-            .when_some(selected_group, |row, group_list| {
-                row.child(div().min_w(px(160.0)).flex_1().child(group_list))
-            })
             .when(
-                !matches!(
-                    snapshot.target_scope,
-                    TerminalCommandSenderTargetScope::Selected
-                        | TerminalCommandSenderTargetScope::Group
-                ),
+                snapshot.target_scope != TerminalCommandSenderTargetScope::Selected,
                 |row| row.child(div().flex_1().min_w(px(8.0))),
             )
             .when(
@@ -721,8 +755,8 @@ impl WorkspaceApp {
         let active_index = match snapshot.target_scope {
             TerminalCommandSenderTargetScope::Current => 0,
             TerminalCommandSenderTargetScope::All => 1,
-            TerminalCommandSenderTargetScope::Selected => 2,
-            TerminalCommandSenderTargetScope::Group => 3,
+            TerminalCommandSenderTargetScope::Broadcast => 2,
+            TerminalCommandSenderTargetScope::Selected => 3,
         };
         let control_id = "terminal-sender-scope";
         let previous_index = self
@@ -734,8 +768,8 @@ impl WorkspaceApp {
         let items = [
             TerminalCommandSenderTargetScope::Current,
             TerminalCommandSenderTargetScope::All,
+            TerminalCommandSenderTargetScope::Broadcast,
             TerminalCommandSenderTargetScope::Selected,
-            TerminalCommandSenderTargetScope::Group,
         ]
         .into_iter()
         .enumerate()
@@ -743,13 +777,12 @@ impl WorkspaceApp {
             let label = match scope {
                 TerminalCommandSenderTargetScope::Current => self.i18n.t("terminal.sender.current"),
                 TerminalCommandSenderTargetScope::All => self.i18n.t("terminal.sender.all"),
+                TerminalCommandSenderTargetScope::Broadcast => {
+                    self.i18n.t("terminal.sender.broadcast")
+                }
                 TerminalCommandSenderTargetScope::Selected => format!(
                     "{} ({selected_target_count})",
                     self.i18n.t("terminal.sender.selected")
-                ),
-                TerminalCommandSenderTargetScope::Group => format!(
-                    "{} ({selected_target_count})",
-                    self.i18n.t("terminal.sender.group")
                 ),
             };
             oxideterm_gpui_ui::segmented_control_item(&self.tokens, label, index == active_index)
@@ -836,71 +869,6 @@ impl WorkspaceApp {
             .w_full()
             .overflow_x_scrollbar()
             .child(target_row)
-            .into_any_element()
-    }
-
-    fn render_terminal_sender_group_list(
-        &self,
-        snapshot: &TerminalCommandSenderDocumentSnapshot,
-        cx: &mut Context<Self>,
-    ) -> AnyElement {
-        let sender_id = snapshot.id;
-        let groups = self.terminal_broadcast_groups();
-        if groups.is_empty() {
-            return div()
-                .text_size(px(self.tokens.metrics.ui_text_xs))
-                .text_color(rgb(self.tokens.ui.text_muted))
-                .child(self.i18n.t("terminal.sender.no_groups"))
-                .into_any_element();
-        }
-
-        let mut group_row = div().flex_none().flex().items_center().gap(px(4.0));
-        for group in groups {
-            let group_id = group.id;
-            let selected = snapshot.selected_group_id == Some(group_id);
-            let options = ActionChipOptions::new()
-                .active(selected)
-                .height(24.0)
-                .radius(ButtonRadius::Sm)
-                .idle_text_tone(ActionChipTextTone::Muted);
-            group_row = group_row.child(
-                action_chip(
-                    &self.tokens,
-                    group.name.clone(),
-                    Some(Self::render_lucide_icon(
-                        if selected {
-                            LucideIcon::CheckSquare
-                        } else {
-                            LucideIcon::Square
-                        },
-                        12.0,
-                        action_chip_foreground(&self.tokens, options),
-                    )),
-                    options,
-                )
-                .on_mouse_down(
-                    MouseButton::Left,
-                    cx.listener(move |this, _event, _window, cx| {
-                        let targets = this.resolve_terminal_broadcast_group(group_id, cx);
-                        this.terminal_command_sender.update(cx, |sender, cx| {
-                            sender.set_target_group(sender_id, group_id, &targets, cx);
-                        });
-                        cx.stop_propagation();
-                    }),
-                ),
-            );
-        }
-        div()
-            .flex()
-            .flex_col()
-            .gap(px(4.0))
-            .child(div().overflow_x_scrollbar().child(group_row))
-            .child(
-                div()
-                    .text_size(px(self.tokens.metrics.ui_text_xs))
-                    .text_color(rgb(self.tokens.ui.text_muted))
-                    .child(self.i18n.t("terminal.sender.group_hint")),
-            )
             .into_any_element()
     }
 
@@ -1113,49 +1081,39 @@ impl WorkspaceApp {
         sender_id: TerminalCommandSenderId,
         cx: &mut Context<Self>,
     ) -> bool {
-        let (selected_group_id, is_current_scope) = {
-            let doc = self
-                .terminal_command_sender
-                .read(cx)
-                .document_snapshots()
-                .into_iter()
-                .find(|document| document.id == sender_id);
-            (
-                doc.as_ref()
-                    .filter(|document| {
-                        document.target_scope == TerminalCommandSenderTargetScope::Group
-                    })
-                    .and_then(|document| document.selected_group_id),
-                doc.as_ref()
-                    .map(|d| d.target_scope == TerminalCommandSenderTargetScope::Current)
-                    .unwrap_or(false),
-            )
-        };
-        if let Some(group_id) = selected_group_id {
-            // Resolve at run time so closed and newly opened saved sessions are reflected
-            // without opening any connection on behalf of the sender.
-            let targets = self.resolve_terminal_broadcast_group(group_id, cx);
-            self.terminal_command_sender.update(cx, |sender, cx| {
-                sender.set_target_group(sender_id, group_id, &targets, cx);
-            });
-        }
+        let target_scope = self
+            .terminal_command_sender
+            .read(cx)
+            .document_snapshots()
+            .into_iter()
+            .find(|document| document.id == sender_id)
+            .map(|d| d.target_scope)
+            .unwrap_or(TerminalCommandSenderTargetScope::Current);
+
         let current_pane_id = self.active_pane_id(cx);
-        let follow_broadcast = self
-            .settings_store
-            .settings()
-            .terminal
-            .command_bar
-            .dispatch_follow_broadcast;
-        if follow_broadcast && is_current_scope {
+
+        if target_scope == TerminalCommandSenderTargetScope::Broadcast {
+            let broadcast_enabled = current_pane_id
+                .and_then(|pane| self.terminal.read(cx).sync_groups().member(pane))
+                .is_some_and(|member| {
+                    !member.isolated && self.terminal.read(cx).sync_groups().enabled(member.group)
+                });
             if let Some(active_pane) = current_pane_id {
-                let broadcast_targets = self.terminal_broadcast_target_panes(active_pane, cx);
-                if !broadcast_targets.is_empty() {
-                    let mut all_targets = vec![active_pane];
-                    all_targets.extend(broadcast_targets);
-                    self.terminal_command_sender.update(cx, |sender, cx| {
-                        sender.set_selected_targets(sender_id, &all_targets, cx);
-                    });
-                }
+                let targets = if broadcast_enabled {
+                    let broadcast_targets = self.terminal_broadcast_target_panes(active_pane, cx);
+                    if !broadcast_targets.is_empty() {
+                        let mut all = vec![active_pane];
+                        all.extend(broadcast_targets);
+                        all
+                    } else {
+                        vec![active_pane]
+                    }
+                } else {
+                    vec![active_pane]
+                };
+                self.terminal_command_sender.update(cx, |sender, cx| {
+                    sender.set_selected_targets(sender_id, &targets, cx);
+                });
             }
         }
         let entries = self.terminal_command_sender_target_entries(cx);

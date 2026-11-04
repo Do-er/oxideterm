@@ -194,12 +194,11 @@
       "pause": "暫停錄製",
       "resume": "繼續錄製",
       "discard": "棄置錄製",
-      "show_timestamps": "顯示時間戳",
-      "hide_timestamps": "隱藏時間戳",
       "search_placeholder": "搜尋錄製...",
       "matches": "個匹配",
       "search_no_results": "沒有結果",
-      "player_empty": "尚無回放輸出"
+      "player_empty": "尚無回放輸出",
+      "timestamps": "時間戳"
     },
     "session_log": {
       "title": "工作階段日誌",
@@ -546,13 +545,8 @@
       "execute": "執行"
     },
     "sender": {
-      "group_hint": "儲存的連線群組會選取所有符合的終端窗格；互動同步中的臨時隔離不會改變此處指定的傳送目標。",
       "task": "傳送器",
       "placeholder": "輸入命令或十六進位位元組……",
-      "show": "顯示命令傳送器",
-      "hide": "隱藏命令傳送器",
-      "expand": "展開命令傳送器",
-      "collapse": "收合命令傳送器",
       "add_task": "新增傳送工作",
       "remove_task": "移除傳送工作",
       "text": "文字",
@@ -563,11 +557,9 @@
       "interval": "間隔",
       "repeat": "次數",
       "targets": "目標",
-      "current": "目前",
+      "current": "當前",
       "all": "全部",
       "selected": "指定",
-      "group": "群組",
-      "no_groups": "沒有廣播群組",
       "start": "開始",
       "stop": "停止",
       "idle": "就緒",
@@ -580,10 +572,13 @@
       "error_empty": "請輸入要傳送的內容",
       "error_hex": "十六進位輸入無效",
       "error_targets": "沒有可用的目標終端",
-      "error_busy": "目標正由另一個傳送工作使用"
+      "error_busy": "目標正由另一個傳送工作使用",
+      "title": "命令發送器",
+      "broadcast": "廣播",
+      "fallback_current": "未啟用同步，將僅發往當前終端",
+      "broadcast_active": "跟隨廣播目標同步中"
     },
     "broadcast": {
-      "members_hint": "選擇個別終端後啟用同步，新開終端不會自動加入。移動終端前，請先將其移出原群組。",
       "isolate_member": "臨時隔離",
       "resume_member": "恢復同步",
       "pause_group": "暫停同步",

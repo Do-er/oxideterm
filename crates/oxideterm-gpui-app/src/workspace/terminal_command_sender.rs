@@ -36,8 +36,8 @@ pub(super) struct TerminalCommandSenderId(pub(super) u64);
 pub(super) enum TerminalCommandSenderTargetScope {
     Current,
     All,
+    Broadcast,
     Selected,
-    Group,
 }
 
 #[derive(Clone, Copy, Debug, Eq, PartialEq)]
@@ -119,7 +119,6 @@ pub(super) struct TerminalCommandSenderDocumentSnapshot {
     pub(super) interval_ms: u64,
     pub(super) repeat_count: u32,
     pub(super) target_scope: TerminalCommandSenderTargetScope,
-    pub(super) selected_group_id: Option<uuid::Uuid>,
     pub(super) selected_targets: HashSet<PaneId>,
     pub(super) status: TerminalCommandSenderStatus,
     pub(super) failure: Option<TerminalCommandSenderFailure>,
@@ -139,7 +138,6 @@ struct TerminalCommandSenderDocument {
     interval_ms: u64,
     repeat_count: u32,
     target_scope: TerminalCommandSenderTargetScope,
-    selected_group_id: Option<uuid::Uuid>,
     selected_targets: HashSet<PaneId>,
     status: TerminalCommandSenderStatus,
     failure: Option<TerminalCommandSenderFailure>,
@@ -161,7 +159,6 @@ impl TerminalCommandSenderDocument {
             interval_ms: self.interval_ms,
             repeat_count: self.repeat_count,
             target_scope: self.target_scope,
-            selected_group_id: self.selected_group_id,
             selected_targets: self.selected_targets.clone(),
             status: self.status,
             failure: self.failure,
@@ -269,7 +266,6 @@ impl TerminalCommandSenderEntity {
             interval_ms: 1_000,
             repeat_count: 1,
             target_scope: TerminalCommandSenderTargetScope::Current,
-            selected_group_id: None,
             selected_targets: HashSet::new(),
             status: TerminalCommandSenderStatus::Idle,
             failure: None,
@@ -767,29 +763,6 @@ impl TerminalCommandSenderEntity {
         }
     }
 
-    pub(super) fn set_target_group(
-        &mut self,
-        sender_id: TerminalCommandSenderId,
-        group_id: uuid::Uuid,
-        targets: &[PaneId],
-        cx: &mut Context<Self>,
-    ) {
-        if self
-            .document(sender_id)
-            .is_some_and(|document| document.status == TerminalCommandSenderStatus::Running)
-        {
-            return;
-        }
-        if let Some(document) = self.document_mut(sender_id) {
-            document.selected_group_id = Some(group_id);
-            document.selected_targets.clear();
-            document.selected_targets.extend(targets.iter().copied());
-            document.target_scope = TerminalCommandSenderTargetScope::Group;
-            document.failure = None;
-            cx.notify();
-        }
-    }
-
     pub(super) fn retain_live_targets(
         &mut self,
         live_panes: &HashSet<PaneId>,
@@ -1264,10 +1237,12 @@ fn resolve_run_targets(
         .filter(|target| match scope {
             TerminalCommandSenderTargetScope::Current => current_pane_id == Some(target.pane_id),
             TerminalCommandSenderTargetScope::All => true,
+            TerminalCommandSenderTargetScope::Broadcast => {
+                selected_targets.contains(&target.pane_id)
+            }
             TerminalCommandSenderTargetScope::Selected => {
                 selected_targets.contains(&target.pane_id)
             }
-            TerminalCommandSenderTargetScope::Group => selected_targets.contains(&target.pane_id),
         })
         .filter(|target| seen.insert(target.pane_id))
         .map(|target| TerminalCommandSenderRunTarget {

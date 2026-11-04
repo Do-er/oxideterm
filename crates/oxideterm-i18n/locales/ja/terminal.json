@@ -194,12 +194,11 @@
       "pause": "録画一時停止",
       "resume": "録画再開",
       "discard": "録画破棄",
-      "show_timestamps": "タイムスタンプを表示",
-      "hide_timestamps": "タイムスタンプを非表示",
       "search_placeholder": "Search recording...",
       "matches": "matches",
       "search_no_results": "No results",
-      "player_empty": "No playback output yet"
+      "player_empty": "No playback output yet",
+      "timestamps": "タイムスタンプ"
     },
     "session_log": {
       "title": "セッションログ",
@@ -546,13 +545,8 @@
       "execute": "実行"
     },
     "sender": {
-      "group_hint": "保存済みの接続グループは、一致するすべての端末ペインを対象にします。対話同期での一時分離は、ここで指定した送信先には影響しません。",
       "task": "送信",
       "placeholder": "コマンドまたは16進バイトを入力...",
-      "show": "コマンド送信を表示",
-      "hide": "コマンド送信を非表示",
-      "expand": "コマンド送信を展開",
-      "collapse": "コマンド送信を折りたたむ",
       "add_task": "送信タスクを追加",
       "remove_task": "送信タスクを削除",
       "text": "テキスト",
@@ -566,8 +560,6 @@
       "current": "現在",
       "all": "すべて",
       "selected": "指定",
-      "group": "グループ",
-      "no_groups": "ブロードキャストグループがありません",
       "start": "開始",
       "stop": "停止",
       "idle": "準備完了",
@@ -580,10 +572,13 @@
       "error_empty": "送信内容を入力してください",
       "error_hex": "16進入力が無効です",
       "error_targets": "送信先ターミナルがありません",
-      "error_busy": "送信先は別の送信タスクで使用中です"
+      "error_busy": "送信先は別の送信タスクで使用中です",
+      "title": "コマンド送信",
+      "broadcast": "ブロードキャスト",
+      "fallback_current": "同期無効のため現在の端末にのみ送信",
+      "broadcast_active": "ブロードキャスト同期中"
     },
     "broadcast": {
-      "members_hint": "対象の端末を選択して同期を有効にします。新しい端末は自動参加しません。別のグループに移す前に現在のグループから外してください。",
       "isolate_member": "一時的に分離",
       "resume_member": "同期を再開",
       "pause_group": "同期を一時停止",

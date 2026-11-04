@@ -194,12 +194,11 @@
       "pause": "Aufnahme pausieren",
       "resume": "Aufnahme fortsetzen",
       "discard": "Aufnahme verwerfen",
-      "show_timestamps": "Zeitstempel anzeigen",
-      "hide_timestamps": "Zeitstempel ausblenden",
       "search_placeholder": "Search recording...",
       "matches": "matches",
       "search_no_results": "No results",
-      "player_empty": "No playback output yet"
+      "player_empty": "No playback output yet",
+      "timestamps": "Zeitstempel"
     },
     "session_log": {
       "title": "Sitzungsprotokoll",
@@ -546,13 +545,8 @@
       "execute": "Ausführen"
     },
     "sender": {
-      "group_hint": "Gespeicherte Verbindungsgruppen wählen alle passenden Terminalfenster aus. Die Isolation bei interaktiver Synchronisation ändert diese expliziten Ziele nicht.",
       "task": "Sender",
       "placeholder": "Befehle oder Hexadezimalbytes eingeben...",
-      "show": "Befehlssender anzeigen",
-      "hide": "Befehlssender ausblenden",
-      "expand": "Befehlssender erweitern",
-      "collapse": "Befehlssender einklappen",
       "add_task": "Sendeauftrag hinzufügen",
       "remove_task": "Sendeauftrag entfernen",
       "text": "Text",
@@ -566,8 +560,6 @@
       "current": "Aktuell",
       "all": "Alle",
       "selected": "Ausgewählt",
-      "group": "Gruppe",
-      "no_groups": "Keine Broadcast-Gruppen",
       "start": "Starten",
       "stop": "Stoppen",
       "idle": "Bereit",
@@ -580,10 +572,13 @@
       "error_empty": "Zu sendenden Inhalt eingeben",
       "error_hex": "Ungültige Hexadezimaleingabe",
       "error_targets": "Kein Zielterminal",
-      "error_busy": "Ein Ziel wird von einem anderen Sender verwendet"
+      "error_busy": "Ein Ziel wird von einem anderen Sender verwendet",
+      "title": "Befehls-Sender",
+      "broadcast": "Broadcast",
+      "fallback_current": "Sync deaktiviert, sendet nur an aktuelles Terminal",
+      "broadcast_active": "Folgt aktiven Broadcast-Zielen"
     },
     "broadcast": {
-      "members_hint": "Einzelne Terminals auswählen und dann die Synchronisation aktivieren. Neue Terminals treten nicht automatisch bei. Vor dem Wechsel ein Terminal aus seiner bisherigen Gruppe entfernen.",
       "isolate_member": "Isolieren",
       "resume_member": "Fortsetzen",
       "pause_group": "Pausieren",

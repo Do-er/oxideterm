@@ -194,12 +194,11 @@
       "pause": "Pausar grabación",
       "resume": "Reanudar grabación",
       "discard": "Descartar grabación",
-      "show_timestamps": "Mostrar marcas de tiempo",
-      "hide_timestamps": "Ocultar marcas de tiempo",
       "search_placeholder": "Search recording...",
       "matches": "matches",
       "search_no_results": "No results",
-      "player_empty": "No playback output yet"
+      "player_empty": "No playback output yet",
+      "timestamps": "Marcas de tiempo"
     },
     "session_log": {
       "title": "Registro de sesión",
@@ -546,13 +545,8 @@
       "execute": "Ejecutar"
     },
     "sender": {
-      "group_hint": "Los grupos de conexiones guardados seleccionan todos los terminales coincidentes. El aislamiento de la sincronización interactiva no cambia estos destinos explícitos.",
       "task": "Emisor",
       "placeholder": "Introduce comandos o bytes hexadecimales...",
-      "show": "Mostrar emisor de comandos",
-      "hide": "Ocultar emisor de comandos",
-      "expand": "Expandir emisor de comandos",
-      "collapse": "Contraer emisor de comandos",
       "add_task": "Añadir tarea de envío",
       "remove_task": "Eliminar tarea de envío",
       "text": "Texto",
@@ -566,8 +560,6 @@
       "current": "Actual",
       "all": "Todos",
       "selected": "Seleccionados",
-      "group": "Grupo",
-      "no_groups": "No hay grupos de difusión",
       "start": "Iniciar",
       "stop": "Detener",
       "idle": "Listo",
@@ -580,10 +572,13 @@
       "error_empty": "Introduce contenido para enviar",
       "error_hex": "Entrada hexadecimal no válida",
       "error_targets": "No hay terminal de destino",
-      "error_busy": "Otro emisor está usando un destino"
+      "error_busy": "Otro emisor está usando un destino",
+      "title": "Emisor de comandos",
+      "broadcast": "Difusión",
+      "fallback_current": "Sincronización desactivada, se envía solo al terminal actual",
+      "broadcast_active": "Siguiendo los destinos de difusión activos"
     },
     "broadcast": {
-      "members_hint": "Selecciona terminales concretos y activa la sincronización. Los nuevos terminales no se unen automáticamente. Quita un terminal de su grupo actual antes de moverlo.",
       "isolate_member": "Aislar",
       "resume_member": "Reanudar",
       "pause_group": "Pausar",

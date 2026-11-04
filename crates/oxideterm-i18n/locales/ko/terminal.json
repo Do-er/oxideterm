@@ -194,12 +194,11 @@
       "pause": "녹화 일시 정지",
       "resume": "녹화 재개",
       "discard": "녹화 삭제",
-      "show_timestamps": "타임스탬프 표시",
-      "hide_timestamps": "타임스탬프 숨기기",
       "search_placeholder": "Search recording...",
       "matches": "matches",
       "search_no_results": "No results",
-      "player_empty": "No playback output yet"
+      "player_empty": "No playback output yet",
+      "timestamps": "타임스탬프"
     },
     "session_log": {
       "title": "세션 로그",
@@ -546,13 +545,8 @@
       "execute": "실행"
     },
     "sender": {
-      "group_hint": "저장된 연결 그룹은 일치하는 모든 터미널 창을 대상으로 합니다. 대화형 동기화의 임시 격리는 여기서 지정한 전송 대상에 영향을 주지 않습니다.",
       "task": "송신기",
       "placeholder": "명령 또는 16진수 바이트 입력...",
-      "show": "명령 송신기 표시",
-      "hide": "명령 송신기 숨기기",
-      "expand": "명령 송신기 펼치기",
-      "collapse": "명령 송신기 접기",
       "add_task": "송신 작업 추가",
       "remove_task": "송신 작업 제거",
       "text": "텍스트",
@@ -566,8 +560,6 @@
       "current": "현재",
       "all": "전체",
       "selected": "선택",
-      "group": "그룹",
-      "no_groups": "브로드캐스트 그룹 없음",
       "start": "시작",
       "stop": "중지",
       "idle": "준비",
@@ -580,10 +572,13 @@
       "error_empty": "전송할 내용을 입력하세요",
       "error_hex": "잘못된 16진수 입력",
       "error_targets": "대상 터미널이 없습니다",
-      "error_busy": "대상이 다른 송신 작업에서 사용 중입니다"
+      "error_busy": "대상이 다른 송신 작업에서 사용 중입니다",
+      "title": "명령 발송기",
+      "broadcast": "브로드캐스트",
+      "fallback_current": "동기화 꺼짐, 현재 터미널로만 전송",
+      "broadcast_active": "브로드캐스트 대상 동기화 중"
     },
     "broadcast": {
-      "members_hint": "개별 터미널을 선택한 후 동기화를 켜세요. 새 터미널은 자동으로 참여하지 않습니다. 터미널을 옮기려면 먼저 기존 그룹에서 제거하세요.",
       "isolate_member": "임시 격리",
       "resume_member": "동기화 재개",
       "pause_group": "동기화 일시 중지",

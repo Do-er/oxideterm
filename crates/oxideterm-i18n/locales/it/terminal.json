@@ -194,12 +194,11 @@
       "pause": "Pausa registrazione",
       "resume": "Riprendi registrazione",
       "discard": "Scarta registrazione",
-      "show_timestamps": "Mostra timestamp",
-      "hide_timestamps": "Nascondi timestamp",
       "search_placeholder": "Search recording...",
       "matches": "matches",
       "search_no_results": "No results",
-      "player_empty": "No playback output yet"
+      "player_empty": "No playback output yet",
+      "timestamps": "Timestamp"
     },
     "session_log": {
       "title": "Registro della sessione",
@@ -546,13 +545,8 @@
       "execute": "Esegui"
     },
     "sender": {
-      "group_hint": "I gruppi di connessioni salvati selezionano tutti i terminali corrispondenti. L’isolamento nella sincronizzazione interattiva non modifica queste destinazioni esplicite.",
       "task": "Invio",
       "placeholder": "Inserisci comandi o byte esadecimali...",
-      "show": "Mostra invio comandi",
-      "hide": "Nascondi invio comandi",
-      "expand": "Espandi invio comandi",
-      "collapse": "Comprimi invio comandi",
       "add_task": "Aggiungi attività di invio",
       "remove_task": "Rimuovi attività di invio",
       "text": "Testo",
@@ -566,8 +560,6 @@
       "current": "Corrente",
       "all": "Tutte",
       "selected": "Selezionate",
-      "group": "Gruppo",
-      "no_groups": "Nessun gruppo di broadcast",
       "start": "Avvia",
       "stop": "Ferma",
       "idle": "Pronto",
@@ -580,10 +572,13 @@
       "error_empty": "Inserisci il contenuto da inviare",
       "error_hex": "Input esadecimale non valido",
       "error_targets": "Nessun terminale di destinazione",
-      "error_busy": "Una destinazione è usata da un altro invio"
+      "error_busy": "Una destinazione è usata da un altro invio",
+      "title": "Invio comandi",
+      "broadcast": "Broadcast",
+      "fallback_current": "Sincronizzazione disattivata, invio solo al terminale corrente",
+      "broadcast_active": "Segue le destinazioni broadcast attive"
     },
     "broadcast": {
-      "members_hint": "Seleziona i singoli terminali, poi attiva la sincronizzazione. I nuovi terminali non vengono aggiunti automaticamente. Rimuovi un terminale dal gruppo attuale prima di spostarlo.",
       "isolate_member": "Isola",
       "resume_member": "Riprendi",
       "pause_group": "Pausa",

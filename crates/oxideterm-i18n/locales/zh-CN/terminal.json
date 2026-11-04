@@ -118,13 +118,8 @@
       "source_quick_command": "快捷命令"
     },
     "sender": {
-      "group_hint": "保存的连接组会选中所有匹配的终端窗格；交互同步中的临时隔离不改变此处指定的发送目标。",
       "task": "发送器",
       "placeholder": "输入命令或十六进制字节……",
-      "show": "显示命令发送器",
-      "hide": "隐藏命令发送器",
-      "expand": "展开命令发送器",
-      "collapse": "收起命令发送器",
       "add_task": "添加发送任务",
       "remove_task": "移除发送任务",
       "text": "文本",
@@ -138,8 +133,6 @@
       "current": "当前",
       "all": "全部",
       "selected": "指定",
-      "group": "分组",
-      "no_groups": "暂无广播组",
       "start": "开始",
       "stop": "停止",
       "idle": "就绪",
@@ -152,10 +145,13 @@
       "error_empty": "请输入要发送的内容",
       "error_hex": "十六进制输入无效",
       "error_targets": "没有可用的目标终端",
-      "error_busy": "目标正在被另一个发送任务使用"
+      "error_busy": "目标正在被另一个发送任务使用",
+      "title": "命令发送器",
+      "broadcast": "广播",
+      "fallback_current": "未启用同步，将仅发往当前终端",
+      "broadcast_active": "跟随广播目标同步中"
     },
     "broadcast": {
-      "members_hint": "选择具体终端后启用同步，新开终端不会自动加入。移动终端前，请先将其移出原组。",
       "isolate_member": "临时隔离",
       "resume_member": "恢复同步",
       "pause_group": "暂停同步",
@@ -282,12 +278,11 @@
       "pause": "暂停录制",
       "resume": "恢复录制",
       "discard": "丢弃录制",
-      "show_timestamps": "显示时间戳",
-      "hide_timestamps": "隐藏时间戳",
       "search_placeholder": "搜索录制...",
       "matches": "个匹配",
       "search_no_results": "没有结果",
-      "player_empty": "暂无回放输出"
+      "player_empty": "暂无回放输出",
+      "timestamps": "时间戳"
     },
     "session_log": {
       "title": "会话日志",

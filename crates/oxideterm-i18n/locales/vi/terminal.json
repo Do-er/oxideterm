@@ -194,12 +194,11 @@
       "pause": "Tạm dừng ghi",
       "resume": "Tiếp tục ghi",
       "discard": "Hủy bản ghi",
-      "show_timestamps": "Hiện dấu thời gian",
-      "hide_timestamps": "Ẩn dấu thời gian",
       "search_placeholder": "Search recording...",
       "matches": "matches",
       "search_no_results": "No results",
-      "player_empty": "No playback output yet"
+      "player_empty": "No playback output yet",
+      "timestamps": "Dấu thời gian"
     },
     "session_log": {
       "title": "Nhật ký phiên",
@@ -546,13 +545,8 @@
       "execute": "Thực thi"
     },
     "sender": {
-      "group_hint": "Nhóm kết nối đã lưu chọn mọi cửa sổ terminal phù hợp. Cách ly trong đồng bộ tương tác không thay đổi các đích gửi được chỉ định ở đây.",
       "task": "Trình gửi",
       "placeholder": "Nhập lệnh hoặc byte thập lục phân...",
-      "show": "Hiện trình gửi lệnh",
-      "hide": "Ẩn trình gửi lệnh",
-      "expand": "Mở rộng trình gửi lệnh",
-      "collapse": "Thu gọn trình gửi lệnh",
       "add_task": "Thêm tác vụ gửi",
       "remove_task": "Xóa tác vụ gửi",
       "text": "Văn bản",
@@ -566,8 +560,6 @@
       "current": "Hiện tại",
       "all": "Tất cả",
       "selected": "Đã chọn",
-      "group": "Nhóm",
-      "no_groups": "Không có nhóm phát lệnh",
       "start": "Bắt đầu",
       "stop": "Dừng",
       "idle": "Sẵn sàng",
@@ -580,10 +572,13 @@
       "error_empty": "Nhập nội dung cần gửi",
       "error_hex": "Dữ liệu thập lục phân không hợp lệ",
       "error_targets": "Không có terminal đích",
-      "error_busy": "Một đích đang được tác vụ gửi khác sử dụng"
+      "error_busy": "Một đích đang được tác vụ gửi khác sử dụng",
+      "title": "Trình gửi lệnh",
+      "broadcast": "Phát sóng",
+      "fallback_current": "Chưa bật đồng bộ, chỉ gửi đến terminal hiện tại",
+      "broadcast_active": "Đang đồng bộ theo các đích phát sóng"
     },
     "broadcast": {
-      "members_hint": "Chọn từng phiên terminal rồi bật đồng bộ. Phiên mới không tự động tham gia. Hãy xóa phiên khỏi nhóm hiện tại trước khi chuyển nhóm.",
       "isolate_member": "Cách ly",
       "resume_member": "Tiếp tục đồng bộ",
       "pause_group": "Tạm dừng",

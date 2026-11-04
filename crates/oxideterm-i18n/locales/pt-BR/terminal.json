@@ -194,12 +194,11 @@
       "pause": "Pausar gravação",
       "resume": "Retomar gravação",
       "discard": "Descartar gravação",
-      "show_timestamps": "Mostrar carimbos de data/hora",
-      "hide_timestamps": "Ocultar carimbos de data/hora",
       "search_placeholder": "Search recording...",
       "matches": "matches",
       "search_no_results": "No results",
-      "player_empty": "No playback output yet"
+      "player_empty": "No playback output yet",
+      "timestamps": "Carimbos de data/hora"
     },
     "session_log": {
       "title": "Registro de sessão",
@@ -546,13 +545,8 @@
       "execute": "Executar"
     },
     "sender": {
-      "group_hint": "Os grupos de conexões salvos selecionam todos os terminais correspondentes. O isolamento na sincronização interativa não altera esses destinos explícitos.",
       "task": "Envio",
       "placeholder": "Digite comandos ou bytes hexadecimais...",
-      "show": "Mostrar envio de comandos",
-      "hide": "Ocultar envio de comandos",
-      "expand": "Expandir envio de comandos",
-      "collapse": "Recolher envio de comandos",
       "add_task": "Adicionar tarefa de envio",
       "remove_task": "Remover tarefa de envio",
       "text": "Texto",
@@ -566,8 +560,6 @@
       "current": "Atual",
       "all": "Todos",
       "selected": "Selecionados",
-      "group": "Grupo",
-      "no_groups": "Nenhum grupo de transmissão",
       "start": "Iniciar",
       "stop": "Parar",
       "idle": "Pronto",
@@ -580,10 +572,13 @@
       "error_empty": "Digite o conteúdo a enviar",
       "error_hex": "Entrada hexadecimal inválida",
       "error_targets": "Nenhum terminal de destino",
-      "error_busy": "Um destino está em uso por outro envio"
+      "error_busy": "Um destino está em uso por outro envio",
+      "title": "Emissor de comandos",
+      "broadcast": "Transmissão",
+      "fallback_current": "Sincronização desativada, enviando apenas para o terminal atual",
+      "broadcast_active": "Seguindo destinos de transmissão ativos"
     },
     "broadcast": {
-      "members_hint": "Selecione os terminais e ative a sincronização. Novos terminais não entram automaticamente. Remova um terminal do grupo atual antes de movê-lo.",
       "isolate_member": "Isolar",
       "resume_member": "Retomar",
       "pause_group": "Pausar",

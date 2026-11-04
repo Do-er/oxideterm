@@ -89,11 +89,7 @@ impl WorkspaceApp {
             self.active_terminal_session_log_status(cx).state != TerminalSessionLogState::Idle;
         let timestamps_active = self.active_terminal_timestamps_enabled(cx);
         let highlight_override_active = self.active_terminal_highlight_override(cx);
-        let timestamps_tooltip_title = if timestamps_active {
-            self.i18n.t("terminal.recording.hide_timestamps")
-        } else {
-            self.i18n.t("terminal.recording.show_timestamps")
-        };
+        let timestamps_tooltip_title = self.i18n.t("terminal.recording.timestamps");
         let recording_toggle_tooltip_title = match recording_status.state {
             TerminalRecordingState::Idle => self.i18n.t("terminal.recording.title"),
             TerminalRecordingState::Recording => self.i18n.t("terminal.recording.pause"),
@@ -166,16 +162,14 @@ impl WorkspaceApp {
                                             rgba(0x00000000)
                                         }),
                                         "terminal-command-sender-toggle",
-                                        if command_sender_expanded {
-                                            self.i18n.t("terminal.sender.collapse")
-                                        } else if command_sender_running_count > 0 {
+                                        if command_sender_running_count > 0 {
                                             format!(
                                                 "{} ({})",
-                                                self.i18n.t("terminal.sender.running"),
+                                                self.i18n.t("terminal.sender.title"),
                                                 command_sender_running_count
                                             )
                                         } else {
-                                            self.i18n.t("terminal.sender.expand")
+                                            self.i18n.t("terminal.sender.title")
                                         },
                                         move |this, _event, window, cx| {
                                             let expanding =
@@ -1195,14 +1189,6 @@ impl WorkspaceApp {
                     },
                     cx,
                 )),
-        );
-        menu = menu.child(
-            div()
-                .px(px(6.0))
-                .pb(px(6.0))
-                .text_size(px(11.0))
-                .text_color(rgb(theme.text_muted))
-                .child(self.i18n.t("terminal.broadcast.members_hint")),
         );
         if entries.is_empty() {
             menu = menu.child(

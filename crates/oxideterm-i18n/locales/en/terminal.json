@@ -118,13 +118,8 @@
       "source_quick_command": "quick"
     },
     "sender": {
-      "group_hint": "Saved connection groups target all matching terminal windows. Interactive sync isolation does not change these explicit targets.",
       "task": "Sender",
       "placeholder": "Enter commands or hexadecimal bytes...",
-      "show": "Show command sender",
-      "hide": "Hide command sender",
-      "expand": "Expand command sender",
-      "collapse": "Collapse command sender",
       "add_task": "Add sender task",
       "remove_task": "Remove sender task",
       "text": "Text",
@@ -138,8 +133,6 @@
       "current": "Current",
       "all": "All",
       "selected": "Selected",
-      "group": "Group",
-      "no_groups": "No broadcast groups",
       "start": "Start",
       "stop": "Stop",
       "idle": "Ready",
@@ -152,10 +145,13 @@
       "error_empty": "Enter content to send",
       "error_hex": "Invalid hexadecimal input",
       "error_targets": "No target terminal",
-      "error_busy": "A target is used by another sender"
+      "error_busy": "A target is used by another sender",
+      "title": "Command Sender",
+      "broadcast": "Broadcast",
+      "fallback_current": "Sync disabled, sending to current terminal only",
+      "broadcast_active": "Following active broadcast targets"
     },
     "broadcast": {
-      "members_hint": "Select specific terminals, then enable sync. New terminals do not join automatically. Remove a terminal from its current group before moving it.",
       "isolate_member": "Isolate",
       "resume_member": "Resume sync",
       "pause_group": "Pause sync",
@@ -282,12 +278,11 @@
       "pause": "Pause Recording",
       "resume": "Resume Recording",
       "discard": "Discard Recording",
-      "show_timestamps": "Show timestamps",
-      "hide_timestamps": "Hide timestamps",
       "search_placeholder": "Search recording...",
       "matches": "matches",
       "search_no_results": "No results",
-      "player_empty": "No playback output yet"
+      "player_empty": "No playback output yet",
+      "timestamps": "Timestamps"
     },
     "session_log": {
       "title": "Session log",
