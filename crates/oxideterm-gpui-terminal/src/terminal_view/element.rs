@@ -814,6 +814,7 @@ impl TerminalElement {
                 )
             } else {
                 visible_search_match_rects(
+                    &self.snapshot,
                     &self.search_matches,
                     self.snapshot.display_offset,
                     visible_rows.clone(),

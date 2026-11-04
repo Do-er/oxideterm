@@ -18,8 +18,8 @@ use oxideterm_theme::ThemeTokens;
 use oxideterm_workspace::PaneId;
 use zeroize::Zeroizing;
 
-pub(super) const TERMINAL_SENDER_DEFAULT_HEIGHT: f32 = 280.0;
-pub(super) const TERMINAL_SENDER_MIN_HEIGHT: f32 = 260.0;
+pub(super) const TERMINAL_SENDER_DEFAULT_HEIGHT: f32 = 240.0;
+pub(super) const TERMINAL_SENDER_MIN_HEIGHT: f32 = 200.0;
 pub(super) const TERMINAL_SENDER_MAX_VIEWPORT_RATIO: f32 = 0.65;
 const TERMINAL_SENDER_MIN_TERMINAL_HEIGHT: f32 = 180.0;
 const TERMINAL_SENDER_WINDOW_CHROME_RESERVE: f32 = 96.0;

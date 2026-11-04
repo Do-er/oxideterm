@@ -293,6 +293,7 @@ impl TerminalSearchResult {
                     line: (base + index) as i32,
                     start_col: row.cell_at(from, text).0,
                     end_col: row.cell_at(last, text).1,
+                    source_id: row.identity,
                 });
             }
             if let Some(first) = ranges.first() {
@@ -524,7 +525,14 @@ impl TerminalSearchSource {
                     return None;
                 }
                 for range in &mut hit.ranges {
-                    range.line = lines[range.line as usize]?;
+                    let row_index = range.line as usize;
+                    // Record the identity before the index is rewritten to a grid line,
+                    // so later renders can re-anchor the range to its content row.
+                    range.source_id = result
+                        .rows
+                        .get(row_index)
+                        .map_or(0, |row| row.identity);
+                    range.line = lines[row_index]?;
                 }
                 hit.line = hit.ranges[0].line;
                 Some(hit)
@@ -653,6 +661,8 @@ fn ranges_for_match(
             line,
             start_col: col,
             end_col: end_col.min(max_cols),
+            // This synchronous helper has no resolved identity; consumers use the line.
+            source_id: 0,
         });
     }
 

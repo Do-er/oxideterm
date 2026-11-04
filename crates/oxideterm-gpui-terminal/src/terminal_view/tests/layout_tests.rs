@@ -559,6 +559,7 @@ fn terminal_element_maps_scrollback_search_matches_into_visible_rows() {
                 line: -3,
                 start_col: 8,
                 end_col: 13,
+                source_id: 0,
             }],
         },
         TerminalSearchMatch {
@@ -569,6 +570,7 @@ fn terminal_element_maps_scrollback_search_matches_into_visible_rows() {
                 line: -1,
                 start_col: 0,
                 end_col: 5,
+                source_id: 0,
             }],
         },
     ];

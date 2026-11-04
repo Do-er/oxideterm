@@ -75,7 +75,8 @@ mod tests {
                     ranges: vec![crate::TerminalSearchRange {
                         line: -1,
                         start_col: 4,
-                        end_col: 8
+                        end_col: 8,
+                        source_id: original,
                     }],
                 }]
             );

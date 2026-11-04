@@ -132,21 +132,41 @@ pub(crate) fn search_match_rects_for_rows(
 }
 
 pub(crate) fn visible_search_match_rects(
+    snapshot: &TerminalSnapshot,
     matches: &[TerminalSearchMatch],
     display_offset: usize,
     rows: Range<usize>,
     selected_match: Option<usize>,
 ) -> Vec<TerminalRect> {
+    // Emulator row identity survives scrolling, so identity-anchored ranges stay
+    // glued to their content between rescans even while output keeps scrolling.
+    // Ranges without an identity fall back to the resolved grid line.
+    let row_by_identity: std::collections::HashMap<usize, usize> = rows
+        .clone()
+        .filter_map(|row| {
+            snapshot
+                .lines
+                .get(row)
+                .filter(|line| line.source_id != 0)
+                .map(|line| (line.source_id, row))
+        })
+        .collect();
     matches
         .iter()
         .enumerate()
         .flat_map(|(index, search_match)| {
             let rows = rows.clone();
+            let row_by_identity = &row_by_identity;
             search_match.ranges.iter().filter_map(move |range| {
-                let row = (range.line + display_offset as i32).try_into().ok()?;
-                if !rows.contains(&row) {
-                    return None;
-                }
+                let row = if range.source_id != 0 {
+                    row_by_identity.get(&range.source_id).copied()?
+                } else {
+                    let row = (range.line + display_offset as i32).try_into().ok()?;
+                    if !rows.contains(&row) {
+                        return None;
+                    }
+                    row
+                };
 
                 Some(TerminalRect {
                     row,

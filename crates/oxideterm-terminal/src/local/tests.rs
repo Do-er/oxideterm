@@ -851,11 +851,13 @@ mod tests {
                         line: -1,
                         start_col: 2,
                         end_col: 3,
+                        source_id: 0,
                     },
                     TerminalSearchRange {
                         line: 0,
                         start_col: 0,
                         end_col: 2,
+                        source_id: 0,
                     },
                 ],
             }]

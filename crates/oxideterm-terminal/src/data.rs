@@ -106,6 +106,10 @@ pub struct TerminalSearchRange {
     pub line: i32,
     pub start_col: usize,
     pub end_col: usize,
+    /// Emulator row identity. It survives scrolling, so a resolved match stays
+    /// glued to its content between rescans. Zero means unknown; consumers fall
+    /// back to the resolved grid line.
+    pub source_id: usize,
 }
 
 #[derive(Clone, Debug, PartialEq, Eq)]

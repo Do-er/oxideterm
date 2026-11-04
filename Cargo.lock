@@ -7541,6 +7541,7 @@ dependencies = [
  "serde_json",
  "tempfile",
  "tokio",
+ "tracing",
  "unicode-segmentation",
  "unicode-width",
  "url",

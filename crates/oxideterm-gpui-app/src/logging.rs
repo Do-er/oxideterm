@@ -13,8 +13,9 @@ const LOG_FILE_NAME: &str = "oxideterm-native.log";
 const LEGACY_LOG_FILE_PREFIX: &str = "oxideterm-native.";
 const MAX_LOG_FILE_BYTES: u64 = 10 * 1024 * 1024;
 const OVERSIZED_LOG_ENTRY_MARKER: &[u8] = b"[oversized log entry omitted]\n";
-const DEFAULT_LOG_FILTER: &str = "warn,oxideterm_gpui_app=info,oxideterm_ssh=info";
-const DEBUG_LOG_FILTER: &str = "warn,oxideterm_gpui_app=debug,oxideterm_ssh=debug,gpui=info";
+const DEFAULT_LOG_FILTER: &str = "warn,oxideterm_gpui_app=info,oxideterm_ssh=info,terminal_perf=info";
+const DEBUG_LOG_FILTER: &str =
+    "warn,oxideterm_gpui_app=debug,oxideterm_ssh=debug,gpui=info,terminal_perf=info";
 
 struct SizeLimitedLogWriter {
     file: File,

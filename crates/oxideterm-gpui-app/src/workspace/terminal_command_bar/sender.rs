@@ -13,15 +13,15 @@ use crate::workspace::terminal_command_sender::{
 use oxideterm_terminal::{TerminalSenderInputMode, TerminalSenderPacing};
 use zeroize::Zeroizing;
 
-const TERMINAL_SENDER_CONTROL_HEIGHT: f32 = 28.0;
+const TERMINAL_SENDER_CONTROL_HEIGHT: f32 = 24.0;
 const TERMINAL_SENDER_PANEL_PADDING: f32 = 8.0;
 const TERMINAL_SENDER_INTERVAL_STEP_LINE_MS: i64 = 100;
 const TERMINAL_SENDER_INTERVAL_STEP_CHARACTER_MS: i64 = 20;
-const TERMINAL_SENDER_MODE_CONTROL_WIDTH: f32 = 144.0;
-const TERMINAL_SENDER_PACING_CONTROL_WIDTH: f32 = 196.0;
-const TERMINAL_SENDER_SCOPE_CONTROL_WIDTH: f32 = 288.0;
-const TERMINAL_SENDER_TARGET_LIST_MIN_WIDTH: f32 = 160.0;
-const TERMINAL_SENDER_TARGET_CONTEXT_MAX_WIDTH: f32 = 220.0;
+const TERMINAL_SENDER_MODE_CONTROL_WIDTH: f32 = 116.0;
+const TERMINAL_SENDER_PACING_CONTROL_WIDTH: f32 = 140.0;
+const TERMINAL_SENDER_SCOPE_CONTROL_WIDTH: f32 = 240.0;
+const TERMINAL_SENDER_TARGET_LIST_MIN_WIDTH: f32 = 140.0;
+const TERMINAL_SENDER_TARGET_CONTEXT_MAX_WIDTH: f32 = 200.0;
 const TERMINAL_SENDER_PROGRESS_HEIGHT: f32 = 2.0;
 
 impl WorkspaceApp {
@@ -263,11 +263,11 @@ impl WorkspaceApp {
                 div()
                     .flex_none()
                     .h_full()
-                    .max_w(px(180.0))
-                    .px(px(12.0))
+                    .max_w(px(160.0))
+                    .px(px(8.0))
                     .flex()
                     .items_center()
-                    .gap(px(8.0))
+                    .gap(px(6.0))
                     .border_b_1()
                     .border_color(if active {
                         rgb(self.tokens.ui.accent)
@@ -345,12 +345,12 @@ impl WorkspaceApp {
             });
 
         div()
-            .h(px(36.0))
+            .h(px(30.0))
             .flex_none()
             .px(px(TERMINAL_SENDER_PANEL_PADDING))
             .flex()
             .items_center()
-            .gap(px(8.0))
+            .gap(px(6.0))
             .border_b_1()
             .border_color(self.workspace_chrome_divider())
             .when(self.window_background_preferences().is_none(), |strip| {
@@ -391,16 +391,20 @@ impl WorkspaceApp {
             TerminalCommandSenderStatus::Stopped => self.tokens.ui.warning,
             TerminalCommandSenderStatus::Idle => self.tokens.ui.text_muted,
         };
-        let format_controls = div()
-            .w_full()
+        let left_format = div()
+            .flex_none()
             .flex()
             .items_center()
-            .gap(px(8.0))
-            .flex_wrap()
+            .gap(px(6.0))
             .child(self.render_terminal_sender_mode_control(snapshot, cx))
             .child(self.render_terminal_sender_control_divider())
-            .child(self.render_terminal_sender_pacing_control(snapshot, cx))
-            .child(self.render_terminal_sender_control_divider())
+            .child(self.render_terminal_sender_pacing_control(snapshot, cx));
+
+        let right_format = div()
+            .flex_none()
+            .flex()
+            .items_center()
+            .gap(px(6.0))
             .child(self.render_terminal_sender_stepper(
                 self.i18n.t("terminal.sender.interval"),
                 format!("{} ms", snapshot.interval_ms),
@@ -444,6 +448,16 @@ impl WorkspaceApp {
                 })),
                 cx,
             ));
+
+        let format_controls = div()
+            .w_full()
+            .flex()
+            .items_center()
+            .justify_between()
+            .gap(px(6.0))
+            .flex_wrap()
+            .child(left_format)
+            .child(right_format);
 
         let target_context = (snapshot.target_scope == TerminalCommandSenderTargetScope::Current)
             .then(|| {
@@ -512,7 +526,7 @@ impl WorkspaceApp {
             .w_full()
             .flex()
             .items_center()
-            .gap(px(8.0))
+            .gap(px(6.0))
             .flex_wrap()
             .child(
                 div()
@@ -595,18 +609,18 @@ impl WorkspaceApp {
             })
             .child(
                 div()
-                    .min_h(px(40.0))
+                    .min_h(px(32.0))
                     .px(px(TERMINAL_SENDER_PANEL_PADDING))
-                    .py(px(4.0))
+                    .py(px(2.0))
                     .flex()
                     .items_center()
                     .child(format_controls),
             )
             .child(
                 div()
-                    .min_h(px(40.0))
+                    .min_h(px(32.0))
                     .px(px(TERMINAL_SENDER_PANEL_PADDING))
-                    .py(px(4.0))
+                    .py(px(2.0))
                     .border_t_1()
                     .border_color(self.workspace_chrome_divider())
                     .flex()
@@ -644,8 +658,8 @@ impl WorkspaceApp {
                     index == active_index,
                 )
                 .rounded_none()
-                .px(px(8.0))
-                .py(px(4.0))
+                .px(px(6.0))
+                .py(px(2.0))
                 .text_size(px(self.tokens.metrics.ui_text_xs))
                 .on_mouse_down(
                     MouseButton::Left,
@@ -711,8 +725,8 @@ impl WorkspaceApp {
                     index == active_index,
                 )
                 .rounded_none()
-                .px(px(8.0))
-                .py(px(4.0))
+                .px(px(6.0))
+                .py(px(2.0))
                 .text_size(px(self.tokens.metrics.ui_text_xs))
                 .on_mouse_down(
                     MouseButton::Left,
@@ -787,8 +801,8 @@ impl WorkspaceApp {
             };
             oxideterm_gpui_ui::segmented_control_item(&self.tokens, label, index == active_index)
                 .rounded_none()
-                .px(px(8.0))
-                .py(px(4.0))
+                .px(px(6.0))
+                .py(px(2.0))
                 .text_size(px(self.tokens.metrics.ui_text_xs))
                 .on_mouse_down(
                     MouseButton::Left,
@@ -875,7 +889,7 @@ impl WorkspaceApp {
     fn render_terminal_sender_control_divider(&self) -> AnyElement {
         div()
             .w(px(1.0))
-            .h(px(18.0))
+            .h(px(14.0))
             .flex_none()
             .bg(self.workspace_chrome_divider())
             .into_any_element()
@@ -904,7 +918,7 @@ impl WorkspaceApp {
     ) -> AnyElement {
         let mut value_container = div()
             .h_full()
-            .min_w(px(56.0))
+            .min_w(px(46.0))
             .px(px(4.0))
             .flex()
             .items_center()
@@ -934,7 +948,7 @@ impl WorkspaceApp {
             .child(
                 div()
                     .h_full()
-                    .px(px(8.0))
+                    .px(px(4.0))
                     .flex()
                     .items_center()
                     .text_size(px(11.0))
@@ -944,7 +958,7 @@ impl WorkspaceApp {
             .child(
                 div()
                     .h_full()
-                    .w(px(24.0))
+                    .w(px(20.0))
                     .flex()
                     .items_center()
                     .justify_center()
@@ -963,7 +977,7 @@ impl WorkspaceApp {
             .child(
                 div()
                     .h_full()
-                    .w(px(24.0))
+                    .w(px(20.0))
                     .flex()
                     .items_center()
                     .justify_center()

@@ -57,7 +57,9 @@ fn ssh_search_refreshes_during_output(cx: &mut TestAppContext) {
         });
         pane.update(cx, |pane, cx| pane.tick(cx));
         cx.run_until_parked();
-        cx.executor().advance_clock(TERMINAL_SEARCH_DEBOUNCE / 2);
+        // Output-driven refreshes wait out the streaming debounce; the previous
+        // cache stays visible until the rescan lands.
+        cx.executor().advance_clock(TERMINAL_SEARCH_STREAMING_DEBOUNCE);
         cx.run_until_parked();
     }
     pane.read_with(cx, |pane, _| {

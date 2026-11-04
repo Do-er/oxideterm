@@ -40,6 +40,7 @@ regex.workspace = true
 rusqlite = { version = "0.37", features = ["bundled"] }
 serde_json.workspace = true
 tempfile = "3.23"
+tracing.workspace = true
 unicode-segmentation.workspace = true
 unicode-width.workspace = true
 url.workspace = true

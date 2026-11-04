@@ -3541,7 +3541,7 @@ mod tests {
     use std::{rc::Rc, sync::Arc};
 
     use crate::SharedTerminalCommandHistory;
-    use crate::app::TERMINAL_SEARCH_DEBOUNCE;
+    use crate::app::{TERMINAL_SEARCH_DEBOUNCE, TERMINAL_SEARCH_STREAMING_DEBOUNCE};
     use gpui::{AppContext, IntoElement, Render, ScrollDelta, TestAppContext, Window, div, point};
     #[cfg(unix)]
     use oxideterm_terminal::{
@@ -4124,7 +4124,9 @@ mod tests {
                     pane.snapshot.display_offset
                 });
                 cx.run_until_parked();
-                cx.executor().advance_clock(TERMINAL_SEARCH_DEBOUNCE);
+                // Output-driven refreshes use the longer streaming debounce; the
+                // previous cache stays displayed until the rescan lands.
+                cx.executor().advance_clock(TERMINAL_SEARCH_STREAMING_DEBOUNCE);
                 cx.run_until_parked();
                 pane.update(cx, |pane, cx| {
                     assert_eq!(pane.search_status().match_count, 3);

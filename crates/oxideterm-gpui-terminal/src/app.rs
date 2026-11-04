@@ -150,11 +150,18 @@ const SSH_DRAIN_BOOST_POLL_INTERVAL: Duration = Duration::from_millis(1);
 const MAX_UI_TERMINAL_DRAIN_DURATION: Duration = Duration::from_millis(2);
 const RECENT_TERMINAL_ACTIVITY_WINDOW: Duration = Duration::from_millis(600);
 const TERMINAL_PERFORMANCE_SAMPLE_CAPACITY: usize = 256;
+// File sampling stays far below frame cadence so diagnostic I/O never competes
+// with the terminal hot path it is meant to observe.
+const TERMINAL_PERFORMANCE_LOG_INTERVAL: Duration = Duration::from_millis(250);
 const RECENT_TERMINAL_INPUT_WINDOW: Duration = Duration::from_millis(220);
 const ACTIVE_PROCESS_INFO_REFRESH_INTERVAL: Duration = Duration::from_secs(1);
 const EDITOR_INTEGRATION_HEARTBEAT_TIMEOUT: Duration = Duration::from_millis(2500);
 const EDITOR_CLIPBOARD_REQUEST_TIMEOUT: Duration = Duration::from_secs(2);
 const TERMINAL_SEARCH_DEBOUNCE: Duration = Duration::from_millis(24);
+// Output-driven rescans only need to keep up with the display, not the byte
+// stream. The resolved cache stays visible between scans, so a longer hold
+// avoids full-buffer scans piling onto a streaming terminal.
+const TERMINAL_SEARCH_STREAMING_DEBOUNCE: Duration = Duration::from_millis(250);
 const BACKGROUND_IMAGE_COMPLETION_POLL_INTERVAL: Duration = Duration::from_millis(32);
 const TERMINAL_AUTOSUGGEST_MAX_CANDIDATES: usize = 8;
 
@@ -395,7 +402,14 @@ fn terminal_output_coalescing_delay(
     wake: TerminalSchedulerWake,
     since_last_tick: Duration,
 ) -> Duration {
-    if kind == TerminalSessionKind::Serial && wake == TerminalSchedulerWake::BackendActivity {
+    // Serial emits activity per byte and SSH per 4 KiB parse slice; both wake
+    // far faster than frame cadence, and each wake notifies a full window
+    // redraw. Hold output-driven ticks to one animation interval; input and
+    // maintenance wakes still interrupt the wait immediately. Other backends
+    // keep their current pacing until their wake rates prove equally hot.
+    if matches!(kind, TerminalSessionKind::Serial | TerminalSessionKind::SshPty)
+        && wake == TerminalSchedulerWake::BackendActivity
+    {
         TERMINAL_ANIMATION_INTERVAL.saturating_sub(since_last_tick)
     } else {
         Duration::ZERO
@@ -412,17 +426,33 @@ fn viewport_needs_live_output_restore(
         || smooth_scroll_animation_active
 }
 
-fn populate_default_session_log_context(
-    context: &mut crate::session_log::TerminalSessionLogContext,
-    session_kind: TerminalSessionKind,
-) {
-    let protocol = match session_kind {
+fn session_kind_protocol_label(session_kind: TerminalSessionKind) -> &'static str {
+    match session_kind {
         TerminalSessionKind::LocalPty => "local",
         TerminalSessionKind::SshPty => "ssh",
         TerminalSessionKind::Telnet => "telnet",
         TerminalSessionKind::Mosh => "mosh",
         TerminalSessionKind::Serial => "serial",
-    };
+    }
+}
+
+fn is_pure_selection_translation(
+    previous: &TerminalSelection,
+    next: &TerminalSelection,
+) -> bool {
+    // Grid coordinates shift uniformly when output scrolls the selection into
+    // history; columns and the selection mode carry no positional meaning here.
+    previous.mode == next.mode
+        && previous.anchor.col == next.anchor.col
+        && previous.head.col == next.head.col
+        && next.anchor.line - previous.anchor.line == next.head.line - previous.head.line
+}
+
+fn populate_default_session_log_context(
+    context: &mut crate::session_log::TerminalSessionLogContext,
+    session_kind: TerminalSessionKind,
+) {
+    let protocol = session_kind_protocol_label(session_kind);
     if context.protocol.is_empty() {
         context.protocol = protocol.to_string();
     }
@@ -627,6 +657,8 @@ pub struct TerminalPane {
     drain_duration_samples_micros: VecDeque<u64>,
     input_latency_samples_micros: VecDeque<u64>,
     last_latency_sampled_input: Option<Instant>,
+    performance_log_pane_id: u64,
+    performance_log_last: Option<Instant>,
     image_cache: ImageRenderCache,
     layout_cache: Arc<Mutex<TerminalLayoutCache>>,
     background_image_cache: BackgroundImageRenderCache,
@@ -753,7 +785,9 @@ impl TerminalRowTimestampStore {
 #[derive(Clone)]
 struct TerminalSearchCache {
     query: String,
-    content_revision: u64,
+    // Scrollback size at resolve time; scrolling since then shifts every stored
+    // grid line by the growth delta, keeping navigation targets accurate.
+    scrollback_lines: usize,
     matches: Arc<[oxideterm_terminal::TerminalSearchMatch]>,
 }
 
@@ -790,8 +824,8 @@ impl SmoothScrollAnimation {
 }
 
 impl TerminalSearchCache {
-    fn is_current(&self, query: &str, content_revision: u64) -> bool {
-        self.query == query && self.content_revision == content_revision
+    fn matches_query(&self, query: &str) -> bool {
+        self.query == query
     }
 }
 
@@ -802,6 +836,8 @@ const COMMAND_MARK_DEDUP_WINDOW_MS: u64 = 2000;
 const COMMAND_MARK_DEDUP_LINE_DISTANCE: usize = 2;
 static NEXT_TRZSZ_OWNER_ID: AtomicU64 = AtomicU64::new(1);
 static NEXT_COMMAND_MARK_ID: AtomicU64 = AtomicU64::new(1);
+// Log lines must stay attributable when several panes stream at the same time.
+static NEXT_PERFORMANCE_LOG_PANE_ID: AtomicU64 = AtomicU64::new(1);
 
 fn command_mark_ui_available(enabled: bool, mode: TermMode) -> bool {
     // Command marks describe normal-screen scrollback. A full-screen application or terminal
@@ -1397,6 +1433,8 @@ impl TerminalPane {
                 TERMINAL_PERFORMANCE_SAMPLE_CAPACITY,
             ),
             last_latency_sampled_input: None,
+            performance_log_pane_id: NEXT_PERFORMANCE_LOG_PANE_ID.fetch_add(1, Ordering::Relaxed),
+            performance_log_last: None,
             image_cache: {
                 let mut cache = ImageRenderCache::default();
                 cache.set_byte_limit(preferences.render_policy.image_cache_bytes);
@@ -1492,7 +1530,20 @@ impl TerminalPane {
             }
         });
         if self.selection != Some(previous) {
-            self.selection_highlight_cache = None;
+            // Output scrolling translates the backend range without changing the
+            // selected text. Keep the highlight cache for such translations so a
+            // streaming buffer does not re-materialize selection text every frame.
+            let translated = self
+                .selection
+                .filter(|next| is_pure_selection_translation(&previous, next));
+            if let Some(next) = translated
+                && let Some(cache) = self.selection_highlight_cache.as_mut()
+                && cache.selection == previous
+            {
+                cache.selection = next;
+            } else {
+                self.selection_highlight_cache = None;
+            }
             // A drag payload refers to its original range; do not apply it after
             // output changes that range while the pointer gesture is in flight.
             self.free_type_drag = None;
@@ -1500,6 +1551,28 @@ impl TerminalPane {
         if self.selection.is_none() {
             self.selecting = false;
             self.selection_autoscroll_position = None;
+        }
+    }
+
+    fn realign_search_matches_to_scrollback(&mut self, scrollback_lines: usize) {
+        // Lines that scrolled into history shifted every stored grid line by the
+        // growth delta. Identity-anchored rendering keeps on-screen matches glued
+        // to their rows; this shift keeps off-screen navigation targets current.
+        // A shrinking history (clear or reset) invalidates the resolved lines.
+        let Some(cache) = self.search_cache.as_mut() else {
+            return;
+        };
+        if scrollback_lines > cache.scrollback_lines {
+            let delta = (scrollback_lines - cache.scrollback_lines) as i32;
+            for hit in Arc::make_mut(&mut cache.matches) {
+                hit.line -= delta;
+                for range in &mut hit.ranges {
+                    range.line -= delta;
+                }
+            }
+            cache.scrollback_lines = scrollback_lines;
+        } else if scrollback_lines < cache.scrollback_lines {
+            self.search_cache = None;
         }
     }
 
@@ -1557,6 +1630,7 @@ impl TerminalPane {
             snapshot.reuse_unchanged_rows_from(&self.snapshot);
         }
         self.record_snapshot_row_timestamps(&snapshot);
+        self.realign_search_matches_to_scrollback(snapshot.scrollback_lines);
         self.snapshot_generation = self.snapshot_generation.wrapping_add(1);
         if self.snapshot_generation == 0 {
             self.snapshot_generation = 1;
@@ -2655,7 +2729,7 @@ impl TerminalPane {
         self.selected_search_match = selected_match.or(Some(0));
         self.pending_search_reveal = true;
         self.search_navigation_needs_viewport_anchor = false;
-        self.schedule_search_refresh(cx);
+        self.schedule_search_refresh(cx, true);
         cx.notify();
         self.search_status()
     }
@@ -2687,7 +2761,7 @@ impl TerminalPane {
             .filter(|cache| {
                 self.search_query
                     .as_deref()
-                    .is_some_and(|query| cache.is_current(query, self.terminal_content_revision))
+                    .is_some_and(|query| cache.matches_query(query))
             })
             .map(|cache| cache.matches.len())
             .unwrap_or_default()
@@ -2695,13 +2769,14 @@ impl TerminalPane {
 
     fn mark_terminal_content_changed(&mut self, cx: &mut Context<Self>) {
         self.clear_terminal_interactions(cx);
-        self.selection_highlight_cache = None;
         self.terminal_content_revision = self.terminal_content_revision.wrapping_add(1).max(1);
-        self.search_cache = None;
-        self.schedule_search_refresh(cx);
+        // Keep the last completed search and selection-highlight caches displayed
+        // while the next scan is in flight; dropping them per tick makes every
+        // highlight strobe under streaming output. The refresh replaces them.
+        self.schedule_search_refresh(cx, false);
     }
 
-    fn schedule_search_refresh(&mut self, cx: &mut Context<Self>) {
+    fn schedule_search_refresh(&mut self, cx: &mut Context<Self>, urgent: bool) {
         // Output joins the pending refresh instead of postponing it indefinitely.
         // Query changes cancel the task before scheduling a replacement.
         if self.search_task.is_some() {
@@ -2726,11 +2801,14 @@ impl TerminalPane {
         let Some(pattern) = self.search_pattern.clone() else {
             return;
         };
+        let debounce = if urgent || self.last_terminal_activity.elapsed() > RECENT_TERMINAL_ACTIVITY_WINDOW {
+            TERMINAL_SEARCH_DEBOUNCE
+        } else {
+            TERMINAL_SEARCH_STREAMING_DEBOUNCE
+        };
         let cancellation = self.search_generation.clone();
         self.search_task = Some(cx.spawn(async move |weak, cx| {
-            cx.background_executor()
-                .timer(TERMINAL_SEARCH_DEBOUNCE)
-                .await;
+            cx.background_executor().timer(debounce).await;
             if cancellation.load(Ordering::Acquire) != generation {
                 return;
             }
@@ -2768,7 +2846,7 @@ impl TerminalPane {
                     source.resolve_search_result(matches).into();
                 this.search_cache = Some(TerminalSearchCache {
                     query,
-                    content_revision: this.terminal_content_revision,
+                    scrollback_lines: this.snapshot.scrollback_lines,
                     matches: matches.clone(),
                 });
                 this.render_stats.search_micros =
@@ -2792,7 +2870,7 @@ impl TerminalPane {
                 cx.emit(TerminalPaneEvent::SearchStatusChanged);
                 cx.notify();
                 if dirty {
-                    this.schedule_search_refresh(cx);
+                    this.schedule_search_refresh(cx, false);
                 }
             });
         }));
@@ -2804,7 +2882,7 @@ impl TerminalPane {
             .filter(|cache| {
                 self.search_query
                     .as_deref()
-                    .is_some_and(|query| cache.is_current(query, self.terminal_content_revision))
+                    .is_some_and(|query| cache.matches_query(query))
             })
             .map(|cache| cache.matches.clone())
             .unwrap_or_else(|| Arc::from([]))
@@ -3523,6 +3601,7 @@ impl TerminalPane {
         self.last_drain_budget_exhausted = report.budget_exhausted;
         self.apply_terminal_drain_activity(&report, now, cx);
         let render_stats_changed = self.update_render_stats(&report, now);
+        self.log_performance_sample(render_stats_changed, now);
 
         let mut event_effect = TerminalEventEffect::default();
         for event in events {
@@ -3570,6 +3649,50 @@ impl TerminalPane {
         if self.expire_editor_integration(mode, now) {
             cx.notify();
         }
+    }
+
+    fn log_performance_sample(&mut self, changed: bool, now: Instant) {
+        // The overlay toggle is the user's diagnostic opt-in; ordinary sessions
+        // never pay for sampling or log traffic. Field names mirror the overlay
+        // so on-screen readings and file lines can be correlated directly.
+        if !self.preferences.show_performance_overlay || !changed {
+            return;
+        }
+        if self
+            .performance_log_last
+            .is_some_and(|last| now.duration_since(last) < TERMINAL_PERFORMANCE_LOG_INTERVAL)
+        {
+            return;
+        }
+        self.performance_log_last = Some(now);
+        let backend = session_kind_protocol_label(self.session_kind());
+        let stats = self.render_stats;
+        tracing::info!(
+            target: "terminal_perf",
+            pane = self.performance_log_pane_id,
+            backend,
+            tier = stats.tier.label(),
+            wps = stats.writes_per_sec,
+            pending_bytes = stats.pending_bytes,
+            drain_us = stats.drain_micros,
+            drain_p95_us = stats.drain_p95_micros,
+            drained_bytes = stats.drained_bytes,
+            max_chunk_bytes = stats.max_data_chunk_bytes,
+            output_processing_us = stats.output_processing_micros,
+            lock_wait_us = stats.terminal_lock_wait_micros,
+            input_p50_us = stats.input_latency_p50_micros,
+            input_p95_us = stats.input_latency_p95_micros,
+            input_p99_us = stats.input_latency_p99_micros,
+            snapshot_us = stats.snapshot_micros,
+            layout_us = stats.layout_micros,
+            paint_us = stats.paint_micros,
+            cache_hit_pct = stats.layout_cache_hit_percent,
+            scroll_snapshot_us = stats.scroll_snapshot_micros,
+            scroll_snapshots = stats.scroll_snapshot_count,
+            search_us = stats.search_micros,
+            image_prepare_us = stats.image_prepare_micros,
+            "terminal performance sample"
+        );
     }
 
     fn next_maintenance_interval(&self) -> Option<Duration> {
@@ -5218,43 +5341,52 @@ mod tests {
     }
 
     #[test]
-    fn serial_output_is_coalesced_without_delaying_input_or_other_backends() {
+    fn output_activity_wakes_are_coalesced_without_delaying_input_or_other_backends() {
         let elapsed = Duration::from_millis(5);
-        assert_eq!(
-            terminal_output_coalescing_delay(
-                TerminalSessionKind::Serial,
-                TerminalSchedulerWake::BackendActivity,
-                elapsed
-            ),
-            Duration::from_millis(11)
-        );
-        assert_eq!(
-            terminal_output_coalescing_delay(
-                TerminalSessionKind::Serial,
-                TerminalSchedulerWake::BackendActivity,
-                Duration::from_millis(20)
-            ),
-            Duration::ZERO
-        );
-        for wake in [
-            TerminalSchedulerWake::PaneActivity,
-            TerminalSchedulerWake::PaneClosed,
-            TerminalSchedulerWake::BackendClosed,
-            TerminalSchedulerWake::Maintenance,
+        for kind in [TerminalSessionKind::Serial, TerminalSessionKind::SshPty] {
+            assert_eq!(
+                terminal_output_coalescing_delay(
+                    kind,
+                    TerminalSchedulerWake::BackendActivity,
+                    elapsed
+                ),
+                Duration::from_millis(11)
+            );
+            assert_eq!(
+                terminal_output_coalescing_delay(
+                    kind,
+                    TerminalSchedulerWake::BackendActivity,
+                    Duration::from_millis(20)
+                ),
+                Duration::ZERO
+            );
+            for wake in [
+                TerminalSchedulerWake::PaneActivity,
+                TerminalSchedulerWake::PaneClosed,
+                TerminalSchedulerWake::BackendClosed,
+                TerminalSchedulerWake::Maintenance,
+            ] {
+                assert_eq!(
+                    terminal_output_coalescing_delay(kind, wake, elapsed),
+                    Duration::ZERO
+                );
+            }
+        }
+        // These backends keep their established wake pacing for now.
+        for kind in [
+            TerminalSessionKind::LocalPty,
+            TerminalSessionKind::Telnet,
+            TerminalSessionKind::Mosh,
         ] {
             assert_eq!(
-                terminal_output_coalescing_delay(TerminalSessionKind::Serial, wake, elapsed),
+                terminal_output_coalescing_delay(
+                    kind,
+                    TerminalSchedulerWake::BackendActivity,
+                    elapsed
+                ),
                 Duration::ZERO
             );
         }
-        assert_eq!(
-            terminal_output_coalescing_delay(
-                TerminalSessionKind::SshPty,
-                TerminalSchedulerWake::BackendActivity,
-                elapsed
-            ),
-            Duration::ZERO
-        );
     }
 
     #[test]
