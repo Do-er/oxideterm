@@ -831,6 +831,8 @@ pub(crate) struct WorkspaceApp {
     pending_privilege_totp: Option<terminal_command_bar::PendingPrivilegeTotp>,
     privilege_prompt_sync_task: Option<Task<()>>,
     terminal_highlight_popover_open: bool,
+    terminal_target_popover_open: bool,
+    terminal_composer_value_edit: Option<terminal_command_bar::TerminalComposerValueEdit>,
     // Settings keep the source pane stable while editing session-only trigger overrides.
     terminal_trigger_settings_pane: Option<PaneId>,
     terminal_trigger_shell_confirmation_pending: bool,

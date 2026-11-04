@@ -287,7 +287,6 @@ fn settings_search_specs() -> Vec<SettingsSearchEntrySpec> {
             2,
             "settings_view.terminal.command_bar_composer_title",
             &[
-                "settings_view.terminal.command_bar_dispatch_follow_broadcast",
                 "settings_view.terminal.command_bar_focus_handoff",
                 "settings_view.terminal.command_bar_focus_handoff_hint",
             ],

@@ -19,7 +19,7 @@ use oxideterm_workspace::PaneId;
 use zeroize::Zeroizing;
 
 pub(super) const TERMINAL_COMPOSER_DEFAULT_HEIGHT: f32 = 240.0;
-pub(super) const TERMINAL_COMPOSER_MIN_HEIGHT: f32 = 200.0;
+pub(super) const TERMINAL_COMPOSER_MIN_HEIGHT: f32 = 180.0;
 pub(super) const TERMINAL_COMPOSER_MAX_VIEWPORT_RATIO: f32 = 0.65;
 const TERMINAL_COMPOSER_MIN_TERMINAL_HEIGHT: f32 = 180.0;
 const TERMINAL_COMPOSER_WINDOW_CHROME_RESERVE: f32 = 96.0;
@@ -35,8 +35,6 @@ pub(super) struct TerminalCommandComposerId(pub(super) u64);
 #[derive(Clone, Copy, Debug, Eq, PartialEq)]
 pub(super) enum TerminalCommandComposerTargetScope {
     Current,
-    All,
-    Broadcast,
     Selected,
 }
 
@@ -192,6 +190,10 @@ pub(super) struct TerminalCommandComposerEntity {
     expanded_editor_placeholder: String,
     editor_context_menu_labels: EditorContextMenuLabels,
     editor_tokens: ThemeTokens,
+    editor_font_family: Option<String>,
+    editor_font_size: Option<f32>,
+    editor_line_height: Option<f32>,
+    editor_background_active: bool,
 }
 
 impl TerminalCommandComposerEntity {
@@ -227,6 +229,10 @@ impl TerminalCommandComposerEntity {
             expanded_editor_placeholder,
             editor_context_menu_labels,
             editor_tokens: tokens,
+            editor_font_family: None,
+            editor_font_size: None,
+            editor_line_height: None,
+            editor_background_active: false,
         }
     }
 
@@ -476,7 +482,7 @@ impl TerminalCommandComposerEntity {
     pub(super) fn add_document(&mut self, cx: &mut Context<Self>) -> TerminalCommandComposerId {
         let document_id = TerminalCommandComposerId(self.next_document_id);
         self.next_document_id = self.next_document_id.wrapping_add(1).max(1);
-        self.documents.push(Self::new_document(
+        let document = Self::new_document(
             document_id,
             self.editor_tokens,
             if self.is_expanded() {
@@ -487,7 +493,28 @@ impl TerminalCommandComposerEntity {
             &self.editor_context_menu_labels,
             self.layout.editor_presentation(),
             cx,
-        ));
+        );
+        if let (Some(font_family), Some(font_size), Some(line_height)) = (
+            self.editor_font_family.as_ref(),
+            self.editor_font_size,
+            self.editor_line_height,
+        ) {
+            let tokens = self.editor_tokens;
+            let family = font_family.clone();
+            let bg_active = self.editor_background_active;
+            document.editor.update(cx, |editor, cx| {
+                editor.apply_runtime_settings(
+                    &tokens,
+                    family,
+                    font_size,
+                    line_height,
+                    false,
+                    bg_active,
+                    cx,
+                );
+            });
+        }
+        self.documents.push(document);
         self.active_document_id = document_id;
         cx.notify();
         document_id
@@ -565,6 +592,52 @@ impl TerminalCommandComposerEntity {
         }
     }
 
+    pub(super) fn set_interval(
+        &mut self,
+        document_id: TerminalCommandComposerId,
+        interval_ms: u64,
+        cx: &mut Context<Self>,
+    ) {
+        if self
+            .document(document_id)
+            .is_some_and(|document| document.status == TerminalCommandComposerStatus::Running)
+        {
+            return;
+        }
+        if let Some(document) = self.document_mut(document_id) {
+            let minimum = match document.pacing {
+                TerminalSendPacing::Line => 100,
+                TerminalSendPacing::Character => TERMINAL_COMPOSER_MIN_INTERVAL_MS,
+            };
+            let next = interval_ms.clamp(minimum, TERMINAL_COMPOSER_MAX_INTERVAL_MS);
+            if next != document.interval_ms {
+                document.interval_ms = next;
+                cx.notify();
+            }
+        }
+    }
+
+    pub(super) fn set_repeat_count(
+        &mut self,
+        document_id: TerminalCommandComposerId,
+        repeat_count: u32,
+        cx: &mut Context<Self>,
+    ) {
+        if self
+            .document(document_id)
+            .is_some_and(|document| document.status == TerminalCommandComposerStatus::Running)
+        {
+            return;
+        }
+        if let Some(document) = self.document_mut(document_id) {
+            let next = repeat_count.min(TERMINAL_COMPOSER_MAX_REPEAT_COUNT);
+            if next != document.repeat_count {
+                document.repeat_count = next;
+                cx.notify();
+            }
+        }
+    }
+
     pub(super) fn adjust_interval(
         &mut self,
         document_id: TerminalCommandComposerId,
@@ -625,32 +698,6 @@ impl TerminalCommandComposerEntity {
                         .saturating_add(add_delta)
                         .min(TERMINAL_COMPOSER_MAX_REPEAT_COUNT)
                 }
-            };
-            if next != document.repeat_count {
-                document.repeat_count = next;
-                cx.notify();
-            }
-        }
-    }
-
-    pub(super) fn cycle_repeat_preset(
-        &mut self,
-        document_id: TerminalCommandComposerId,
-        cx: &mut Context<Self>,
-    ) {
-        if self
-            .document(document_id)
-            .is_some_and(|document| document.status == TerminalCommandComposerStatus::Running)
-        {
-            return;
-        }
-        if let Some(document) = self.document_mut(document_id) {
-            let next = match document.repeat_count {
-                0 => 1,
-                1..=9 => 10,
-                10..=99 => 100,
-                100..=999 => 1000,
-                _ => 0,
             };
             if next != document.repeat_count {
                 document.repeat_count = next;
@@ -1104,6 +1151,10 @@ impl TerminalCommandComposerEntity {
         }
     }
 
+    pub(super) fn set_panel_height(&mut self, height: f32) {
+        self.panel_height = height;
+    }
+
     pub(super) fn reset_height(&mut self, viewport_height: f32, cx: &mut Context<Self>) {
         let height =
             adjusted_composer_panel_height(TERMINAL_COMPOSER_DEFAULT_HEIGHT, 0.0, viewport_height);
@@ -1125,6 +1176,10 @@ impl TerminalCommandComposerEntity {
         cx: &mut Context<Self>,
     ) {
         self.editor_tokens = tokens;
+        self.editor_font_family = Some(font_family.clone());
+        self.editor_font_size = Some(font_size);
+        self.editor_line_height = Some(line_height);
+        self.editor_background_active = background_active;
         for document in &self.documents {
             document.editor.update(cx, |editor, cx| {
                 editor.apply_runtime_settings(
@@ -1189,16 +1244,17 @@ fn resolve_run_targets(
     candidates: Vec<TerminalCommandComposerTarget>,
 ) -> Vec<TerminalCommandComposerRunTarget> {
     let mut seen = HashSet::new();
+    let has_selection = !selected_targets.is_empty();
     candidates
         .into_iter()
         .filter(|target| match scope {
             TerminalCommandComposerTargetScope::Current => current_pane_id == Some(target.pane_id),
-            TerminalCommandComposerTargetScope::All => true,
-            TerminalCommandComposerTargetScope::Broadcast => {
-                selected_targets.contains(&target.pane_id)
-            }
             TerminalCommandComposerTargetScope::Selected => {
-                selected_targets.contains(&target.pane_id)
+                if has_selection {
+                    selected_targets.contains(&target.pane_id)
+                } else {
+                    current_pane_id == Some(target.pane_id)
+                }
             }
         })
         .filter(|target| seen.insert(target.pane_id))
@@ -1333,7 +1389,7 @@ mod tests {
     }
 
     #[gpui::test]
-    fn adjust_repeat_count_supports_infinite_and_presets(cx: &mut TestAppContext) {
+    fn adjust_repeat_count_supports_infinite_and_large_steps(cx: &mut TestAppContext) {
         let composer = cx.new(|cx| {
             TerminalCommandComposerEntity::new(
                 default_tokens(),
@@ -1365,19 +1421,6 @@ mod tests {
             // Step by 1000
             composer.adjust_repeat_count(document_id, 1000, cx);
             assert_eq!(composer.document(document_id).unwrap().repeat_count, 1001);
-
-            // Cycle presets
-            composer.document_mut(document_id).unwrap().repeat_count = 1;
-            composer.cycle_repeat_preset(document_id, cx);
-            assert_eq!(composer.document(document_id).unwrap().repeat_count, 10);
-            composer.cycle_repeat_preset(document_id, cx);
-            assert_eq!(composer.document(document_id).unwrap().repeat_count, 100);
-            composer.cycle_repeat_preset(document_id, cx);
-            assert_eq!(composer.document(document_id).unwrap().repeat_count, 1000);
-            composer.cycle_repeat_preset(document_id, cx);
-            assert_eq!(composer.document(document_id).unwrap().repeat_count, 0);
-            composer.cycle_repeat_preset(document_id, cx);
-            assert_eq!(composer.document(document_id).unwrap().repeat_count, 1);
         });
     }
 }

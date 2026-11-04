@@ -473,10 +473,6 @@ pub fn set_command_bar_enabled(settings: &mut PersistedSettings, value: bool) {
     settings.terminal.command_bar.enabled = value;
 }
 
-pub fn set_command_bar_dispatch_follow_broadcast(settings: &mut PersistedSettings, value: bool) {
-    settings.terminal.command_bar.dispatch_follow_broadcast = value;
-}
-
 pub fn set_command_bar_current_directory_awareness(settings: &mut PersistedSettings, value: bool) {
     settings.terminal.command_bar.current_directory_awareness = value;
 }

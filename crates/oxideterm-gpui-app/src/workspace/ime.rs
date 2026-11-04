@@ -38,6 +38,7 @@ use oxideterm_gpui_ui::{
         TextInputAnchor, TextInputAnchorId, TextInputAnchorProbe, TextInputContentAlign,
         TextInputView, TextInputViewport, text_input_anchor_probe, text_input_secret_mask,
         text_input_visual_range, text_input_with_viewport_and_content_align,
+        text_input_with_viewport_and_content_align_borderless,
     },
 };
 use zeroize::{Zeroize, Zeroizing};
@@ -135,6 +136,7 @@ pub(super) enum WorkspaceImeTarget {
     KnowledgeSearch,
     KnowledgeRename,
     TerminalCommandComposerCompact,
+    TerminalComposerValue,
     TerminalBroadcastGroupName,
     TerminalCastSearch,
     HostProcessSearch,
@@ -528,6 +530,7 @@ impl WorkspaceImeTarget {
             Self::KnowledgeSearch => 23,
             Self::KnowledgeRename => 24,
             Self::TerminalCommandComposerCompact => 2,
+            Self::TerminalComposerValue => 28,
             Self::TerminalBroadcastGroupName => 21,
             Self::TerminalCastSearch => 3,
             Self::HostProcessSearch => 6,
@@ -979,6 +982,26 @@ impl WorkspaceApp {
         )
     }
 
+    /// Renders a workspace text input without the shared control box, for
+    /// callers that already supply their own surrounding chrome (e.g. the
+    /// terminal command composer capsules).
+    pub(in crate::workspace) fn workspace_text_input_borderless(
+        &self,
+        target: WorkspaceImeTarget,
+        view: TextInputView<'_>,
+    ) -> gpui::Div {
+        let active = self
+            .ime_selection_for_target(target)
+            .map(|selection| selection.active_offset());
+        text_input_with_viewport_and_content_align_borderless(
+            &self.tokens,
+            view,
+            TextInputContentAlign::Start,
+            &self.text_input_anchors.viewport(target.anchor_id()),
+            active,
+        )
+    }
+
     pub(super) fn defer_active_ime_key(
         &mut self,
         keystroke: &Keystroke,
@@ -1323,6 +1346,9 @@ impl WorkspaceApp {
 
         let terminal_tab_visible = self.keyboard_content_tab(cx).is_some_and(is_terminal_tab);
         if terminal_tab_visible {
+            if self.terminal_composer_value_edit.is_some() {
+                return Some(WorkspaceImeTarget::TerminalComposerValue);
+            }
             if self.terminal.read(cx).broadcast_group_editor().is_some() {
                 return Some(WorkspaceImeTarget::TerminalBroadcastGroupName);
             }
@@ -2277,6 +2303,10 @@ impl WorkspaceApp {
                 .read(cx)
                 .active_compact_draft()
                 .map(str::to_string),
+            WorkspaceImeTarget::TerminalComposerValue => self
+                .terminal_composer_value_edit
+                .as_ref()
+                .map(|edit| edit.draft.clone()),
             WorkspaceImeTarget::TerminalBroadcastGroupName => self
                 .terminal
                 .read(cx)
@@ -3235,6 +3265,14 @@ impl WorkspaceApp {
                 });
                 self.show_active_input_caret(cx);
                 cx.notify();
+            }
+            WorkspaceImeTarget::TerminalComposerValue => {
+                if let Some(edit) = self.terminal_composer_value_edit.as_mut() {
+                    let filtered: String = text.chars().filter(|c| c.is_ascii_digit()).collect();
+                    replace_utf16(&mut edit.draft, replacement_range, &filtered);
+                    self.show_active_input_caret(cx);
+                    cx.notify();
+                }
             }
             WorkspaceImeTarget::TerminalBroadcastGroupName => {
                 if self.terminal.update(cx, |terminal, _cx| {

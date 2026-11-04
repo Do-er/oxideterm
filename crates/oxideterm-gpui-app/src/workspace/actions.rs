@@ -1196,6 +1196,7 @@ impl WorkspaceApp {
             self.blur_terminal_quick_commands_input(cx);
             self.dismiss_terminal_recording_menu();
             self.dismiss_terminal_highlight_popover();
+            self.dismiss_terminal_target_popover();
             self.terminal.update(cx, |terminal, _cx| {
                 terminal.set_broadcast_menu_open(true);
             });
@@ -1306,6 +1307,26 @@ impl WorkspaceApp {
                 }
                 "enter" => {
                     self.commit_terminal_broadcast_group_edit(cx);
+                    return;
+                }
+                _ => {}
+            }
+        }
+
+        if self.terminal_composer_value_edit.is_some()
+            && !modifiers.platform
+            && !modifiers.control
+            && !modifiers.alt
+        {
+            match key {
+                "escape" => {
+                    self.cancel_terminal_composer_value_edit(cx);
+                    cx.stop_propagation();
+                    return;
+                }
+                "enter" => {
+                    self.commit_terminal_composer_value_edit(cx);
+                    cx.stop_propagation();
                     return;
                 }
                 _ => {}
@@ -2308,7 +2329,6 @@ impl WorkspaceApp {
             .quick_commands_confirm_before_run;
         let needs_dialog = !command.parameters.is_empty()
             || command.command.contains("{{")
-            || target_contexts.len() > 1
             || global_confirmation
             || prepared.as_ref().is_ok_and(|prepared| {
                 prepared.confirmation_required
@@ -2332,11 +2352,7 @@ impl WorkspaceApp {
         &self,
         cx: &mut Context<Self>,
     ) -> Vec<(PaneId, QuickCommandTargetContext)> {
-        let Some(active_pane_id) = self.active_pane_id(cx) else {
-            return Vec::new();
-        };
-        let mut pane_ids = vec![active_pane_id];
-        pane_ids.extend(self.terminal_broadcast_target_panes(active_pane_id, cx));
+        let pane_ids = self.terminal_command_target_panes(cx);
         pane_ids
             .into_iter()
             .filter_map(|pane_id| {

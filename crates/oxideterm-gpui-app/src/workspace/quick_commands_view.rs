@@ -2157,6 +2157,43 @@ impl WorkspaceApp {
                         cx,
                     )),
             )
+            .when(!snapshot.managing, |toolbar| {
+                toolbar.child(
+                    div()
+                        .h(px(32.0))
+                        .px(px(8.0))
+                        .flex()
+                        .items_center()
+                        .gap(px(4.0))
+                        .rounded(px(self.tokens.radii.md))
+                        .border_1()
+                        .border_color(rgba((theme.border << 8) | 0x99))
+                        .cursor_pointer()
+                        .text_color(rgb(theme.text_muted))
+                        .hover(move |style| style.bg(rgb(theme.bg_hover)).text_color(rgb(theme.text)))
+                        .on_mouse_down(
+                            MouseButton::Left,
+                            cx.listener(|this, _event, window, cx| {
+                                this.start_quick_command_create(cx);
+                                window.focus(&this.focus_handle, cx);
+                                cx.stop_propagation();
+                            }),
+                        )
+                        .child(Self::render_lucide_icon(
+                            LucideIcon::Plus,
+                            14.0,
+                            rgb(theme.text_muted),
+                        ))
+                        .child(self.render_display_text_with_role(
+                            SelectableTextRole::NonSelectable,
+                            "quick-command-new-button",
+                            "label",
+                            self.i18n.t("terminal.quick_commands.add"),
+                            theme.text_muted,
+                            cx,
+                        )),
+                )
+            })
             .child(
                 div()
                     .h(px(32.0))

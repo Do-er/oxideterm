@@ -548,6 +548,7 @@ fn write_connection_secret(
     store
         .upsert(SaveConnectionRequest {
             totp_credential_id: None,
+            account_credential_id: connection.options.account_credential_id.clone(),
             id: Some(connection.id),
             name: connection.name,
             group: connection.group,

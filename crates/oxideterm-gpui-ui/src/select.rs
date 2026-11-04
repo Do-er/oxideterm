@@ -196,6 +196,7 @@ pub enum SelectAnchorId {
     IdeFileEncoding,
     IdeFileLineEnding,
     TerminalBroadcastMenu,
+    TerminalTargetMenu,
     TerminalHighlightRuleSet,
     TerminalCommandBar,
     TerminalCwdMenu,

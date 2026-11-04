@@ -592,6 +592,8 @@ impl WorkspaceApp {
             pending_privilege_totp: None,
             privilege_prompt_sync_task: None,
             terminal_highlight_popover_open: false,
+            terminal_target_popover_open: false,
+            terminal_composer_value_edit: None,
             terminal_trigger_settings_pane: None,
             terminal_trigger_shell_confirmation_pending: false,
             terminal_triggers,

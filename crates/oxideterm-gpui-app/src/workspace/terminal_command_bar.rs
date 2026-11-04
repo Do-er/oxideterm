@@ -11,8 +11,7 @@ use oxideterm_gpui_ui::context_menu::{
 };
 use oxideterm_gpui_ui::text_input::TextInputView;
 use oxideterm_gpui_ui::{
-    ActionChipOptions, ActionChipTextTone, CommandPanelOptions, MonospaceDatumOptions,
-    MonospaceDatumTone, StatusPillOptions, StatusTone, action_chip, action_chip_foreground,
+    CommandPanelOptions, MonospaceDatumOptions, MonospaceDatumTone, StatusPillOptions, StatusTone,
     command_panel, monospace_datum, status_pill,
 };
 use oxideterm_terminal_recording::format_recording_elapsed;
@@ -48,6 +47,18 @@ struct PrivilegePromptHelperState {
     connection_id: String,
     prompt: PrivilegePromptMatch,
     matches: Vec<MatchedPrivilegeCredential>,
+}
+
+#[derive(Clone, Copy, Debug, Eq, PartialEq)]
+pub(in crate::workspace) enum TerminalComposerEditField {
+    Interval,
+    Repeat,
+}
+
+#[derive(Clone, Debug, Eq, PartialEq)]
+pub(in crate::workspace) struct TerminalComposerValueEdit {
+    pub(in crate::workspace) field: TerminalComposerEditField,
+    pub(in crate::workspace) draft: String,
 }
 
 pub(super) struct PrivilegeCredentialPicker {

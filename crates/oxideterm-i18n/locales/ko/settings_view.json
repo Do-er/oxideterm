@@ -849,8 +849,6 @@
       "font_hint": "터미널 글꼴, 크기, 굵기, 합자 및 줄 높이를 설정합니다.",
       "display_behavior": "표시 동작",
       "display_behavior_hint": "터미널 여백, 스크롤 및 문자 인코딩을 설정합니다.",
-      "command_bar_dispatch_follow_broadcast": "명령 발송 시 브로드캐스트 대상 동기화",
-      "command_bar_dispatch_follow_broadcast_hint": "명령줄에서 브로드캐스트 그룹이 활성화된 경우, 명령 작성기와 빠른 명령이 그룹 내 모든 터미널에 기본 전송됩니다.",
       "command_bar_composer_title": "명령 작성기 및 다중 발송",
       "command_bar_composer_description": "여러 줄 스크립트 임시 보관, 문자/행 지연 간격 및 다중 터미널 발송 정책."
     },

@@ -849,8 +849,6 @@
       "font_hint": "Configure terminal font families, size, weight, ligatures, and line height.",
       "display_behavior": "Display Behavior",
       "display_behavior_hint": "Configure terminal padding, scrolling, and character encoding.",
-      "command_bar_dispatch_follow_broadcast": "Follow broadcast group target",
-      "command_bar_dispatch_follow_broadcast_hint": "When a broadcast sync group is active in the command bar, composer and quick commands dispatch to all group members by default.",
       "command_bar_composer_title": "Command Composer & Dispatch",
       "command_bar_composer_description": "Multiline scratchpad, character/line pacing intervals, and multi-terminal dispatch policies."
     },

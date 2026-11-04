@@ -908,17 +908,16 @@ impl WorkspaceApp {
                         surface.child(self.render_terminal_recording_controls(recording_status, cx))
                     }),
             )
-            .child(self.render_terminal_command_bar(cx))
             .child(self.render_terminal_quick_commands_panel(cx))
-            // The toolbar is the composer header. Hidden, compact, and expanded
-            // layouts all retain the same document and running jobs below it.
+            // The composer drawer renders above the fixed bottom bar.
             .child(self.render_terminal_command_composer_panel(window, cx))
+            .child(self.render_terminal_command_bar(cx))
             .on_children_prepainted(move |bounds, window, _| {
                 // Only the terminal and dock share this budget; all other rows have already
                 // consumed their actual layout heights, including an optional quick bar.
                 if bounds.len() >= 4 {
                     let available =
-                        f32::from(bounds[0].size.height + bounds[bounds.len() - 2].size.height);
+                        f32::from(bounds[0].size.height + bounds[1].size.height);
                     if (panel_available_height.get() - available).abs() > 0.5 {
                         panel_available_height.set(available);
                         window.refresh();

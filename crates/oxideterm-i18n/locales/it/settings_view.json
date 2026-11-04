@@ -849,8 +849,6 @@
       "font_hint": "Configura caratteri, dimensione, peso, legature e altezza delle righe del terminale.",
       "display_behavior": "Comportamento della visualizzazione",
       "display_behavior_hint": "Configura margini, scorrimento e codifica del terminale.",
-      "command_bar_dispatch_follow_broadcast": "La destinazione di invio segue il gruppo broadcast",
-      "command_bar_dispatch_follow_broadcast_hint": "Quando un gruppo broadcast è attivo, il compositore e i comandi rapidi inviano per impostazione predefinita a tutti i terminali del gruppo.",
       "command_bar_composer_title": "Compositore e invio comandi",
       "command_bar_composer_description": "Bozza multilinea, intervalli di passo per riga/carattere e criteri di distribuzione multiterminale."
     },

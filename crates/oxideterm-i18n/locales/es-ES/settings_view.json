@@ -849,8 +849,6 @@
       "font_hint": "Configurar las fuentes, el tamaño, el grosor, las ligaduras y la altura de línea del terminal.",
       "display_behavior": "Comportamiento de visualización",
       "display_behavior_hint": "Configurar márgenes, desplazamiento y codificación del terminal.",
-      "command_bar_dispatch_follow_broadcast": "El destino de envío sigue el grupo de difusión",
-      "command_bar_dispatch_follow_broadcast_hint": "Cuando un grupo de difusión está activo, el compositor y los comandos rápidos se envían por defecto a todos los terminales del grupo.",
       "command_bar_composer_title": "Compositor y despacho de comandos",
       "command_bar_composer_description": "Borrador multilínea, intervalos de paso por línea/carácter y políticas de despacho multiterminal."
     },

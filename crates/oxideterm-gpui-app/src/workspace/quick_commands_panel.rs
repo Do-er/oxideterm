@@ -7,8 +7,8 @@ use gpui::{
 
 use super::super::{WorkspaceApp, settings_ui_font_family};
 
-const DEFAULT_HEIGHT: f32 = 260.0;
-const MIN_HEIGHT: f32 = 160.0;
+const DEFAULT_HEIGHT: f32 = 240.0;
+const MIN_HEIGHT: f32 = 180.0;
 const MIN_TERMINAL_HEIGHT: f32 = 180.0;
 const RESIZE_HOTZONE: f32 = 6.0;
 
@@ -38,7 +38,7 @@ impl QuickCommandsPanelState {
         height.clamp(MIN_HEIGHT.min(maximum), maximum)
     }
 
-    fn height(&self) -> f32 {
+    pub(in crate::workspace) fn height(&self) -> f32 {
         self.clamp_height(self.height)
     }
 
@@ -102,6 +102,15 @@ impl WorkspaceApp {
         window: &mut Window,
         cx: &mut Context<Self>,
     ) {
+        // Keep quick commands drawer height in sync with the composer drawer.
+        let composer_height = self
+            .terminal_command_composer
+            .read(cx)
+            .panel_height_for_viewport(f32::from(window.viewport_size().height));
+        self.terminal.update(cx, |terminal, _| {
+            terminal.quick_commands.panel.height = composer_height;
+        });
+
         // The composer retains its drafts and running jobs while its expanded surface closes.
         self.terminal_command_composer.update(cx, |composer, cx| {
             composer.set_expanded(false, cx);

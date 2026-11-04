@@ -154,6 +154,7 @@ impl WorkspaceApp {
             self.blur_terminal_quick_commands_input(cx);
             self.dismiss_terminal_recording_menu();
             self.dismiss_terminal_broadcast_menu(cx);
+            self.dismiss_terminal_target_popover();
         }
         cx.notify();
     }

@@ -218,6 +218,7 @@ pub fn text_input(tokens: &ThemeTokens, view: TextInputView<'_>) -> Div {
         None,
         None,
         None,
+        true,
     )
 }
 
@@ -235,6 +236,7 @@ pub fn text_input_with_viewport(
         Some(viewport),
         active_offset,
         None,
+        true,
     )
 }
 
@@ -253,6 +255,7 @@ pub fn text_input_with_viewport_and_ghost_text(
         Some(viewport),
         active_offset,
         ghost_text,
+        true,
     )
 }
 
@@ -261,7 +264,7 @@ pub fn text_input_with_content_align(
     view: TextInputView<'_>,
     align: TextInputContentAlign,
 ) -> Div {
-    text_input_with_content_align_and_viewport(tokens, view, align, None, None, None)
+    text_input_with_content_align_and_viewport(tokens, view, align, None, None, None, true)
 }
 
 pub fn text_input_with_viewport_and_content_align(
@@ -278,6 +281,28 @@ pub fn text_input_with_viewport_and_content_align(
         Some(viewport),
         active_offset,
         None,
+        true,
+    )
+}
+
+/// Renders a single-line input without its own box (no fixed height, padding,
+/// background, or border). Callers that supply their own surrounding chrome use
+/// this so the input reads as plain text while keeping caret/selection/IME.
+pub fn text_input_with_viewport_and_content_align_borderless(
+    tokens: &ThemeTokens,
+    view: TextInputView<'_>,
+    align: TextInputContentAlign,
+    viewport: &TextInputViewport,
+    active_offset: Option<usize>,
+) -> Div {
+    text_input_with_content_align_and_viewport(
+        tokens,
+        view,
+        align,
+        Some(viewport),
+        active_offset,
+        None,
+        false,
     )
 }
 
@@ -288,6 +313,7 @@ fn text_input_with_content_align_and_viewport(
     viewport: Option<&TextInputViewport>,
     active_offset: Option<usize>,
     ghost_text: Option<&str>,
+    boxed: bool,
 ) -> Div {
     if let Some(viewport) = viewport {
         let mut state = viewport.state.borrow_mut();
@@ -369,17 +395,20 @@ fn text_input_with_content_align_and_viewport(
     });
 
     div()
-        .h(px(tokens.metrics.ui_control_height))
-        .px(px(tokens.metrics.ui_control_padding_x))
         .flex()
         .items_center()
-        .rounded(px(tokens.radii.md))
-        .bg(rgba((theme.bg << 8) | 0x80))
-        .border_1()
-        .border_color(if view.focused {
-            rgb(theme.accent)
-        } else {
-            rgb(theme.border)
+        .when(boxed, |input| {
+            input
+                .h(px(tokens.metrics.ui_control_height))
+                .px(px(tokens.metrics.ui_control_padding_x))
+                .rounded(px(tokens.radii.md))
+                .bg(rgba((theme.bg << 8) | 0x80))
+                .border_1()
+                .border_color(if view.focused {
+                    rgb(theme.accent)
+                } else {
+                    rgb(theme.border)
+                })
         })
         .text_size(px(tokens.metrics.ui_text_sm))
         .text_color(if visually_empty {

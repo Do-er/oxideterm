@@ -849,8 +849,6 @@
       "font_hint": "Configurer les polices, la taille, la graisse, les ligatures et la hauteur de ligne du terminal.",
       "display_behavior": "Comportement d’affichage",
       "display_behavior_hint": "Configurer les marges, le défilement et l’encodage du terminal.",
-      "command_bar_dispatch_follow_broadcast": "Cible d envoi calquée sur le groupe de diffusion",
-      "command_bar_dispatch_follow_broadcast_hint": "Lorsqu un groupe de diffusion est actif, le compositeur et les commandes rapides s exécutent par défaut sur tous les membres du groupe.",
       "command_bar_composer_title": "Compositeur et envoi de commandes",
       "command_bar_composer_description": "Brouillon multiligne, intervalles de temporisation par ligne/caractère et stratégies d envoi multi-terminaux."
     },

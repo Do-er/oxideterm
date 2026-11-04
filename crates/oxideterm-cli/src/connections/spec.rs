@@ -191,6 +191,8 @@ pub(super) fn connection_request_from_spec(
                 })
                 .and_then(|connection| connection.options.totp_credential_id.clone())
         },
+        account_credential_id: existing
+            .and_then(|connection| connection.options.account_credential_id.clone()),
         id: existing.map(|connection| connection.id.clone()),
         name,
         group: spec
@@ -384,6 +386,7 @@ fn saved_proxy_hop_from_spec(
             .as_deref()
             .map(|query| resolve_totp_credential(store, query, json))
             .transpose()?,
+        account_credential_id: None,
         host: spec.host,
         port: spec.port,
         username: spec.username,

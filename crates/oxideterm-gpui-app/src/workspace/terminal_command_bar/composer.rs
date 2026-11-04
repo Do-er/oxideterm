@@ -10,18 +10,12 @@ use crate::workspace::terminal_command_composer::{
     TerminalCommandComposerFailure, TerminalCommandComposerId, TerminalCommandComposerStatus,
     TerminalCommandComposerTarget, TerminalCommandComposerTargetScope,
 };
+use super::terminal_command_bar::{TerminalComposerEditField, TerminalComposerValueEdit};
+use oxideterm_gpui_ui::text_input::TextInputView;
 use oxideterm_terminal::{TerminalSendInputMode, TerminalSendPacing};
 use zeroize::Zeroizing;
 
-const TERMINAL_COMPOSER_CONTROL_HEIGHT: f32 = 24.0;
 const TERMINAL_COMPOSER_PANEL_PADDING: f32 = 8.0;
-const TERMINAL_COMPOSER_INTERVAL_STEP_LINE_MS: i64 = 100;
-const TERMINAL_COMPOSER_INTERVAL_STEP_CHARACTER_MS: i64 = 20;
-const TERMINAL_COMPOSER_MODE_CONTROL_WIDTH: f32 = 116.0;
-const TERMINAL_COMPOSER_PACING_CONTROL_WIDTH: f32 = 140.0;
-const TERMINAL_COMPOSER_SCOPE_CONTROL_WIDTH: f32 = 240.0;
-const TERMINAL_COMPOSER_TARGET_LIST_MIN_WIDTH: f32 = 140.0;
-const TERMINAL_COMPOSER_TARGET_CONTEXT_MAX_WIDTH: f32 = 200.0;
 const TERMINAL_COMPOSER_PROGRESS_HEIGHT: f32 = 2.0;
 
 impl WorkspaceApp {
@@ -77,7 +71,6 @@ impl WorkspaceApp {
             .read(cx)
             .panel_height_for_viewport(viewport_height);
         let documents = self.terminal_command_composer.read(cx).document_snapshots();
-        let targets = self.terminal_command_composer_target_entries(cx);
         let composer_is_resizing = self.terminal_command_composer.read(cx).is_resizing();
         let has_background = self.window_background_preferences().is_some();
 
@@ -145,7 +138,7 @@ impl WorkspaceApp {
                 // Keep pointer capture inside the composer surface while its divider moves.
                 panel.cursor(CursorStyle::ResizeRow)
             })
-            .child(self.render_terminal_command_composer_tabs(&documents, active.id, window, cx))
+            .child(self.render_terminal_command_composer_controls(&active, documents.len(), cx))
             .child(
                 div()
                     .flex_1()
@@ -153,7 +146,7 @@ impl WorkspaceApp {
                     .overflow_hidden()
                     .child(active.editor.clone()),
             )
-            .child(self.render_terminal_command_composer_controls(&active, &targets, cx))
+            .child(self.render_terminal_command_composer_tabs(&documents, active.id, window, cx))
             .into_any_element();
         if has_background {
             oxideterm_gpui_ui::surface::tab_surface(&self.tokens, panel)
@@ -272,13 +265,17 @@ impl WorkspaceApp {
                     .flex()
                     .items_center()
                     .gap(px(6.0))
-                    .border_b_1()
+                    .border_t_2()
                     .border_color(if active {
                         rgb(self.tokens.ui.accent)
                     } else {
                         rgba(0x00000000)
                     })
-                    .bg(rgba(0x00000000))
+                    .bg(if active {
+                        rgba((self.tokens.ui.accent << 8) | 0x14)
+                    } else {
+                        rgba(0x00000000)
+                    })
                     .cursor_pointer()
                     .text_size(px(11.0))
                     .text_color(foreground)
@@ -297,9 +294,6 @@ impl WorkspaceApp {
                     ),
             );
         }
-        // Scrollable moves the viewport's own style onto an outer wrapper.
-        // Keep the tab flex row as a child so its horizontal layout survives
-        // that transfer and additional tasks cannot stack behind the editor.
         let tab_list = div()
             .h_full()
             .flex_1()
@@ -307,16 +301,53 @@ impl WorkspaceApp {
             .overflow_x_scrollbar()
             .child(tab_row);
 
-        let task_actions = div()
+        div()
+            .h(px(26.0))
+            .w_full()
+            .flex_none()
+            .px(px(TERMINAL_COMPOSER_PANEL_PADDING))
+            .border_t_1()
+            .border_color(self.workspace_chrome_divider())
+            .when(self.window_background_preferences().is_none(), |strip| {
+                strip.bg(rgb(self.tokens.ui.bg))
+            })
+            .child(tab_list)
+            .into_any_element()
+    }
+
+    fn render_terminal_command_composer_controls(
+        &self,
+        snapshot: &TerminalCommandComposerDocumentSnapshot,
+        documents_len: usize,
+        cx: &mut Context<Self>,
+    ) -> AnyElement {
+        let document_id = snapshot.id;
+        let status_label = self.terminal_command_composer_status_label(snapshot);
+        let failure_label = self.terminal_command_composer_failure_label(snapshot);
+        let progress_percent = if snapshot.total_units == 0 {
+            0.0
+        } else {
+            (snapshot.completed_units as f32 / snapshot.total_units as f32) * 100.0
+        };
+        let running = snapshot.status == TerminalCommandComposerStatus::Running;
+        let status_tone = match snapshot.status {
+            TerminalCommandComposerStatus::Completed => StatusTone::Success,
+            TerminalCommandComposerStatus::Failed => StatusTone::Error,
+            TerminalCommandComposerStatus::Running => StatusTone::Accent,
+            TerminalCommandComposerStatus::Stopped => StatusTone::Warning,
+            TerminalCommandComposerStatus::Idle => StatusTone::Neutral,
+        };
+
+        let left_controls = div()
             .flex_none()
             .flex()
             .items_center()
-            .gap(px(2.0))
-            .child(self.terminal_command_action_button(
+            .gap(px(4.0))
+            .child(self.terminal_composer_run_button(document_id, running, cx))
+            .child(self.terminal_command_capsule_button(
                 LucideIcon::Plus,
                 rgb(self.tokens.ui.text_muted),
                 false,
-                None,
                 "terminal-command-composer-add",
                 self.i18n.t("terminal.composer.add_task"),
                 |this, _event, window, cx| {
@@ -328,272 +359,92 @@ impl WorkspaceApp {
                 },
                 cx,
             ))
-            .when(documents.len() > 1, |actions| {
-                actions.child(self.terminal_command_action_button(
-                    LucideIcon::X,
-                    rgb(self.tokens.ui.text_muted),
-                    false,
-                    None,
-                    "terminal-command-composer-remove",
-                    self.i18n.t("terminal.composer.remove_task"),
-                    move |this, _event, window, cx| {
-                        this.terminal_command_composer.update(cx, |composer, cx| {
-                            composer.remove_document(active_id, cx);
-                        });
-                        let next_id = this.terminal_command_composer.read(cx).active_document_id();
-                        this.focus_terminal_command_composer_editor(next_id, window, cx);
-                        cx.stop_propagation();
-                    },
-                    cx,
-                ))
-            });
-
-        div()
-            .h(px(30.0))
-            .flex_none()
-            .px(px(TERMINAL_COMPOSER_PANEL_PADDING))
-            .flex()
-            .items_center()
-            .gap(px(6.0))
-            .border_b_1()
-            .border_color(self.workspace_chrome_divider())
-            .when(self.window_background_preferences().is_none(), |strip| {
-                strip.bg(rgb(self.tokens.ui.bg))
-            })
-            .child(tab_list)
-            .child(task_actions)
-            .into_any_element()
-    }
-
-    fn render_terminal_command_composer_controls(
-        &self,
-        snapshot: &TerminalCommandComposerDocumentSnapshot,
-        targets: &[(TerminalCommandComposerTarget, String, TabKind)],
-        cx: &mut Context<Self>,
-    ) -> AnyElement {
-        let document_id = snapshot.id;
-        let interval_step = match snapshot.pacing {
-            TerminalSendPacing::Line => TERMINAL_COMPOSER_INTERVAL_STEP_LINE_MS,
-            TerminalSendPacing::Character => TERMINAL_COMPOSER_INTERVAL_STEP_CHARACTER_MS,
-        };
-        let status_label = self.terminal_command_composer_status_label(snapshot);
-        let progress_percent = if snapshot.total_units == 0 {
-            0.0
-        } else {
-            (snapshot.completed_units as f32 / snapshot.total_units as f32) * 100.0
-        };
-        let running = snapshot.status == TerminalCommandComposerStatus::Running;
-        let selected_target_count = targets
-            .iter()
-            .filter(|(target, _, _)| snapshot.selected_targets.contains(&target.pane_id))
-            .count();
-        let current_target_label = self.terminal_command_active_target_label(cx);
-        let status_color = match snapshot.status {
-            TerminalCommandComposerStatus::Completed => self.tokens.ui.success,
-            TerminalCommandComposerStatus::Failed => self.tokens.ui.error,
-            TerminalCommandComposerStatus::Running => self.tokens.ui.accent,
-            TerminalCommandComposerStatus::Stopped => self.tokens.ui.warning,
-            TerminalCommandComposerStatus::Idle => self.tokens.ui.text_muted,
-        };
-        let left_format = div()
-            .flex_none()
-            .flex()
-            .items_center()
-            .gap(px(6.0))
-            .child(self.render_terminal_composer_mode_control(snapshot, cx))
-            .child(self.render_terminal_composer_control_divider())
-            .child(self.render_terminal_composer_pacing_control(snapshot, cx));
-
-        let right_format = div()
-            .flex_none()
-            .flex()
-            .items_center()
-            .gap(px(6.0))
-            .child(self.render_terminal_composer_stepper(
-                self.i18n.t("terminal.composer.interval"),
-                format!("{} ms", snapshot.interval_ms),
-                move |this, _event, cx| {
+            .child(self.terminal_command_capsule_button(
+                LucideIcon::X,
+                rgb(self.tokens.ui.text_muted),
+                documents_len <= 1,
+                "terminal-command-composer-remove",
+                self.i18n.t("terminal.composer.remove_task"),
+                move |this, _event, window, cx| {
                     this.terminal_command_composer.update(cx, |composer, cx| {
-                        composer.adjust_interval(document_id, -interval_step, cx);
+                        composer.remove_document(document_id, cx);
                     });
+                    let next_id = this.terminal_command_composer.read(cx).active_document_id();
+                    this.focus_terminal_command_composer_editor(next_id, window, cx);
+                    cx.stop_propagation();
                 },
-                move |this, _event, cx| {
-                    this.terminal_command_composer.update(cx, |composer, cx| {
-                        composer.adjust_interval(document_id, interval_step, cx);
-                    });
-                },
-                None,
                 cx,
             ))
-            .child(self.render_terminal_composer_control_divider())
-            .child(self.render_terminal_composer_stepper(
-                self.i18n.t("terminal.composer.repeat"),
-                if snapshot.repeat_count == 0 {
-                    "♾️".to_string()
-                } else {
-                    format!("{}×", snapshot.repeat_count)
-                },
-                move |this, event, cx| {
-                    let step = Self::composer_step_from_modifiers(&event.modifiers);
-                    this.terminal_command_composer.update(cx, |composer, cx| {
-                        composer.adjust_repeat_count(document_id, -step, cx);
-                    });
-                },
-                move |this, event, cx| {
-                    let step = Self::composer_step_from_modifiers(&event.modifiers);
-                    this.terminal_command_composer.update(cx, |composer, cx| {
-                        composer.adjust_repeat_count(document_id, step, cx);
-                    });
-                },
-                Some(Box::new(move |this, cx| {
-                    this.terminal_command_composer.update(cx, |composer, cx| {
-                        composer.cycle_repeat_preset(document_id, cx);
-                    });
-                })),
-                cx,
-            ));
-
-        let format_controls = div()
-            .w_full()
-            .flex()
-            .items_center()
-            .justify_between()
-            .gap(px(6.0))
-            .flex_wrap()
-            .child(left_format)
-            .child(right_format);
-
-        let target_context = (snapshot.target_scope == TerminalCommandComposerTargetScope::Current)
-            .then(|| {
-                div()
+            .when(snapshot.status != TerminalCommandComposerStatus::Idle, |left| {
+                let mut status_group = div()
                     .flex_none()
-                    .max_w(px(TERMINAL_COMPOSER_TARGET_CONTEXT_MAX_WIDTH))
                     .flex()
                     .items_center()
-                    .gap(px(4.0))
-                    .text_size(px(self.tokens.metrics.ui_text_xs))
-                    .text_color(rgb(self.tokens.ui.text_muted))
-                    .child(Self::render_lucide_icon(
-                        LucideIcon::Terminal,
-                        12.0,
-                        rgb(self.tokens.ui.text_muted),
-                    ))
-                    .child(div().truncate().child(current_target_label))
-                    .into_any_element()
-            });
-        let broadcast_context =
-            (snapshot.target_scope == TerminalCommandComposerTargetScope::Broadcast).then(|| {
-                let active_pane = self.active_pane_id(cx);
-                let broadcast_targets = active_pane
-                    .map(|pane| self.terminal_broadcast_target_panes(pane, cx))
-                    .unwrap_or_default();
-                let broadcast_enabled = active_pane
-                    .and_then(|pane| self.terminal.read(cx).sync_groups().member(pane))
-                    .is_some_and(|member| {
-                        !member.isolated
-                            && self.terminal.read(cx).sync_groups().enabled(member.group)
-                    });
-                let (icon_color, label) = if broadcast_enabled && !broadcast_targets.is_empty() {
-                    (
-                        self.tokens.ui.accent,
-                        format!(
-                            "{} ({})",
-                            self.i18n.t("terminal.composer.broadcast_active"),
-                            broadcast_targets.len() + 1
-                        ),
-                    )
-                } else {
-                    (
-                        self.tokens.ui.text_muted,
-                        self.i18n.t("terminal.composer.fallback_current"),
-                    )
-                };
-                div()
-                    .flex_none()
-                    .max_w(px(TERMINAL_COMPOSER_TARGET_CONTEXT_MAX_WIDTH + 100.0))
-                    .flex()
-                    .items_center()
-                    .gap(px(4.0))
-                    .text_size(px(self.tokens.metrics.ui_text_xs))
-                    .text_color(rgb(icon_color))
-                    .child(Self::render_lucide_icon(
-                        LucideIcon::Radio,
-                        12.0,
-                        rgb(icon_color),
-                    ))
-                    .child(div().truncate().child(label))
-                    .into_any_element()
-            });
-        let selected_targets = (snapshot.target_scope
-            == TerminalCommandComposerTargetScope::Selected)
-            .then(|| self.render_terminal_composer_target_list(snapshot, targets, cx));
-        let target_controls = div()
-            .w_full()
-            .flex()
-            .items_center()
-            .gap(px(6.0))
-            .flex_wrap()
-            .child(
-                div()
-                    .flex_none()
-                    .text_size(px(self.tokens.metrics.ui_text_xs))
-                    .font_weight(gpui::FontWeight::MEDIUM)
-                    .text_color(rgb(self.tokens.ui.text_muted))
-                    .child(self.i18n.t("terminal.composer.targets")),
-            )
-            .child(self.render_terminal_composer_scope_control(snapshot, selected_target_count, cx))
-            .when_some(target_context, |row, context| row.child(context))
-            .when_some(broadcast_context, |row, context| row.child(context))
-            .when_some(selected_targets, |row, target_list| {
-                row.child(
-                    div()
-                        .min_w(px(TERMINAL_COMPOSER_TARGET_LIST_MIN_WIDTH))
-                        .flex_1()
-                        .child(target_list),
-                )
-            })
-            .when(
-                snapshot.target_scope != TerminalCommandComposerTargetScope::Selected,
-                |row| row.child(div().flex_1().min_w(px(8.0))),
-            )
-            .when(
-                snapshot.status != TerminalCommandComposerStatus::Idle,
-                |row| {
-                    row.child(
+                    .gap(px(10.0))
+                    .child(status_pill(
+                        &self.tokens,
+                        status_label,
+                        StatusPillOptions::new(status_tone).compact(),
+                    ));
+                status_group = status_group.when_some(failure_label, |group, detail| {
+                    group.child(
                         div()
                             .flex_none()
+                            .max_w(px(240.0))
+                            .truncate()
                             .text_size(px(11.0))
-                            .text_color(rgb(status_color))
-                            .child(status_label),
+                            .text_color(rgb(self.tokens.ui.text_muted))
+                            .child(detail),
                     )
-                    .child(
-                        monospace_datum(
-                            &self.tokens,
-                            format!(
-                                "{}/{} · {} {} · {} {}",
-                                snapshot.completed_units,
-                                if snapshot.total_units == 0 {
-                                    "♾️".to_string()
-                                } else {
-                                    snapshot.total_units.to_string()
-                                },
-                                self.i18n.t("terminal.composer.accepted"),
-                                snapshot.accepted_writes,
-                                self.i18n.t("terminal.composer.skipped"),
-                                snapshot.skipped_writes
-                            ),
-                            Some(settings_mono_font_family(self.settings_store.settings())),
-                            MonospaceDatumOptions::new(MonospaceDatumTone::Muted).text_size(10.0),
+                });
+                if snapshot.status != TerminalCommandComposerStatus::Failed {
+                    let total_label = if snapshot.repeat_count == 0 {
+                        "∞".to_string()
+                    } else {
+                        snapshot.total_units.to_string()
+                    };
+                    status_group = status_group
+                        .child(
+                            monospace_datum(
+                                &self.tokens,
+                                format!("{}/{}", snapshot.completed_units, total_label),
+                                Some(settings_mono_font_family(self.settings_store.settings())),
+                                MonospaceDatumOptions::new(MonospaceDatumTone::Muted).text_size(10.0),
+                            )
+                            .whitespace_nowrap(),
                         )
-                        .whitespace_nowrap(),
-                    )
-                },
-            )
-            .child(self.terminal_composer_run_button(document_id, running, cx));
+                        .child(self.render_terminal_composer_counter(
+                            LucideIcon::Check,
+                            rgb(self.tokens.ui.success),
+                            self.i18n.t("terminal.composer.accepted"),
+                            snapshot.accepted_writes,
+                        ))
+                        .child(self.render_terminal_composer_counter(
+                            LucideIcon::ArrowRight,
+                            rgb(self.tokens.ui.text_muted),
+                            self.i18n.t("terminal.composer.skipped"),
+                            snapshot.skipped_writes,
+                        ));
+                }
+                left.child(self.render_terminal_composer_control_divider())
+                    .child(status_group)
+            });
+
+        let right_controls = div()
+            .flex_none()
+            .flex()
+            .items_center()
+            .gap(px(6.0))
+            .child(self.render_terminal_composer_interval_capsule(snapshot, cx))
+            .child(self.render_terminal_composer_control_divider())
+            .child(self.render_terminal_composer_repeat_capsule(snapshot, cx))
+            .child(self.render_terminal_composer_control_divider())
+            .child(self.render_terminal_composer_mode_control(snapshot, cx))
+            .child(self.render_terminal_composer_pacing_control(snapshot, cx));
 
         div()
             .flex_none()
-            .border_t_1()
+            .border_b_1()
             .border_color(self.workspace_chrome_divider())
             .when(self.window_background_preferences().is_none(), |controls| {
                 controls.bg(rgb(self.tokens.ui.bg))
@@ -619,19 +470,314 @@ impl WorkspaceApp {
                     .py(px(2.0))
                     .flex()
                     .items_center()
-                    .child(format_controls),
+                    .justify_between()
+                    .gap(px(6.0))
+                    .child(left_controls)
+                    .child(right_controls),
             )
+            .into_any_element()
+    }
+
+    pub(super) fn open_terminal_target_popover(&mut self, cx: &mut Context<Self>) {
+        self.terminal_target_popover_open = true;
+        self.commit_terminal_composer_value_edit(cx);
+        self.dismiss_terminal_highlight_popover();
+        self.dismiss_terminal_broadcast_menu(cx);
+        self.dismiss_terminal_recording_menu();
+        cx.notify();
+    }
+
+    pub(super) fn toggle_terminal_target_popover(&mut self, cx: &mut Context<Self>) {
+        if self.terminal_target_popover_open {
+            self.terminal_target_popover_open = false;
+        } else {
+            self.open_terminal_target_popover(cx);
+        }
+        cx.notify();
+    }
+
+    pub(in crate::workspace) fn dismiss_terminal_target_popover(&mut self) -> bool {
+        std::mem::take(&mut self.terminal_target_popover_open)
+    }
+
+    pub(in crate::workspace) fn begin_terminal_composer_value_edit(
+        &mut self,
+        field: TerminalComposerEditField,
+        window: &mut Window,
+        cx: &mut Context<Self>,
+    ) {
+        let Some(snapshot) = self.terminal_command_composer.read(cx).active_document_snapshot() else {
+            return;
+        };
+        let draft = match field {
+            TerminalComposerEditField::Interval => snapshot.interval_ms.to_string(),
+            TerminalComposerEditField::Repeat => snapshot.repeat_count.to_string(),
+        };
+        let draft_len = draft.encode_utf16().count();
+        self.terminal_composer_value_edit = Some(TerminalComposerValueEdit {
+            field,
+            draft: draft.clone(),
+        });
+        self.ime_marked_text = None;
+        self.selected_ime_target = Some(WorkspaceImeTarget::TerminalComposerValue);
+        self.set_ime_selection_from_anchor(WorkspaceImeTarget::TerminalComposerValue, 0, draft_len);
+        window.focus(&self.focus_handle, cx);
+        self.show_active_input_caret(cx);
+        cx.notify();
+    }
+
+    pub(in crate::workspace) fn commit_terminal_composer_value_edit(
+        &mut self,
+        cx: &mut Context<Self>,
+    ) -> bool {
+        let Some(edit) = self.terminal_composer_value_edit.take() else {
+            return false;
+        };
+        let Some(snapshot) = self.terminal_command_composer.read(cx).active_document_snapshot() else {
+            self.clear_ime_selection();
+            self.selected_ime_target = None;
+            cx.notify();
+            return true;
+        };
+        let document_id = snapshot.id;
+        match edit.field {
+            TerminalComposerEditField::Interval => {
+                if let Ok(ms) = edit.draft.trim().parse::<u64>() {
+                    self.terminal_command_composer.update(cx, |composer, cx| {
+                        composer.set_interval(document_id, ms, cx);
+                    });
+                }
+            }
+            TerminalComposerEditField::Repeat => {
+                let trimmed = edit.draft.trim();
+                if trimmed == "0" || trimmed.is_empty() {
+                    self.terminal_command_composer.update(cx, |composer, cx| {
+                        composer.set_repeat_count(document_id, 0, cx);
+                    });
+                } else if let Ok(val) = trimmed.parse::<u32>() {
+                    self.terminal_command_composer.update(cx, |composer, cx| {
+                        composer.set_repeat_count(document_id, val, cx);
+                    });
+                }
+            }
+        }
+        self.clear_ime_selection();
+        self.selected_ime_target = None;
+        cx.notify();
+        true
+    }
+
+    pub(in crate::workspace) fn cancel_terminal_composer_value_edit(
+        &mut self,
+        cx: &mut Context<Self>,
+    ) -> bool {
+        if self.terminal_composer_value_edit.take().is_some() {
+            self.clear_ime_selection();
+            self.selected_ime_target = None;
+            cx.notify();
+            true
+        } else {
+            false
+        }
+    }
+
+    pub(super) fn render_terminal_composer_bar_targets(
+        &self,
+        cx: &mut Context<Self>,
+    ) -> AnyElement {
+        let Some(snapshot) = self.terminal_command_composer.read(cx).active_document_snapshot() else {
+            return div().into_any_element();
+        };
+        let document_id = snapshot.id;
+        let targets = self.terminal_command_composer_target_entries(cx);
+        let selected_target_count = targets
+            .iter()
+            .filter(|(target, _, _)| snapshot.selected_targets.contains(&target.pane_id))
+            .count();
+        let theme = self.tokens.ui;
+        let is_current = snapshot.target_scope == TerminalCommandComposerTargetScope::Current;
+        let is_selected = !is_current;
+        let is_popover_open = self.terminal_target_popover_open;
+
+        let selected_label = if selected_target_count > 0 {
+            format!("{} ({})", self.i18n.t("terminal.composer.selected"), selected_target_count)
+        } else {
+            self.i18n.t("terminal.composer.selected")
+        };
+
+        let current_tab = div()
+            .h(px(20.0))
+            .px(px(7.0))
+            .flex()
+            .items_center()
+            .gap(px(3.0))
+            .rounded(px(self.tokens.radii.sm))
+            .cursor_pointer()
+            .text_size(px(self.tokens.metrics.ui_text_xs))
+            .font_weight(if is_current {
+                gpui::FontWeight::MEDIUM
+            } else {
+                gpui::FontWeight::NORMAL
+            })
+            .bg(if is_current {
+                rgba((theme.accent << 8) | 0x2e)
+            } else {
+                rgba(0x00000000)
+            })
+            .text_color(if is_current {
+                rgb(theme.accent)
+            } else {
+                rgb(theme.text_muted)
+            })
+            .hover(move |s| {
+                s.bg(if is_current {
+                    rgba((theme.accent << 8) | 0x3d)
+                } else {
+                    rgba((theme.bg_hover << 8) | 0x80)
+                })
+                .text_color(if is_current {
+                    rgb(theme.accent)
+                } else {
+                    rgb(theme.text)
+                })
+            })
+            .child(Self::render_lucide_icon(
+                LucideIcon::Terminal,
+                11.0,
+                if is_current {
+                    rgb(theme.accent)
+                } else {
+                    rgb(theme.text_muted)
+                },
+            ))
+            .child(self.i18n.t("terminal.composer.current"))
+            .on_mouse_down(
+                MouseButton::Left,
+                cx.listener(move |this, _event: &MouseDownEvent, _window, cx| {
+                    this.terminal_command_composer.update(cx, |composer, cx| {
+                        composer.set_target_scope(
+                            document_id,
+                            TerminalCommandComposerTargetScope::Current,
+                            cx,
+                        );
+                    });
+                    this.dismiss_terminal_target_popover();
+                    cx.stop_propagation();
+                }),
+            );
+
+        let selected_tab = select_anchor_probe(
+            SelectAnchorId::TerminalTargetMenu,
+            div()
+                .id("terminal-target-selected-tab")
+                .h(px(20.0))
+                .px(px(7.0))
+                .flex()
+                .items_center()
+                .gap(px(3.0))
+                .rounded(px(self.tokens.radii.sm))
+                .cursor_pointer()
+                .text_size(px(self.tokens.metrics.ui_text_xs))
+                .font_weight(if is_selected {
+                    gpui::FontWeight::MEDIUM
+                } else {
+                    gpui::FontWeight::NORMAL
+                })
+                .bg(if is_selected || is_popover_open {
+                    rgba((theme.accent << 8) | 0x2e)
+                } else {
+                    rgba(0x00000000)
+                })
+                .text_color(if is_selected || is_popover_open {
+                    rgb(theme.accent)
+                } else {
+                    rgb(theme.text_muted)
+                })
+                .hover(move |s| {
+                    s.bg(if is_selected || is_popover_open {
+                        rgba((theme.accent << 8) | 0x3d)
+                    } else {
+                        rgba((theme.bg_hover << 8) | 0x80)
+                    })
+                    .text_color(if is_selected || is_popover_open {
+                        rgb(theme.accent)
+                    } else {
+                        rgb(theme.text)
+                    })
+                })
+                .child(Self::render_lucide_icon(
+                    LucideIcon::CheckSquare,
+                    11.0,
+                    if is_selected || is_popover_open {
+                        rgb(theme.accent)
+                    } else {
+                        rgb(theme.text_muted)
+                    },
+                ))
+                .child(selected_label)
+                .child(Self::render_lucide_icon(
+                    LucideIcon::ChevronDown,
+                    10.0,
+                    if is_selected || is_popover_open {
+                        rgb(theme.accent)
+                    } else {
+                        rgb(theme.text_muted)
+                    },
+                ))
+                .on_mouse_down(
+                    MouseButton::Left,
+                    cx.listener(move |this, _event: &MouseDownEvent, _window, cx| {
+                        if !is_selected {
+                            this.terminal_command_composer.update(cx, |composer, cx| {
+                                composer.set_target_scope(
+                                    document_id,
+                                    TerminalCommandComposerTargetScope::Selected,
+                                    cx,
+                                );
+                            });
+                            this.open_terminal_target_popover(cx);
+                        } else {
+                            this.toggle_terminal_target_popover(cx);
+                        }
+                        cx.stop_propagation();
+                    }),
+                ),
+            {
+                let workspace = cx.entity().clone();
+                move |anchor, _window, cx| {
+                    let _ = workspace.update(cx, |this, cx| {
+                        this.update_select_anchor(anchor, cx);
+                    });
+                }
+            },
+        );
+
+        let segmented_container = div()
+            .flex()
+            .items_center()
+            .gap(px(2.0))
+            .p(px(2.0))
+            .rounded(px(self.tokens.radii.md))
+            .border_1()
+            .border_color(rgba((theme.border << 8) | 0x80))
+            .bg(rgba((theme.bg << 8) | 0x60))
+            .child(current_tab)
+            .child(selected_tab);
+
+        div()
+            .flex()
+            .items_center()
+            .gap(px(6.0))
+            .min_w(px(0.0))
             .child(
                 div()
-                    .min_h(px(32.0))
-                    .px(px(TERMINAL_COMPOSER_PANEL_PADDING))
-                    .py(px(2.0))
-                    .border_t_1()
-                    .border_color(self.workspace_chrome_divider())
-                    .flex()
-                    .items_center()
-                    .child(target_controls),
+                    .flex_none()
+                    .text_size(px(self.tokens.metrics.ui_text_xs))
+                    .font_weight(gpui::FontWeight::MEDIUM)
+                    .text_color(rgb(theme.text_muted))
+                    .child(self.i18n.t("terminal.composer.targets")),
             )
+            .child(segmented_container)
             .into_any_element()
     }
 
@@ -641,60 +787,73 @@ impl WorkspaceApp {
         cx: &mut Context<Self>,
     ) -> AnyElement {
         let document_id = snapshot.id;
-        let active_index = usize::from(snapshot.input_mode == TerminalSendInputMode::Hex);
-        let control_id = "terminal-composer-mode";
-        let previous_index = self
-            .segmented_control_user_previous_index(control_id, active_index)
-            .unwrap_or(active_index);
-        let transition_active =
-            self.segmented_control_user_transition_active(control_id, active_index);
+        let theme = self.tokens.ui;
         let can_change = snapshot.status != TerminalCommandComposerStatus::Running;
-        let items = [TerminalSendInputMode::Text, TerminalSendInputMode::Hex]
-            .into_iter()
-            .enumerate()
-            .map(|(index, mode)| {
-                let label = self.i18n.t(match mode {
-                    TerminalSendInputMode::Text => "terminal.composer.text",
-                    TerminalSendInputMode::Hex => "terminal.composer.hex",
-                });
-                oxideterm_gpui_ui::segmented_control_item(
-                    &self.tokens,
-                    label,
-                    index == active_index,
-                )
-                .rounded_none()
-                .px(px(6.0))
-                .py(px(2.0))
+        let is_hex = snapshot.input_mode == TerminalSendInputMode::Hex;
+
+        let make_tab = |mode: TerminalSendInputMode, label: &'static str, active: bool| {
+            div()
+                .h(px(20.0))
+                .px(px(7.0))
+                .flex()
+                .items_center()
+                .justify_center()
+                .rounded(px(self.tokens.radii.sm))
+                .cursor_pointer()
                 .text_size(px(self.tokens.metrics.ui_text_xs))
+                .font_weight(if active {
+                    gpui::FontWeight::MEDIUM
+                } else {
+                    gpui::FontWeight::NORMAL
+                })
+                .bg(if active {
+                    rgba((theme.accent << 8) | 0x2e)
+                } else {
+                    rgba(0x00000000)
+                })
+                .text_color(if active {
+                    rgb(theme.accent)
+                } else {
+                    rgb(theme.text_muted)
+                })
+                .hover(move |s| {
+                    s.bg(if active {
+                        rgba((theme.accent << 8) | 0x3d)
+                    } else {
+                        rgba((theme.bg_hover << 8) | 0x80)
+                    })
+                    .text_color(if active {
+                        rgb(theme.accent)
+                    } else {
+                        rgb(theme.text)
+                    })
+                })
+                .child(label)
                 .on_mouse_down(
                     MouseButton::Left,
                     cx.listener(move |this, _event, _window, cx| {
-                        if can_change && index != active_index {
-                            this.begin_user_segmented_control_transition_from(
-                                control_id,
-                                active_index,
-                                index,
-                                cx,
-                            );
+                        if can_change && !active {
+                            this.terminal_command_composer.update(cx, |composer, cx| {
+                                composer.set_input_mode(document_id, mode, cx);
+                            });
                         }
-                        this.terminal_command_composer.update(cx, |composer, cx| {
-                            composer.set_input_mode(document_id, mode, cx);
-                        });
                         cx.stop_propagation();
                     }),
                 )
-                .into_any_element()
-            })
-            .collect();
-        oxideterm_gpui_ui::segmented_control(
-            &self.tokens,
-            ("terminal-composer-mode", document_id.0),
-            oxideterm_gpui_ui::SegmentedControlOptions::new(active_index, previous_index, 2)
-                .user_transition_active(transition_active)
-                .underline(TERMINAL_COMPOSER_MODE_CONTROL_WIDTH),
-            items,
-        )
-        .into_any_element()
+        };
+
+        div()
+            .flex()
+            .items_center()
+            .gap(px(2.0))
+            .p(px(2.0))
+            .rounded(px(self.tokens.radii.md))
+            .border_1()
+            .border_color(rgba((theme.border << 8) | 0x80))
+            .bg(rgba((theme.bg << 8) | 0x60))
+            .child(make_tab(TerminalSendInputMode::Text, "Text", !is_hex))
+            .child(make_tab(TerminalSendInputMode::Hex, "Hex", is_hex))
+            .into_any_element()
     }
 
     fn render_terminal_composer_pacing_control(
@@ -703,193 +862,248 @@ impl WorkspaceApp {
         cx: &mut Context<Self>,
     ) -> AnyElement {
         let document_id = snapshot.id;
-        let active_index = usize::from(snapshot.pacing == TerminalSendPacing::Character);
-        let control_id = "terminal-composer-pacing";
-        let previous_index = self
-            .segmented_control_user_previous_index(control_id, active_index)
-            .unwrap_or(active_index);
-        let transition_active =
-            self.segmented_control_user_transition_active(control_id, active_index);
+        let theme = self.tokens.ui;
         let can_change = snapshot.status != TerminalCommandComposerStatus::Running;
-        let items = [TerminalSendPacing::Line, TerminalSendPacing::Character]
-            .into_iter()
-            .enumerate()
-            .map(|(index, pacing)| {
-                let label = self.i18n.t(match pacing {
-                    TerminalSendPacing::Line => "terminal.composer.by_line",
-                    TerminalSendPacing::Character
-                        if snapshot.input_mode == TerminalSendInputMode::Hex =>
-                    {
-                        "terminal.composer.by_byte"
-                    }
-                    TerminalSendPacing::Character => "terminal.composer.by_character",
-                });
-                oxideterm_gpui_ui::segmented_control_item(
-                    &self.tokens,
-                    label,
-                    index == active_index,
-                )
-                .rounded_none()
-                .px(px(6.0))
-                .py(px(2.0))
+        let is_character = snapshot.pacing == TerminalSendPacing::Character;
+
+        let line_label = self.i18n.t("terminal.composer.by_line");
+        let char_label = self.i18n.t("terminal.composer.by_character");
+
+        let make_tab = |pacing: TerminalSendPacing, label: String, active: bool| {
+            div()
+                .h(px(20.0))
+                .px(px(7.0))
+                .flex()
+                .items_center()
+                .justify_center()
+                .rounded(px(self.tokens.radii.sm))
+                .cursor_pointer()
                 .text_size(px(self.tokens.metrics.ui_text_xs))
+                .font_weight(if active {
+                    gpui::FontWeight::MEDIUM
+                } else {
+                    gpui::FontWeight::NORMAL
+                })
+                .bg(if active {
+                    rgba((theme.accent << 8) | 0x2e)
+                } else {
+                    rgba(0x00000000)
+                })
+                .text_color(if active {
+                    rgb(theme.accent)
+                } else {
+                    rgb(theme.text_muted)
+                })
+                .hover(move |s| {
+                    s.bg(if active {
+                        rgba((theme.accent << 8) | 0x3d)
+                    } else {
+                        rgba((theme.bg_hover << 8) | 0x80)
+                    })
+                    .text_color(if active {
+                        rgb(theme.accent)
+                    } else {
+                        rgb(theme.text)
+                    })
+                })
+                .child(label)
                 .on_mouse_down(
                     MouseButton::Left,
                     cx.listener(move |this, _event, _window, cx| {
-                        if can_change && index != active_index {
-                            this.begin_user_segmented_control_transition_from(
-                                control_id,
-                                active_index,
-                                index,
-                                cx,
-                            );
+                        if can_change && !active {
+                            this.terminal_command_composer.update(cx, |composer, cx| {
+                                composer.set_pacing(document_id, pacing, cx);
+                            });
                         }
-                        this.terminal_command_composer.update(cx, |composer, cx| {
-                            composer.set_pacing(document_id, pacing, cx);
-                        });
                         cx.stop_propagation();
                     }),
                 )
-                .into_any_element()
-            })
-            .collect();
-        oxideterm_gpui_ui::segmented_control(
-            &self.tokens,
-            ("terminal-composer-pacing", document_id.0),
-            oxideterm_gpui_ui::SegmentedControlOptions::new(active_index, previous_index, 2)
-                .user_transition_active(transition_active)
-                .underline(TERMINAL_COMPOSER_PACING_CONTROL_WIDTH),
-            items,
-        )
-        .into_any_element()
-    }
-
-    fn render_terminal_composer_scope_control(
-        &self,
-        snapshot: &TerminalCommandComposerDocumentSnapshot,
-        selected_target_count: usize,
-        cx: &mut Context<Self>,
-    ) -> AnyElement {
-        let document_id = snapshot.id;
-        let active_index = match snapshot.target_scope {
-            TerminalCommandComposerTargetScope::Current => 0,
-            TerminalCommandComposerTargetScope::All => 1,
-            TerminalCommandComposerTargetScope::Broadcast => 2,
-            TerminalCommandComposerTargetScope::Selected => 3,
         };
-        let control_id = "terminal-composer-scope";
-        let previous_index = self
-            .segmented_control_user_previous_index(control_id, active_index)
-            .unwrap_or(active_index);
-        let transition_active =
-            self.segmented_control_user_transition_active(control_id, active_index);
-        let can_change = snapshot.status != TerminalCommandComposerStatus::Running;
-        let items = [
-            TerminalCommandComposerTargetScope::Current,
-            TerminalCommandComposerTargetScope::All,
-            TerminalCommandComposerTargetScope::Broadcast,
-            TerminalCommandComposerTargetScope::Selected,
-        ]
-        .into_iter()
-        .enumerate()
-        .map(|(index, scope)| {
-            let label = match scope {
-                TerminalCommandComposerTargetScope::Current => {
-                    self.i18n.t("terminal.composer.current")
-                }
-                TerminalCommandComposerTargetScope::All => self.i18n.t("terminal.composer.all"),
-                TerminalCommandComposerTargetScope::Broadcast => {
-                    self.i18n.t("terminal.composer.broadcast")
-                }
-                TerminalCommandComposerTargetScope::Selected => format!(
-                    "{} ({selected_target_count})",
-                    self.i18n.t("terminal.composer.selected")
-                ),
-            };
-            oxideterm_gpui_ui::segmented_control_item(&self.tokens, label, index == active_index)
-                .rounded_none()
-                .px(px(6.0))
-                .py(px(2.0))
-                .text_size(px(self.tokens.metrics.ui_text_xs))
-                .on_mouse_down(
-                    MouseButton::Left,
-                    cx.listener(move |this, _event, _window, cx| {
-                        if can_change && index != active_index {
-                            this.begin_user_segmented_control_transition_from(
-                                control_id,
-                                active_index,
-                                index,
-                                cx,
-                            );
-                        }
-                        this.terminal_command_composer.update(cx, |composer, cx| {
-                            composer.set_target_scope(document_id, scope, cx);
-                        });
-                        cx.stop_propagation();
-                    }),
-                )
-                .into_any_element()
-        })
-        .collect();
-        oxideterm_gpui_ui::segmented_control(
-            &self.tokens,
-            ("terminal-composer-scope", document_id.0),
-            oxideterm_gpui_ui::SegmentedControlOptions::new(active_index, previous_index, 4)
-                .user_transition_active(transition_active)
-                .underline(TERMINAL_COMPOSER_SCOPE_CONTROL_WIDTH),
-            items,
-        )
-        .into_any_element()
+
+        div()
+            .flex()
+            .items_center()
+            .gap(px(2.0))
+            .p(px(2.0))
+            .rounded(px(self.tokens.radii.md))
+            .border_1()
+            .border_color(rgba((theme.border << 8) | 0x80))
+            .bg(rgba((theme.bg << 8) | 0x60))
+            .child(make_tab(TerminalSendPacing::Line, line_label, !is_character))
+            .child(make_tab(TerminalSendPacing::Character, char_label, is_character))
+            .into_any_element()
     }
 
-    fn render_terminal_composer_target_list(
+    pub(in crate::workspace) fn render_terminal_target_popover(
         &self,
-        snapshot: &TerminalCommandComposerDocumentSnapshot,
-        targets: &[(TerminalCommandComposerTarget, String, TabKind)],
         cx: &mut Context<Self>,
     ) -> AnyElement {
+        let Some(snapshot) = self.terminal_command_composer.read(cx).active_document_snapshot() else {
+            return div().into_any_element();
+        };
         let document_id = snapshot.id;
-        let mut target_row = div().flex_none().flex().items_center().gap(px(4.0));
-        for (target, label, _kind) in targets {
+        let theme = self.tokens.ui;
+        let targets = self.terminal_command_composer_target_entries(cx);
+        let anchor_left = self
+            .select_anchors
+            .get(&SelectAnchorId::TerminalTargetMenu)
+            .map(|anchor| f32::from(anchor.bounds.origin.x).max(12.0));
+
+        let all_pane_ids: Vec<PaneId> = targets.iter().map(|(t, _, _)| t.pane_id).collect();
+        let header_row = div()
+            .flex()
+            .items_center()
+            .justify_between()
+            .gap(px(12.0))
+            .px(px(4.0))
+            .py(px(2.0))
+            .text_size(px(self.tokens.metrics.ui_text_xs))
+            .child(
+                div()
+                    .font_weight(gpui::FontWeight::MEDIUM)
+                    .text_color(rgb(theme.text_muted))
+                    .child(format!(
+                        "{}/{}",
+                        snapshot.selected_targets.len(),
+                        targets.len()
+                    )),
+            )
+            .child(
+                div()
+                    .flex()
+                    .items_center()
+                    .gap(px(8.0))
+                    .child(
+                        div()
+                            .cursor_pointer()
+                            .text_color(rgb(theme.accent))
+                            .hover(|s| s.underline())
+                            .child(self.i18n.t("terminal.composer.select_all"))
+                            .on_mouse_down(
+                                MouseButton::Left,
+                                cx.listener({
+                                    let all_pane_ids = all_pane_ids.clone();
+                                    move |this, _event, _window, cx| {
+                                        this.terminal_command_composer.update(cx, |composer, cx| {
+                                            composer.set_selected_targets(document_id, &all_pane_ids, cx);
+                                        });
+                                        cx.stop_propagation();
+                                    }
+                                }),
+                            ),
+                    )
+                    .child(
+                        div()
+                            .cursor_pointer()
+                            .text_color(rgb(theme.text_muted))
+                            .hover(|s| s.underline())
+                            .child(self.i18n.t("terminal.composer.deselect_all"))
+                            .on_mouse_down(
+                                MouseButton::Left,
+                                cx.listener(move |this, _event, _window, cx| {
+                                    this.terminal_command_composer.update(cx, |composer, cx| {
+                                        composer.set_selected_targets(document_id, &[], cx);
+                                    });
+                                    cx.stop_propagation();
+                                }),
+                            ),
+                    ),
+            );
+
+        let mut pane_list = div()
+            .flex()
+            .flex_col()
+            .gap(px(2.0))
+            .max_h(px(180.0))
+            .overflow_y_scrollbar();
+
+        for (target, label, _kind) in &targets {
             let pane_id = target.pane_id;
-            let selected = snapshot.selected_targets.contains(&pane_id);
-            let options = ActionChipOptions::new()
-                .active(selected)
-                .height(24.0)
-                .radius(ButtonRadius::Sm)
-                .idle_text_tone(ActionChipTextTone::Muted);
-            target_row = target_row.child(
-                action_chip(
-                    &self.tokens,
-                    label.clone(),
-                    Some(Self::render_lucide_icon(
-                        if selected {
+            let is_included = snapshot.selected_targets.contains(&pane_id);
+
+            pane_list = pane_list.child(
+                div()
+                    .h(px(24.0))
+                    .px(px(6.0))
+                    .flex()
+                    .items_center()
+                    .gap(px(6.0))
+                    .rounded(px(self.tokens.radii.sm))
+                    .cursor_pointer()
+                    .bg(if is_included {
+                        rgba((theme.accent << 8) | 0x14)
+                    } else {
+                        rgba(0x00000000)
+                    })
+                    .hover(move |s| s.bg(rgba((theme.bg_hover << 8) | 0x80)))
+                    .child(Self::render_lucide_icon(
+                        if is_included {
                             LucideIcon::CheckSquare
                         } else {
                             LucideIcon::Square
                         },
                         12.0,
-                        action_chip_foreground(&self.tokens, options),
-                    )),
-                    options,
-                )
-                .on_mouse_down(
-                    MouseButton::Left,
-                    cx.listener(move |this, _event, _window, cx| {
-                        this.terminal_command_composer.update(cx, |composer, cx| {
-                            composer.toggle_selected_target(document_id, pane_id, cx);
-                        });
-                        cx.stop_propagation();
-                    }),
-                ),
+                        if is_included {
+                            rgb(theme.accent)
+                        } else {
+                            rgb(theme.text_muted)
+                        },
+                    ))
+                    .child(
+                        div()
+                            .flex_1()
+                            .truncate()
+                            .text_size(px(self.tokens.metrics.ui_text_xs))
+                            .text_color(if is_included {
+                                rgb(theme.text)
+                            } else {
+                                rgb(theme.text_muted)
+                            })
+                            .child(label.clone()),
+                    )
+                    .on_mouse_down(
+                        MouseButton::Left,
+                        cx.listener(move |this, _event, _window, cx| {
+                            this.terminal_command_composer.update(cx, |composer, cx| {
+                                composer.toggle_selected_target(document_id, pane_id, cx);
+                            });
+                            cx.stop_propagation();
+                        }),
+                    ),
             );
         }
-        // The inner row retains content-sized target chips while the outer
-        // viewport owns horizontal overflow at narrow terminal widths.
-        div()
-            .w_full()
-            .overflow_x_scrollbar()
-            .child(target_row)
+
+        let mut popover = div()
+            .absolute()
+            .bottom(px(38.0))
+            .min_w(px(160.0))
+            .max_w(px(240.0))
+            .max_h(px(260.0))
+            .rounded(px(self.tokens.radii.lg))
+            .border_1()
+            .border_color(rgb(theme.border))
+            .bg(rgba((theme.bg_elevated << 8) | 0xfc))
+            .shadow_lg()
+            .p(px(6.0))
+            .flex()
+            .flex_col()
+            .gap(px(4.0));
+
+        if let Some(left) = anchor_left {
+            popover = popover.left(px(left));
+        } else {
+            popover = popover.left(px(80.0));
+        }
+
+        context_menu_event_boundary(popover)
+            .child(header_row)
+            .child(
+                div()
+                    .h(px(1.0))
+                    .w_full()
+                    .bg(rgba((theme.border << 8) | 0x60)),
+            )
+            .child(pane_list)
             .into_any_element()
     }
 
@@ -902,102 +1116,331 @@ impl WorkspaceApp {
             .into_any_element()
     }
 
-    fn composer_step_from_modifiers(modifiers: &gpui::Modifiers) -> i32 {
-        if modifiers.alt {
-            1000
-        } else if modifiers.control || modifiers.platform {
-            100
-        } else if modifiers.shift {
-            10
-        } else {
-            1
-        }
-    }
-
-    fn render_terminal_composer_stepper(
+    fn render_terminal_composer_counter(
         &self,
+        icon: LucideIcon,
+        icon_color: Rgba,
         label: String,
-        value: String,
-        decrement: impl Fn(&mut Self, &MouseDownEvent, &mut Context<Self>) + 'static,
-        increment: impl Fn(&mut Self, &MouseDownEvent, &mut Context<Self>) + 'static,
-        value_click: Option<Box<dyn Fn(&mut Self, &mut Context<Self>) + 'static>>,
-        cx: &mut Context<Self>,
+        value: u64,
     ) -> AnyElement {
-        let mut value_container = div()
-            .h_full()
-            .min_w(px(46.0))
-            .px(px(4.0))
-            .flex()
-            .items_center()
-            .justify_center()
-            .text_size(px(11.0))
-            .font_family(settings_mono_font_family(self.settings_store.settings()))
-            .child(value);
-
-        if let Some(on_click) = value_click {
-            value_container = value_container
-                .cursor_pointer()
-                .hover(|button| button.bg(rgb(self.tokens.ui.bg_hover)))
-                .on_mouse_down(
-                    MouseButton::Left,
-                    cx.listener(move |this, _event: &MouseDownEvent, _window, cx| {
-                        on_click(this, cx);
-                        cx.stop_propagation();
-                    }),
-                );
-        }
-
+        // Counters pair a semantic icon with the localized label so accepted
+        // and skipped writes stay readable without one long datum string.
         div()
-            .h(px(TERMINAL_COMPOSER_CONTROL_HEIGHT))
+            .flex_none()
             .flex()
             .items_center()
-            .overflow_hidden()
+            .gap(px(3.0))
+            .child(Self::render_lucide_icon(icon, 10.0, icon_color))
             .child(
                 div()
-                    .h_full()
-                    .px(px(4.0))
-                    .flex()
-                    .items_center()
-                    .text_size(px(11.0))
+                    .text_size(px(10.0))
                     .text_color(rgb(self.tokens.ui.text_muted))
                     .child(label),
             )
             .child(
-                div()
-                    .h_full()
-                    .w(px(20.0))
-                    .flex()
-                    .items_center()
-                    .justify_center()
-                    .cursor_pointer()
-                    .hover(|button| button.bg(rgb(self.tokens.ui.bg_hover)))
-                    .child("−")
-                    .on_mouse_down(
-                        MouseButton::Left,
-                        cx.listener(move |this, event: &MouseDownEvent, _window, cx| {
-                            decrement(this, event, cx);
-                            cx.stop_propagation();
-                        }),
-                    ),
+                monospace_datum(
+                    &self.tokens,
+                    value.to_string(),
+                    Some(settings_mono_font_family(self.settings_store.settings())),
+                    MonospaceDatumOptions::new(MonospaceDatumTone::Primary)
+                        .text_size(10.0)
+                        .strong(),
+                )
+                .whitespace_nowrap(),
             )
-            .child(value_container)
-            .child(
-                div()
-                    .h_full()
-                    .w(px(20.0))
-                    .flex()
-                    .items_center()
-                    .justify_center()
-                    .cursor_pointer()
-                    .hover(|button| button.bg(rgb(self.tokens.ui.bg_hover)))
-                    .child("+")
-                    .on_mouse_down(
-                        MouseButton::Left,
-                        cx.listener(move |this, event: &MouseDownEvent, _window, cx| {
-                            increment(this, event, cx);
-                            cx.stop_propagation();
-                        }),
-                    ),
+            .into_any_element()
+    }
+
+    fn render_terminal_composer_interval_capsule(
+        &self,
+        snapshot: &TerminalCommandComposerDocumentSnapshot,
+        cx: &mut Context<Self>,
+    ) -> AnyElement {
+        let document_id = snapshot.id;
+        let theme = self.tokens.ui;
+        let is_editing = self
+            .terminal_composer_value_edit
+            .as_ref()
+            .is_some_and(|edit| edit.field == TerminalComposerEditField::Interval);
+
+        let content = if is_editing {
+            let target = WorkspaceImeTarget::TerminalComposerValue;
+            let edit_draft = self
+                .terminal_composer_value_edit
+                .as_ref()
+                .map(|e| e.draft.clone())
+                .unwrap_or_default();
+
+            div()
+                .flex()
+                .items_center()
+                .gap(px(2.0))
+                .child(Self::render_lucide_icon(
+                    LucideIcon::Clock,
+                    11.0,
+                    rgb(theme.accent),
+                ))
+                .child(
+                    div()
+                        .w(px(36.0))
+                        .child(self.text_input_with_workspace_ime(
+                            target,
+                            self.workspace_text_input_borderless(
+                                target,
+                                TextInputView {
+                                    value: &edit_draft,
+                                    placeholder: String::new(),
+                                    focused: true,
+                                    caret_visible: self.input_caret.visible(),
+                                    secret: false,
+                                    selected_all: false,
+                                    selected_range: self.ime_selected_range_for_target(target, cx),
+                                    marked_text: self.marked_text_for_target(target, cx),
+                                },
+                            ),
+                            |_this, _cx| {},
+                            cx,
+                        )),
+                )
+                .child(
+                    div()
+                        .text_size(px(self.tokens.metrics.ui_text_xs))
+                        .font_weight(gpui::FontWeight::MEDIUM)
+                        .text_color(rgb(theme.accent))
+                        .child("ms"),
+                )
+        } else {
+            let interval_label = format!("{} ms", snapshot.interval_ms);
+            div()
+                .flex()
+                .items_center()
+                .gap(px(4.0))
+                .child(Self::render_lucide_icon(
+                    LucideIcon::Clock,
+                    11.0,
+                    rgb(theme.text_muted),
+                ))
+                .child(
+                    div()
+                        .font_weight(gpui::FontWeight::MEDIUM)
+                        .text_color(rgb(theme.text))
+                        .child(interval_label),
+                )
+        };
+
+        let pacing = snapshot.pacing;
+        div()
+            .id("terminal-composer-interval-capsule")
+            .h(px(24.0))
+            .px(px(7.0))
+            .flex()
+            .items_center()
+            .rounded(px(self.tokens.radii.sm))
+            .border_1()
+            .border_color(if is_editing {
+                rgb(theme.accent)
+            } else {
+                rgba((theme.border << 8) | 0x80)
+            })
+            .bg(if is_editing {
+                rgba((theme.accent << 8) | 0x14)
+            } else {
+                rgba((theme.bg << 8) | 0x60)
+            })
+            .cursor_pointer()
+            .text_size(px(self.tokens.metrics.ui_text_xs))
+            .when(!is_editing, |capsule| {
+                capsule.hover(|s| s.bg(rgba((theme.bg_hover << 8) | 0x80)))
+            })
+            .child(content)
+            .on_scroll_wheel(cx.listener(move |this, event: &gpui::ScrollWheelEvent, _window, cx| {
+                let vertical = f32::from(event.delta.pixel_delta(px(16.0)).y);
+                if vertical.abs() > 0.5 {
+                    let base_step = match pacing {
+                        TerminalSendPacing::Line => 100,
+                        TerminalSendPacing::Character => 10,
+                    };
+                    let step = if event.modifiers.shift {
+                        base_step * 10
+                    } else {
+                        base_step
+                    };
+                    let delta_ms = if vertical < 0.0 { step } else { -step };
+                    this.terminal_command_composer.update(cx, |composer, cx| {
+                        composer.adjust_interval(document_id, delta_ms, cx);
+                    });
+                    if let Some(edit) = this.terminal_composer_value_edit.as_mut() {
+                        if edit.field == TerminalComposerEditField::Interval {
+                            if let Some(snap) = this
+                                .terminal_command_composer
+                                .read(cx)
+                                .active_document_snapshot()
+                            {
+                                edit.draft = snap.interval_ms.to_string();
+                            }
+                        }
+                    }
+                    cx.stop_propagation();
+                }
+            }))
+            .on_mouse_down(
+                MouseButton::Left,
+                cx.listener(move |this, _event, window, cx| {
+                    if !is_editing {
+                        this.begin_terminal_composer_value_edit(
+                            TerminalComposerEditField::Interval,
+                            window,
+                            cx,
+                        );
+                    }
+                    cx.stop_propagation();
+                }),
+            )
+            .into_any_element()
+    }
+
+    fn render_terminal_composer_repeat_capsule(
+        &self,
+        snapshot: &TerminalCommandComposerDocumentSnapshot,
+        cx: &mut Context<Self>,
+    ) -> AnyElement {
+        let document_id = snapshot.id;
+        let theme = self.tokens.ui;
+        let is_editing = self
+            .terminal_composer_value_edit
+            .as_ref()
+            .is_some_and(|edit| edit.field == TerminalComposerEditField::Repeat);
+
+        let content = if is_editing {
+            let target = WorkspaceImeTarget::TerminalComposerValue;
+            let edit_draft = self
+                .terminal_composer_value_edit
+                .as_ref()
+                .map(|e| e.draft.clone())
+                .unwrap_or_default();
+
+            div()
+                .flex()
+                .items_center()
+                .gap(px(2.0))
+                .child(Self::render_lucide_icon(
+                    LucideIcon::RefreshCw,
+                    10.0,
+                    rgb(theme.accent),
+                ))
+                .child(
+                    div()
+                        .w(px(30.0))
+                        .child(self.text_input_with_workspace_ime(
+                            target,
+                            self.workspace_text_input_borderless(
+                                target,
+                                TextInputView {
+                                    value: &edit_draft,
+                                    placeholder: String::new(),
+                                    focused: true,
+                                    caret_visible: self.input_caret.visible(),
+                                    secret: false,
+                                    selected_all: false,
+                                    selected_range: self.ime_selected_range_for_target(target, cx),
+                                    marked_text: self.marked_text_for_target(target, cx),
+                                },
+                            ),
+                            |_this, _cx| {},
+                            cx,
+                        )),
+                )
+                .child(
+                    div()
+                        .text_size(px(self.tokens.metrics.ui_text_xs))
+                        .font_weight(gpui::FontWeight::MEDIUM)
+                        .text_color(rgb(theme.accent))
+                        .child(self.i18n.t("terminal.composer.repeat_unit")),
+                )
+        } else {
+            let repeat_label = if snapshot.repeat_count == 0 {
+                "♾️".to_string()
+            } else {
+                self.i18n
+                    .t("terminal.composer.repeat_count_format")
+                    .replace("{{count}}", &snapshot.repeat_count.to_string())
+            };
+
+            div()
+                .flex()
+                .items_center()
+                .gap(px(4.0))
+                .child(Self::render_lucide_icon(
+                    LucideIcon::RefreshCw,
+                    10.0,
+                    rgb(theme.text_muted),
+                ))
+                .child(
+                    div()
+                        .font_weight(gpui::FontWeight::MEDIUM)
+                        .text_color(rgb(theme.text))
+                        .child(repeat_label),
+                )
+        };
+
+        div()
+            .id("terminal-composer-repeat-capsule")
+            .h(px(24.0))
+            .px(px(7.0))
+            .flex()
+            .items_center()
+            .rounded(px(self.tokens.radii.sm))
+            .border_1()
+            .border_color(if is_editing {
+                rgb(theme.accent)
+            } else {
+                rgba((theme.border << 8) | 0x80)
+            })
+            .bg(if is_editing {
+                rgba((theme.accent << 8) | 0x14)
+            } else {
+                rgba((theme.bg << 8) | 0x60)
+            })
+            .cursor_pointer()
+            .text_size(px(self.tokens.metrics.ui_text_xs))
+            .when(!is_editing, |capsule| {
+                capsule.hover(|s| s.bg(rgba((theme.bg_hover << 8) | 0x80)))
+            })
+            .child(content)
+            .on_scroll_wheel(cx.listener(move |this, event: &gpui::ScrollWheelEvent, _window, cx| {
+                let vertical = f32::from(event.delta.pixel_delta(px(16.0)).y);
+                if vertical.abs() > 0.5 {
+                    let step = if event.modifiers.shift { 5 } else { 1 };
+                    let delta_step = if vertical < 0.0 { step } else { -step };
+                    this.terminal_command_composer.update(cx, |composer, cx| {
+                        composer.adjust_repeat_count(document_id, delta_step, cx);
+                    });
+                    if let Some(edit) = this.terminal_composer_value_edit.as_mut() {
+                        if edit.field == TerminalComposerEditField::Repeat {
+                            if let Some(snap) = this
+                                .terminal_command_composer
+                                .read(cx)
+                                .active_document_snapshot()
+                            {
+                                edit.draft = snap.repeat_count.to_string();
+                            }
+                        }
+                    }
+                    cx.stop_propagation();
+                }
+            }))
+            .on_mouse_down(
+                MouseButton::Left,
+                cx.listener(move |this, _event, window, cx| {
+                    if !is_editing {
+                        this.begin_terminal_composer_value_edit(
+                            TerminalComposerEditField::Repeat,
+                            window,
+                            cx,
+                        );
+                    }
+                    cx.stop_propagation();
+                }),
             )
             .into_any_element()
     }
@@ -1008,6 +1451,7 @@ impl WorkspaceApp {
         running: bool,
         cx: &mut Context<Self>,
     ) -> AnyElement {
+        let theme = self.tokens.ui;
         let label = if running {
             self.i18n.t("terminal.composer.stop")
         } else {
@@ -1019,53 +1463,65 @@ impl WorkspaceApp {
         } else {
             format!("{} (Ctrl+Enter)", self.i18n.t("terminal.composer.start"))
         };
-        oxideterm_gpui_ui::button::button_with(
-            &self.tokens,
-            label,
-            oxideterm_gpui_ui::button::ButtonOptions {
-                variant: if running {
-                    oxideterm_gpui_ui::button::ButtonVariant::Destructive
-                } else {
-                    oxideterm_gpui_ui::button::ButtonVariant::Default
-                },
-                size: oxideterm_gpui_ui::button::ButtonSize::Sm,
-                radius: oxideterm_gpui_ui::button::ButtonRadius::Md,
-                disabled: false,
-            },
-        )
-        .id("terminal-composer-run-button")
-        .min_w(px(68.0))
-        .tooltip(move |_, cx| {
-            oxideterm_gpui_ui::tooltip::tooltip_view(tokens, tooltip_label.clone(), None, cx)
-        })
-        .on_mouse_down(
-            MouseButton::Left,
-            cx.listener(move |this, _event, _window, cx| {
-                if running {
-                    this.terminal_command_composer.update(cx, |composer, cx| {
-                        composer.stop(document_id, cx);
-                    });
-                } else {
-                    this.start_terminal_command_composer(document_id, cx);
-                }
-                cx.stop_propagation();
-            }),
-        )
-        .into_any_element()
+        let (border, background, hover_background, text_color) = if running {
+            (
+                rgba((theme.error << 8) | 0x80),
+                rgba((theme.error << 8) | 0x14),
+                rgba((theme.error << 8) | 0x24),
+                rgb(theme.error),
+            )
+        } else {
+            (
+                rgba((theme.border << 8) | 0x80),
+                rgba((theme.bg << 8) | 0x60),
+                rgba((theme.bg_hover << 8) | 0x80),
+                rgb(theme.text),
+            )
+        };
+        // The run control shares the 24px capsule chrome with the +/x task
+        // buttons. Its width matches the + and x capsules plus the 4px gap so
+        // the whole task-action group keeps a stable footprint.
+        div()
+            .h(px(24.0))
+            .w(px(52.0))
+            .flex_none()
+            .flex()
+            .items_center()
+            .justify_center()
+            .rounded(px(self.tokens.radii.sm))
+            .border_1()
+            .border_color(border)
+            .bg(background)
+            .text_size(px(self.tokens.metrics.ui_text_xs))
+            .font_weight(gpui::FontWeight::MEDIUM)
+            .text_color(text_color)
+            .cursor_pointer()
+            .hover(move |button| button.bg(hover_background))
+            .child(div().min_w_0().truncate().child(label))
+            .id("terminal-composer-run-button")
+            .tooltip(move |_, cx| {
+                oxideterm_gpui_ui::tooltip::tooltip_view(tokens, tooltip_label.clone(), None, cx)
+            })
+            .on_mouse_down(
+                MouseButton::Left,
+                cx.listener(move |this, _event, _window, cx| {
+                    if running {
+                        this.terminal_command_composer.update(cx, |composer, cx| {
+                            composer.stop(document_id, cx);
+                        });
+                    } else {
+                        this.start_terminal_command_composer(document_id, cx);
+                    }
+                    cx.stop_propagation();
+                }),
+            )
+            .into_any_element()
     }
 
     fn terminal_command_composer_status_label(
         &self,
         snapshot: &TerminalCommandComposerDocumentSnapshot,
     ) -> String {
-        if let Some(failure) = snapshot.failure {
-            return self.i18n.t(match failure {
-                TerminalCommandComposerFailure::EmptyInput => "terminal.composer.error_empty",
-                TerminalCommandComposerFailure::InvalidHex => "terminal.composer.error_hex",
-                TerminalCommandComposerFailure::NoTargets => "terminal.composer.error_targets",
-                TerminalCommandComposerFailure::TargetBusy => "terminal.composer.error_busy",
-            });
-        }
         self.i18n.t(match snapshot.status {
             TerminalCommandComposerStatus::Idle => "terminal.composer.idle",
             TerminalCommandComposerStatus::Running => "terminal.composer.running",
@@ -1075,7 +1531,21 @@ impl WorkspaceApp {
         })
     }
 
-    fn terminal_command_composer_target_entries(
+    fn terminal_command_composer_failure_label(
+        &self,
+        snapshot: &TerminalCommandComposerDocumentSnapshot,
+    ) -> Option<String> {
+        snapshot.failure.map(|failure| {
+            self.i18n.t(match failure {
+                TerminalCommandComposerFailure::EmptyInput => "terminal.composer.error_empty",
+                TerminalCommandComposerFailure::InvalidHex => "terminal.composer.error_hex",
+                TerminalCommandComposerFailure::NoTargets => "terminal.composer.error_targets",
+                TerminalCommandComposerFailure::TargetBusy => "terminal.composer.error_busy",
+            })
+        })
+    }
+
+    pub(in crate::workspace) fn terminal_command_composer_target_entries(
         &self,
         cx: &App,
     ) -> Vec<(TerminalCommandComposerTarget, String, TabKind)> {
@@ -1097,46 +1567,42 @@ impl WorkspaceApp {
             .collect()
     }
 
+    pub(in crate::workspace) fn terminal_command_target_panes(&self, cx: &App) -> Vec<PaneId> {
+        let Some(active_pane_id) = self.active_pane_id(cx) else {
+            return Vec::new();
+        };
+        let Some(snapshot) = self
+            .terminal_command_composer
+            .read(cx)
+            .active_document_snapshot()
+        else {
+            return vec![active_pane_id];
+        };
+        let entries = self.terminal_command_composer_target_entries(cx);
+        let live_panes: Vec<PaneId> = entries.into_iter().map(|(t, _, _)| t.pane_id).collect();
+
+        match snapshot.target_scope {
+            TerminalCommandComposerTargetScope::Current => vec![active_pane_id],
+            TerminalCommandComposerTargetScope::Selected => {
+                let selected: Vec<PaneId> = live_panes
+                    .into_iter()
+                    .filter(|pane_id| snapshot.selected_targets.contains(pane_id))
+                    .collect();
+                if selected.is_empty() {
+                    vec![active_pane_id]
+                } else {
+                    selected
+                }
+            }
+        }
+    }
+
     pub(in crate::workspace) fn start_terminal_command_composer(
         &mut self,
         document_id: TerminalCommandComposerId,
         cx: &mut Context<Self>,
     ) -> bool {
-        let target_scope = self
-            .terminal_command_composer
-            .read(cx)
-            .document_snapshots()
-            .into_iter()
-            .find(|document| document.id == document_id)
-            .map(|d| d.target_scope)
-            .unwrap_or(TerminalCommandComposerTargetScope::Current);
-
         let current_pane_id = self.active_pane_id(cx);
-
-        if target_scope == TerminalCommandComposerTargetScope::Broadcast {
-            let broadcast_enabled = current_pane_id
-                .and_then(|pane| self.terminal.read(cx).sync_groups().member(pane))
-                .is_some_and(|member| {
-                    !member.isolated && self.terminal.read(cx).sync_groups().enabled(member.group)
-                });
-            if let Some(active_pane) = current_pane_id {
-                let targets = if broadcast_enabled {
-                    let broadcast_targets = self.terminal_broadcast_target_panes(active_pane, cx);
-                    if !broadcast_targets.is_empty() {
-                        let mut all = vec![active_pane];
-                        all.extend(broadcast_targets);
-                        all
-                    } else {
-                        vec![active_pane]
-                    }
-                } else {
-                    vec![active_pane]
-                };
-                self.terminal_command_composer.update(cx, |composer, cx| {
-                    composer.set_selected_targets(document_id, &targets, cx);
-                });
-            }
-        }
         let entries = self.terminal_command_composer_target_entries(cx);
         let live_panes = entries
             .iter()
@@ -1432,55 +1898,3 @@ impl WorkspaceApp {
     }
 }
 
-#[cfg(test)]
-mod quick_command_preview_tests {
-    use super::*;
-
-    struct ChipFixture;
-
-    impl Render for ChipFixture {
-        fn render(&mut self, _: &mut Window, _: &mut Context<Self>) -> impl IntoElement {
-            div().flex().gap(px(5.0)).children(
-                [
-                    ("short", "Status".to_string()),
-                    ("long", "Long command name ".repeat(30)),
-                ]
-                .into_iter()
-                .map(|(id, label)| {
-                    action_chip(
-                        &oxideterm_theme::default_tokens(),
-                        label,
-                        Some(
-                            div()
-                                .size(px(11.0))
-                                .debug_selector(move || format!("{id}-icon"))
-                                .into_any_element(),
-                        ),
-                        ActionChipOptions::new().max_width(220.0),
-                    )
-                    .debug_selector(move || id.into())
-                }),
-            )
-        }
-    }
-
-    #[gpui::test]
-    fn long_names_keep_chips_bounded_without_shrinking_icons(cx: &mut gpui::TestAppContext) {
-        let (_, cx) = cx.add_window_view(|_, _| ChipFixture);
-        cx.simulate_resize(gpui::size(px(800.0), px(100.0)));
-        cx.update(|window, app| {
-            window.draw(app).clear(app);
-        });
-        let short = cx.debug_bounds("short").unwrap();
-        let long = cx.debug_bounds("long").unwrap();
-        assert!(short.size.width < px(220.0));
-        assert_eq!(long.size.width, px(220.0));
-        assert_eq!(long.left(), short.right() + px(5.0));
-        for id in ["short-icon", "long-icon"] {
-            assert_eq!(
-                cx.debug_bounds(id).unwrap().size,
-                gpui::size(px(11.0), px(11.0))
-            );
-        }
-    }
-}

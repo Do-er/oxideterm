@@ -1415,6 +1415,12 @@ impl WorkspaceApp {
                     cx,
                 ))
             })
+            .when(self.terminal_target_popover_open, |root| {
+                root.child(self.workspace_context_menu_backdrop(
+                    self.render_terminal_target_popover(cx),
+                    cx,
+                ))
+            })
             .when_some(
                 self.render_detached_tab_return_handoff(window, cx),
                 |root, handoff| root.child(handoff),

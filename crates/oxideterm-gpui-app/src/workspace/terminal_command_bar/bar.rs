@@ -109,9 +109,7 @@ impl WorkspaceApp {
                             .flex()
                             .items_center()
                             .gap(px(6.0))
-                            .flex_1()
-                            .min_w(px(0.0))
-                            .overflow_hidden()
+                            .flex_none()
                             .child(
                                 div()
                                     .relative()
@@ -149,6 +147,10 @@ impl WorkspaceApp {
                                                 this.close_terminal_quick_commands_panel(cx);
                                                 this.close_terminal_command_overlays(cx);
                                                 this.ime_marked_text = None;
+                                                let qc_height = this.terminal.read(cx).quick_commands.panel.height();
+                                                this.terminal_command_composer.update(cx, |composer, _| {
+                                                    composer.set_panel_height(qc_height);
+                                                });
                                             }
                                             this.terminal_command_composer.update(
                                                 cx,
@@ -298,6 +300,18 @@ impl WorkspaceApp {
                                     }
                                 },
                             )),
+                    )
+                    .child(
+                        div()
+                            .flex_1()
+                            .min_w(px(0.0))
+                            .overflow_hidden()
+                            .flex()
+                            .items_center()
+                            .justify_start()
+                            .when(composer_expanded || quick_commands_open, |mid| {
+                                mid.child(self.render_terminal_composer_bar_targets(cx))
+                            }),
                     )
                     .child(
                         div()
@@ -580,6 +594,7 @@ impl WorkspaceApp {
             self.blur_terminal_quick_commands_input(cx);
             self.dismiss_terminal_broadcast_menu(cx);
             self.dismiss_terminal_highlight_popover();
+            self.dismiss_terminal_target_popover();
         }
         cx.notify();
     }
@@ -777,7 +792,6 @@ impl WorkspaceApp {
         let theme = self.tokens.ui;
         let entries = self.terminal_broadcast_entries(cx);
         let groups = self.terminal_broadcast_groups().to_vec();
-        let active_pane_id = self.active_pane_id(cx);
         let selected_group_id = self.terminal.read(cx).selected_broadcast_group_id();
         let group_editor = self
             .terminal
@@ -966,34 +980,6 @@ impl WorkspaceApp {
                     )
                     .child(
                         div()
-                            .text_size(px(10.0))
-                            .text_color(rgb(if group_enabled {
-                                theme.accent
-                            } else {
-                                theme.text_muted
-                            }))
-                            .child(self.i18n.t(if group_enabled {
-                                "terminal.broadcast.sync_enabled"
-                            } else {
-                                "terminal.broadcast.sync_disabled"
-                            })),
-                    )
-                    .child(
-                        div()
-                            .min_w(px(18.0))
-                            .px(px(4.0))
-                            .py(px(1.0))
-                            .flex()
-                            .items_center()
-                            .justify_center()
-                            .rounded(px(self.tokens.radii.sm))
-                            .bg(rgb(theme.bg_panel))
-                            .text_size(px(10.0))
-                            .text_color(rgb(theme.text_muted))
-                            .child(member_count.to_string()),
-                    )
-                    .child(
-                        div()
                             .size(px(20.0))
                             .flex()
                             .items_center()
@@ -1035,6 +1021,34 @@ impl WorkspaceApp {
                                     cx.stop_propagation();
                                 }),
                             ),
+                    )
+                    .child(
+                        div()
+                            .text_size(px(10.0))
+                            .text_color(rgb(if group_enabled {
+                                theme.accent
+                            } else {
+                                theme.text_muted
+                            }))
+                            .child(self.i18n.t(if group_enabled {
+                                "terminal.broadcast.sync_enabled"
+                            } else {
+                                "terminal.broadcast.sync_disabled"
+                            })),
+                    )
+                    .child(
+                        div()
+                            .min_w(px(18.0))
+                            .px(px(4.0))
+                            .py(px(1.0))
+                            .flex()
+                            .items_center()
+                            .justify_center()
+                            .rounded(px(self.tokens.radii.sm))
+                            .bg(rgb(theme.bg_panel))
+                            .text_size(px(10.0))
+                            .text_color(rgb(theme.text_muted))
+                            .child(member_count.to_string()),
                     )
                     .on_mouse_down(
                         MouseButton::Left,
@@ -1352,18 +1366,6 @@ impl WorkspaceApp {
                         .text_color(rgb(theme.text_muted))
                         .child(format!("#{}", pane_id.0)),
                 )
-                .when(Some(pane_id) == active_pane_id, |row| {
-                    row.child(
-                        div()
-                            .px(px(4.0))
-                            .py(px(1.0))
-                            .rounded(px(self.tokens.radii.sm))
-                            .bg(rgba((theme.accent << 8) | 0x22))
-                            .text_size(px(10.0))
-                            .text_color(rgb(theme.accent))
-                            .child(self.i18n.t("terminal.broadcast.current")),
-                    )
-                })
                 .when_some(other_group, |row, member| {
                     row.child(
                         div()

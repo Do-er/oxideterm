@@ -948,3 +948,57 @@ pub fn button_focus_visible(tokens: &ThemeTokens, button: Div, focused: bool) ->
     // caller marks the action as keyboard-focused.
     button.shadow(tauri_focus_visible_ring(tokens))
 }
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+    use gpui::{Context, InteractiveElement, Render, TestAppContext, Window, size};
+
+    struct ChipFixture;
+
+    impl Render for ChipFixture {
+        fn render(&mut self, _: &mut Window, _: &mut Context<Self>) -> impl IntoElement {
+            div().flex().gap(px(5.0)).children(
+                [
+                    ("short", "Status".to_string()),
+                    ("long", "Long command name ".repeat(30)),
+                ]
+                .into_iter()
+                .map(|(id, label)| {
+                    action_chip(
+                        &oxideterm_theme::default_tokens(),
+                        label,
+                        Some(
+                            div()
+                                .size(px(11.0))
+                                .debug_selector(move || format!("{id}-icon"))
+                                .into_any_element(),
+                        ),
+                        ActionChipOptions::new().max_width(220.0),
+                    )
+                    .debug_selector(move || id.into())
+                }),
+            )
+        }
+    }
+
+    #[gpui::test]
+    fn long_names_keep_chips_bounded_without_shrinking_icons(cx: &mut TestAppContext) {
+        let (_, cx) = cx.add_window_view(|_, _| ChipFixture);
+        cx.simulate_resize(size(px(800.0), px(100.0)));
+        cx.update(|window, app| {
+            window.draw(app).clear(app);
+        });
+        let short = cx.debug_bounds("short").unwrap();
+        let long = cx.debug_bounds("long").unwrap();
+        assert!(short.size.width < px(220.0));
+        assert_eq!(long.size.width, px(220.0));
+        assert_eq!(long.left(), short.right() + px(5.0));
+        for id in ["short-icon", "long-icon"] {
+            assert_eq!(
+                cx.debug_bounds(id).unwrap().size,
+                size(px(11.0), px(11.0))
+            );
+        }
+    }
+}

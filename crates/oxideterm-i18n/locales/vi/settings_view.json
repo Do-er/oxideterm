@@ -849,8 +849,6 @@
       "font_hint": "Cấu hình phông chữ, kích thước, độ đậm, chữ ghép và chiều cao dòng của terminal.",
       "display_behavior": "Hành vi hiển thị",
       "display_behavior_hint": "Cấu hình lề, cuộn và mã hóa ký tự của terminal.",
-      "command_bar_dispatch_follow_broadcast": "Đích gửi lệnh đồng bộ theo nhóm phát sóng",
-      "command_bar_dispatch_follow_broadcast_hint": "Khi nhóm phát sóng đang hoạt động, bộ soạn lệnh và lệnh nhanh sẽ mặc định gửi đến tất cả terminal trong nhóm.",
       "command_bar_composer_title": "Bộ soạn lệnh và gửi hàng loạt",
       "command_bar_composer_description": "Bản nháp nhiều dòng, khoảng nghỉ dòng/ký tự và chính sách gửi lệnh đa terminal."
     },

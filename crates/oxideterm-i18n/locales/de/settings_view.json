@@ -849,8 +849,6 @@
       "font_hint": "Schriftfamilien, Größe, Stärke, Ligaturen und Zeilenhöhe des Terminals einstellen.",
       "display_behavior": "Anzeigeverhalten",
       "display_behavior_hint": "Terminalabstände, Scrollen und Zeichenkodierung einstellen.",
-      "command_bar_dispatch_follow_broadcast": "Sendeziel folgt Broadcast-Gruppe",
-      "command_bar_dispatch_follow_broadcast_hint": "Wenn eine Broadcast-Gruppe aktiv ist, senden Composer und Schnellbefehle standardmäßig an alle Gruppenmitglieder.",
       "command_bar_composer_title": "Befehls-Composer & Ausführung",
       "command_bar_composer_description": "Mehrzeiliger Notizblock, Zeichen-/Zeilenschrittintervalle und Mehrterminal-Verteilungsrichtlinien."
     },

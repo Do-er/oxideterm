@@ -1111,17 +1111,7 @@ impl WorkspaceApp {
             (TerminalSettingsPage::CommandBar, 1) => self.settings_card(
                 "settings_view.terminal.command_bar_composer_title",
                 "settings_view.terminal.command_bar_composer_description",
-                vec![
-                    self.bool_row(
-                        "settings_view.terminal.command_bar_dispatch_follow_broadcast",
-                        "settings_view.terminal.command_bar_dispatch_follow_broadcast_hint",
-                        settings.terminal.command_bar.dispatch_follow_broadcast,
-                        set_command_bar_dispatch_follow_broadcast,
-                        cx,
-                    ),
-                    self.card_separator(),
-                    self.focus_handoff_commands_row(settings, cx),
-                ],
+                vec![self.focus_handoff_commands_row(settings, cx)],
             ),
             (TerminalSettingsPage::CommandBar, 2) => self.settings_card(
                 "settings_view.terminal.quick_commands",
