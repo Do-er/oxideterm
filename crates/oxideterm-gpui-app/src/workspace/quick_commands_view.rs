@@ -14,6 +14,7 @@ use oxideterm_editor_core::utf16::replace_utf16;
 use oxideterm_gpui_editor::{EditorContextMenuLabels, EditorSettings, TextEditorView};
 use oxideterm_gpui_ui::{
     ConfirmDialogVariant, ConfirmDialogView, StatusPillOptions, StatusTone,
+    button::{ButtonOptions, ButtonRadius, ButtonSize, ButtonVariant, ToolbarButtonOptions},
     confirm::confirm_dialog,
     modal::{dismissible_dialog_backdrop, overlay_content_boundary},
     scroll::ScrollableElement,
@@ -2137,6 +2138,21 @@ impl WorkspaceApp {
         cx: &mut Context<Self>,
     ) -> AnyElement {
         let theme = self.tokens.ui;
+        let toolbar_button_options = ToolbarButtonOptions {
+            button: ButtonOptions {
+                variant: ButtonVariant::Outline,
+                size: ButtonSize::Sm,
+                radius: ButtonRadius::Md,
+                disabled: false,
+            },
+            height: Some(32.0),
+            padding_x: Some(8.0),
+            font_size: Some(self.tokens.metrics.ui_text_sm),
+            text_color: Some(rgb(theme.text_muted)),
+            hover_background: Some(rgb(theme.bg_hover)),
+            hover_text_color: Some(rgb(theme.text)),
+            ..ToolbarButtonOptions::default()
+        };
         div()
             .flex_none()
             .flex()
@@ -2158,89 +2174,47 @@ impl WorkspaceApp {
                     )),
             )
             .when(!snapshot.managing, |toolbar| {
-                toolbar.child(
-                    div()
-                        .h(px(32.0))
-                        .px(px(8.0))
-                        .flex()
-                        .items_center()
-                        .gap(px(4.0))
-                        .rounded(px(self.tokens.radii.md))
-                        .border_1()
-                        .border_color(rgba((theme.border << 8) | 0x99))
-                        .cursor_pointer()
-                        .text_color(rgb(theme.text_muted))
-                        .hover(move |style| style.bg(rgb(theme.bg_hover)).text_color(rgb(theme.text)))
-                        .on_mouse_down(
-                            MouseButton::Left,
-                            cx.listener(|this, _event, window, cx| {
-                                this.start_quick_command_create(cx);
-                                window.focus(&this.focus_handle, cx);
-                                cx.stop_propagation();
-                            }),
-                        )
-                        .child(Self::render_lucide_icon(
-                            LucideIcon::Plus,
-                            14.0,
-                            rgb(theme.text_muted),
-                        ))
-                        .child(self.render_display_text_with_role(
-                            SelectableTextRole::NonSelectable,
-                            "quick-command-new-button",
-                            "label",
-                            self.i18n.t("terminal.quick_commands.add"),
-                            theme.text_muted,
-                            cx,
-                        )),
-                )
-            })
-            .child(
-                div()
-                    .h(px(32.0))
-                    .px(px(8.0))
-                    .flex()
-                    .items_center()
-                    .gap(px(4.0))
-                    .rounded(px(self.tokens.radii.md))
-                    .border_1()
-                    .border_color(rgba((theme.border << 8) | 0x99))
-                    .cursor_pointer()
-                    .text_color(rgb(theme.text_muted))
-                    .hover(move |style| style.bg(rgb(theme.bg_hover)).text_color(rgb(theme.text)))
-                    .on_mouse_down(
-                        MouseButton::Left,
-                        cx.listener(|this, _event, window, cx| {
-                            if this.terminal.read(cx).quick_commands.manager_open() {
-                                this.start_quick_command_create(cx);
-                                window.focus(&this.focus_handle, cx);
-                            } else {
-                                this.open_quick_commands_manager(window, cx);
-                            }
-                            cx.stop_propagation();
-                        }),
-                    )
-                    .child(Self::render_lucide_icon(
-                        if snapshot.managing {
-                            LucideIcon::Plus
-                        } else {
-                            LucideIcon::Settings
-                        },
+                toolbar.child(self.workspace_toolbar_action_button(
+                    self.i18n.t("terminal.quick_commands.add"),
+                    Some(Self::render_lucide_icon(
+                        LucideIcon::Plus,
                         14.0,
                         rgb(theme.text_muted),
-                    ))
-                    .child(self.render_display_text_with_role(
-                        SelectableTextRole::NonSelectable,
-                        "quick-command-add-button",
-                        "label",
-                        self.i18n.t(if snapshot.managing {
-                            "terminal.quick_commands.add"
-                        } else {
-                            "terminal.quick_commands.manage"
-                        }),
-                        theme.text_muted,
-                        cx,
                     )),
-            )
+                    toolbar_button_options,
+                    cx.listener(|this, _event, window, cx| {
+                        this.start_quick_command_create(cx);
+                        window.focus(&this.focus_handle, cx);
+                        cx.stop_propagation();
+                    }),
+                ))
+            })
+            .child(self.workspace_toolbar_action_button(
+                self.i18n.t(if snapshot.managing {
+                    "terminal.quick_commands.add"
+                } else {
+                    "terminal.quick_commands.manage"
+                }),
+                Some(Self::render_lucide_icon(
+                    if snapshot.managing {
+                        LucideIcon::Plus
+                    } else {
+                        LucideIcon::Settings
+                    },
+                    14.0,
+                    rgb(theme.text_muted),
+                )),
+                toolbar_button_options,
+                cx.listener(|this, _event, window, cx| {
+                    if this.terminal.read(cx).quick_commands.manager_open() {
+                        this.start_quick_command_create(cx);
+                        window.focus(&this.focus_handle, cx);
+                    } else {
+                        this.open_quick_commands_manager(window, cx);
+                    }
+                    cx.stop_propagation();
+                }),
+            ))
             .into_any_element()
     }
 
@@ -2618,6 +2592,9 @@ impl WorkspaceApp {
         let command_id_for_move_down = command.id.clone();
         let command_id_for_delete = command.id.clone();
         let command_id_for_hover = command.id.clone();
+        let description_for_tooltip = command.description.clone();
+        let tooltip_id = format!("quick-command-description-{}", command.id);
+        let tooltip_id_for_hover = tooltip_id.clone();
         let keep_open_for_insert = true;
         let highlighted = highlighted_command == Some(command.id.as_str());
         let selection_group_id = crate::workspace::selectable_text::selectable_text_id(
@@ -2625,6 +2602,7 @@ impl WorkspaceApp {
             command.id.as_str(),
         );
         div()
+            .id(("quick-command-row", selection_group_id))
             .rounded(px(self.tokens.radii.md))
             .px(px(8.0))
             .py(px(8.0))
@@ -2643,7 +2621,7 @@ impl WorkspaceApp {
                     .text_color(rgb(theme.text))
             })
             .on_mouse_move(
-                cx.listener(move |this, _event: &gpui::MouseMoveEvent, _window, cx| {
+                cx.listener(move |this, event: &gpui::MouseMoveEvent, _window, cx| {
                     // Mouse hover and ArrowUp/ArrowDown share the same active
                     // row state, matching browser menu focus without changing
                     // row-safe selectable click bubbling.
@@ -2654,8 +2632,22 @@ impl WorkspaceApp {
                     }) {
                         cx.notify();
                     }
+                    if let Some(description) = description_for_tooltip.clone() {
+                        this.queue_workspace_tooltip(
+                            tooltip_id.clone(),
+                            description,
+                            f32::from(event.position.x) + 12.0,
+                            f32::from(event.position.y) + 16.0,
+                            cx,
+                        );
+                    }
                 }),
             )
+            .on_hover(cx.listener(move |this, hovered: &bool, _window, cx| {
+                if !*hovered {
+                    this.clear_workspace_tooltip(&tooltip_id_for_hover, cx);
+                }
+            }))
             .child(
                 div()
                     .flex_1()
@@ -2764,25 +2756,6 @@ impl WorkspaceApp {
                                 cx,
                             )),
                     )
-                    .when_some(command.description.as_ref(), |row, description| {
-                        row.child(
-                            div()
-                                .truncate()
-                                .text_size(px(self.tokens.metrics.ui_text_xs))
-                                .text_color(rgba((theme.text_muted << 8) | 0xcc))
-                                .child(self.render_row_safe_selectable_display_text_in_group_with_alpha(
-                                    selection_group_id,
-                                    "quick-command-row-cell",
-                                    ("description", command.id.as_str()),
-                                    2,
-                                    description.clone(),
-                                    theme.text_muted,
-                                    0xcc as f32 / 255.0,
-                                    None,
-                                    cx,
-                                )),
-                        )
-                    }),
             )
             .child(self.quick_command_action_button(
                 LucideIcon::Play,
