@@ -2,6 +2,7 @@
 // SPDX-License-Identifier: GPL-3.0-only
 
 use super::*;
+use crate::workspace::terminal_entity::TerminalBroadcastGroupEditKind;
 use gpui::StatefulInteractiveElement;
 use oxideterm_gpui_ui::dropdown_menu::{
     DropdownMenuItemKind, dropdown_menu_content, dropdown_menu_item, dropdown_menu_separator,
@@ -784,6 +785,126 @@ impl WorkspaceApp {
         .into_any_element()
     }
 
+    fn render_terminal_broadcast_group_edit_row(
+        &self,
+        group_id: Option<uuid::Uuid>,
+        value: &str,
+        cx: &mut Context<Self>,
+    ) -> AnyElement {
+        let theme = self.tokens.ui;
+        let target = WorkspaceImeTarget::TerminalBroadcastGroupName;
+        let edit_kind = match group_id {
+            Some(group_id) => TerminalBroadcastGroupEditKind::Rename(group_id),
+            None => TerminalBroadcastGroupEditKind::Create,
+        };
+        let valid = self.terminal_broadcast_group_name_valid(edit_kind, value);
+        let input = self
+            .workspace_text_input_borderless(
+                target,
+                TextInputView {
+                    value,
+                    placeholder: self.i18n.t("terminal.broadcast.group_name_placeholder"),
+                    focused: true,
+                    caret_visible: self.input_caret.visible(),
+                    secret: false,
+                    selected_all: false,
+                    selected_range: self.ime_selected_range_for_target(target, cx),
+                    marked_text: self.marked_text_for_target(target, cx),
+                },
+            )
+            .w_full()
+            .text_size(px(12.0));
+
+        // Rename edits the group row in place; create uses the same row shape at
+        // the end of the list so both flows share one inline editor.
+        div()
+            .h(px(30.0))
+            .flex()
+            .items_center()
+            .gap(px(6.0))
+            .px(px(8.0))
+            .rounded(px(self.tokens.radii.md))
+            .bg(rgba((theme.accent << 8) | 0x14))
+            .child(Self::render_lucide_icon(
+                if group_id.is_some() {
+                    LucideIcon::Pencil
+                } else {
+                    LucideIcon::Plus
+                },
+                12.0,
+                rgb(theme.accent),
+            ))
+            .child(
+                div()
+                    .flex_1()
+                    .min_w(px(0.0))
+                    .child(self.text_input_with_workspace_ime(
+                        target,
+                        input,
+                        |_this, _cx| {},
+                        cx,
+                    )),
+            )
+            .child(
+                div()
+                    .size(px(20.0))
+                    .flex_none()
+                    .flex()
+                    .items_center()
+                    .justify_center()
+                    .rounded(px(self.tokens.radii.sm))
+                    .when(valid, |button| {
+                        button
+                            .cursor_pointer()
+                            .hover(|button| button.bg(rgb(theme.bg_hover)))
+                    })
+                    .child(Self::render_lucide_icon(
+                        LucideIcon::Check,
+                        12.0,
+                        rgb(if valid {
+                            theme.accent
+                        } else {
+                            theme.text_muted
+                        }),
+                    ))
+                    .on_mouse_down(
+                        MouseButton::Left,
+                        cx.listener(|this, _event, _window, cx| {
+                            this.commit_terminal_broadcast_group_edit(cx);
+                            cx.stop_propagation();
+                        }),
+                    ),
+            )
+            .child(
+                div()
+                    .size(px(20.0))
+                    .flex_none()
+                    .flex()
+                    .items_center()
+                    .justify_center()
+                    .rounded(px(self.tokens.radii.sm))
+                    .cursor_pointer()
+                    .hover(|button| button.bg(rgb(theme.bg_hover)))
+                    .child(Self::render_lucide_icon(
+                        LucideIcon::X,
+                        12.0,
+                        rgb(theme.text_muted),
+                    ))
+                    .on_mouse_down(
+                        MouseButton::Left,
+                        cx.listener(|this, _event, _window, cx| {
+                            this.terminal.update(cx, |terminal, _cx| {
+                                terminal.cancel_broadcast_group_edit();
+                            });
+                            this.clear_ime_selection();
+                            cx.notify();
+                            cx.stop_propagation();
+                        }),
+                    ),
+            )
+            .into_any_element()
+    }
+
     pub(in crate::workspace) fn render_terminal_broadcast_menu(
         &self,
         placement: TerminalBroadcastMenuPlacement,
@@ -938,6 +1059,20 @@ impl WorkspaceApp {
 
         for group in &groups {
             let group_id = group.id;
+            if matches!(
+                &group_editor,
+                Some((TerminalBroadcastGroupEditKind::Rename(editing_id), _))
+                    if *editing_id == group_id
+            ) {
+                let value = group_editor
+                    .as_ref()
+                    .map(|(_, value)| value.as_str())
+                    .unwrap_or_default();
+                menu = menu.child(
+                    self.render_terminal_broadcast_group_edit_row(Some(group_id), value, cx),
+                );
+                continue;
+            }
             let selected = selected_group_id == Some(group_id);
             let member_count = self
                 .terminal
@@ -1060,98 +1195,10 @@ impl WorkspaceApp {
             );
         }
 
-        if let Some((edit_kind, value)) = group_editor {
-            let target = WorkspaceImeTarget::TerminalBroadcastGroupName;
-            let valid = self.terminal_broadcast_group_name_valid(edit_kind, &value);
-            menu = menu.child(
-                div()
-                    .mt(px(4.0))
-                    .px(px(6.0))
-                    .pb(px(6.0))
-                    .flex()
-                    .items_center()
-                    .gap(px(6.0))
-                    .child(
-                        self.text_input_with_workspace_ime(
-                            target,
-                            self.workspace_text_input(
-                                target,
-                                TextInputView {
-                                    value: &value,
-                                    placeholder: self
-                                        .i18n
-                                        .t("terminal.broadcast.group_name_placeholder"),
-                                    focused: true,
-                                    caret_visible: self.input_caret.visible(),
-                                    secret: false,
-                                    selected_all: false,
-                                    selected_range: self.ime_selected_range_for_target(target, cx),
-                                    marked_text: self.marked_text_for_target(target, cx),
-                                },
-                            )
-                            .h(px(28.0)),
-                            |_this, _cx| {},
-                            cx,
-                        ),
-                    )
-                    .child(
-                        div()
-                            .size(px(24.0))
-                            .flex()
-                            .items_center()
-                            .justify_center()
-                            .rounded(px(self.tokens.radii.sm))
-                            .when(valid, |button| {
-                                button
-                                    .cursor_pointer()
-                                    .hover(|button| button.bg(rgb(theme.bg_hover)))
-                            })
-                            .child(Self::render_lucide_icon(
-                                LucideIcon::Save,
-                                12.0,
-                                rgb(if valid {
-                                    theme.accent
-                                } else {
-                                    theme.text_muted
-                                }),
-                            ))
-                            .on_mouse_down(
-                                MouseButton::Left,
-                                cx.listener(move |this, _event, _window, cx| {
-                                    if valid {
-                                        this.commit_terminal_broadcast_group_edit(cx);
-                                    }
-                                    cx.stop_propagation();
-                                }),
-                            ),
-                    )
-                    .child(
-                        div()
-                            .size(px(24.0))
-                            .flex()
-                            .items_center()
-                            .justify_center()
-                            .rounded(px(self.tokens.radii.sm))
-                            .cursor_pointer()
-                            .hover(|button| button.bg(rgb(theme.bg_hover)))
-                            .child(Self::render_lucide_icon(
-                                LucideIcon::X,
-                                12.0,
-                                rgb(theme.text_muted),
-                            ))
-                            .on_mouse_down(
-                                MouseButton::Left,
-                                cx.listener(|this, _event, _window, cx| {
-                                    this.terminal.update(cx, |terminal, _cx| {
-                                        terminal.cancel_broadcast_group_edit();
-                                    });
-                                    this.clear_ime_selection();
-                                    cx.notify();
-                                    cx.stop_propagation();
-                                }),
-                            ),
-                    ),
-            );
+        if let Some((TerminalBroadcastGroupEditKind::Create, value)) = &group_editor {
+            // A new group is appended to the list, so its inline editor sits at
+            // the end of the group section instead of in a detached bottom box.
+            menu = menu.child(self.render_terminal_broadcast_group_edit_row(None, value, cx));
         }
 
         let enabled = self.terminal.read(cx).broadcast_enabled();
