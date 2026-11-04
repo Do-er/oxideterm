@@ -922,16 +922,9 @@ impl WorkspaceApp {
             TerminalBroadcastMenuPlacement::Top(offset) => menu.top(px(offset)),
         };
 
-        if groups.is_empty() && group_editor.is_none() {
-            menu = menu.child(
-                div()
-                    .px(px(8.0))
-                    .pb(px(8.0))
-                    .text_size(px(11.0))
-                    .text_color(rgb(theme.text_muted))
-                    .child(self.i18n.t("terminal.broadcast.no_groups")),
-            );
-        }
+        let temp_selected = selected_group_id.is_none();
+        let temp_member_count = self.terminal.read(cx).sync_groups().panes(None).len();
+        let temp_enabled = self.terminal.read(cx).sync_groups().enabled(None);
 
         menu = menu.child(
             div()
@@ -942,16 +935,54 @@ impl WorkspaceApp {
                 .px(px(8.0))
                 .rounded(px(self.tokens.radii.md))
                 .cursor_pointer()
-                .when(selected_group_id.is_none(), |row| {
+                .when(temp_selected, |row| {
                     row.bg(rgba((theme.accent << 8) | 0x1f))
                 })
                 .hover(|row| row.bg(rgb(theme.bg_hover)))
-                .child(if selected_group_id.is_none() {
+                .child(if temp_selected {
                     Self::render_lucide_icon(LucideIcon::Check, 12.0, rgb(theme.accent))
                 } else {
                     div().size(px(12.0)).into_any_element()
                 })
-                .child(self.i18n.t("terminal.broadcast.temporary_group"))
+                .child(
+                    div()
+                        .flex_1()
+                        .truncate()
+                        .font_weight(if temp_selected {
+                            gpui::FontWeight::MEDIUM
+                        } else {
+                            gpui::FontWeight::NORMAL
+                        })
+                        .child(self.i18n.t("terminal.broadcast.temporary_group")),
+                )
+                .child(
+                    div()
+                        .text_size(px(10.0))
+                        .text_color(rgb(if temp_enabled {
+                            theme.accent
+                        } else {
+                            theme.text_muted
+                        }))
+                        .child(self.i18n.t(if temp_enabled {
+                            "terminal.broadcast.sync_enabled"
+                        } else {
+                            "terminal.broadcast.sync_disabled"
+                        })),
+                )
+                .child(
+                    div()
+                        .min_w(px(18.0))
+                        .px(px(4.0))
+                        .py(px(1.0))
+                        .flex()
+                        .items_center()
+                        .justify_center()
+                        .rounded(px(self.tokens.radii.sm))
+                        .bg(rgb(theme.bg_panel))
+                        .text_size(px(10.0))
+                        .text_color(rgb(theme.text_muted))
+                        .child(temp_member_count.to_string()),
+                )
                 .on_mouse_down(
                     MouseButton::Left,
                     cx.listener(|this, _event, _window, cx| {
@@ -973,6 +1004,11 @@ impl WorkspaceApp {
                 .sync_groups()
                 .panes(Some(group_id))
                 .len();
+            let group_enabled = self
+                .terminal
+                .read(cx)
+                .sync_groups()
+                .enabled(Some(group_id));
             let name = group.name.clone();
             menu = menu.child(
                 div()
@@ -990,28 +1026,48 @@ impl WorkspaceApp {
                     } else {
                         div().size(px(12.0)).into_any_element()
                     })
-                    .child(div().flex_1().truncate().child(name))
                     .child(
                         div()
-                            .text_size(px(10.0))
-                            .text_color(rgb(theme.accent))
-                            .child(self.i18n.t(
-                                if self.terminal.read(cx).sync_groups().enabled(Some(group_id)) {
-                                    "terminal.broadcast.sync_enabled"
-                                } else {
-                                    "terminal.broadcast.sync_disabled"
-                                },
-                            )),
+                            .flex_1()
+                            .truncate()
+                            .font_weight(if selected {
+                                gpui::FontWeight::MEDIUM
+                            } else {
+                                gpui::FontWeight::NORMAL
+                            })
+                            .child(name),
                     )
                     .child(
                         div()
+                            .text_size(px(10.0))
+                            .text_color(rgb(if group_enabled {
+                                theme.accent
+                            } else {
+                                theme.text_muted
+                            }))
+                            .child(self.i18n.t(if group_enabled {
+                                "terminal.broadcast.sync_enabled"
+                            } else {
+                                "terminal.broadcast.sync_disabled"
+                            })),
+                    )
+                    .child(
+                        div()
+                            .min_w(px(18.0))
+                            .px(px(4.0))
+                            .py(px(1.0))
+                            .flex()
+                            .items_center()
+                            .justify_center()
+                            .rounded(px(self.tokens.radii.sm))
+                            .bg(rgb(theme.bg_panel))
                             .text_size(px(10.0))
                             .text_color(rgb(theme.text_muted))
                             .child(member_count.to_string()),
                     )
                     .child(
                         div()
-                            .size(px(22.0))
+                            .size(px(20.0))
                             .flex()
                             .items_center()
                             .justify_center()
@@ -1034,7 +1090,7 @@ impl WorkspaceApp {
                     )
                     .child(
                         div()
-                            .size(px(22.0))
+                            .size(px(20.0))
                             .flex()
                             .items_center()
                             .justify_center()
@@ -1164,56 +1220,204 @@ impl WorkspaceApp {
             .sync_groups()
             .panes(selected_group_id)
             .len();
+        let selectable_count = entries
+            .iter()
+            .filter(|entry| {
+                let member = self.terminal.read(cx).sync_groups().member(entry.pane_id);
+                member.is_none() || member.map(|m| m.group) == Some(selected_group_id)
+            })
+            .count();
+        let all_selected = selectable_count > 0 && selected_count >= selectable_count;
+
         menu = menu.child(
             div()
                 .border_t_1()
-                .border_color(rgb(theme.border))
-                .mt(px(4.0))
-                .p(px(6.0))
+                .border_color(self.workspace_chrome_divider())
+                .my(px(4.0)),
+        );
+
+        menu = menu.child(
+            div()
+                .px(px(6.0))
+                .py(px(4.0))
                 .flex()
                 .items_center()
                 .justify_between()
-                .child(self.i18n.t("terminal.broadcast.group_members"))
-                .child(self.terminal_sync_action_button(
-                    self.i18n.t(if enabled {
-                        "terminal.broadcast.pause_group"
-                    } else {
-                        "terminal.broadcast.start_group"
-                    }),
-                    selected_count > 0,
-                    |this, _, _, cx| {
-                        this.terminal
-                            .update(cx, |terminal, _| terminal.toggle_broadcast());
-                        cx.stop_propagation();
-                        cx.notify();
-                    },
-                    cx,
-                )),
+                .child(
+                    div()
+                        .flex()
+                        .items_center()
+                        .gap(px(6.0))
+                        .child(
+                            div()
+                                .text_size(px(11.0))
+                                .font_weight(gpui::FontWeight::MEDIUM)
+                                .text_color(rgb(theme.text_muted))
+                                .child(self.i18n.t("terminal.broadcast.group_members")),
+                        )
+                        .child(
+                            div()
+                                .text_size(px(10.0))
+                                .text_color(rgb(theme.text_muted))
+                                .child(format!("({selected_count})")),
+                        )
+                        .when(selectable_count > 1, |row| {
+                            row.child(
+                                div()
+                                    .cursor_pointer()
+                                    .px(px(4.0))
+                                    .py(px(1.0))
+                                    .rounded(px(self.tokens.radii.sm))
+                                    .text_size(px(10.0))
+                                    .text_color(rgb(theme.accent))
+                                    .hover(|btn| btn.bg(rgb(theme.bg_hover)))
+                                    .child(self.i18n.t(if all_selected {
+                                        "terminal.broadcast.deselect_all"
+                                    } else {
+                                        "terminal.broadcast.select_all"
+                                    }))
+                                    .on_mouse_down(
+                                        MouseButton::Left,
+                                        cx.listener(move |this, _event, _window, cx| {
+                                            this.set_all_terminal_broadcast_group_members(
+                                                !all_selected,
+                                                cx,
+                                            );
+                                            cx.stop_propagation();
+                                        }),
+                                    ),
+                            )
+                        }),
+                )
+                .child(
+                    div()
+                        .h(px(24.0))
+                        .flex()
+                        .items_center()
+                        .gap(px(4.0))
+                        .px(px(8.0))
+                        .rounded(px(self.tokens.radii.sm))
+                        .when(selected_count > 0, |button| {
+                            if enabled {
+                                button
+                                    .bg(rgba((theme.accent << 8) | 0x22))
+                                    .text_color(rgb(theme.accent))
+                                    .hover(|btn| btn.bg(rgba((theme.accent << 8) | 0x38)))
+                            } else {
+                                button
+                                    .bg(rgb(theme.bg_hover))
+                                    .text_color(rgb(theme.text))
+                                    .hover(|btn| btn.bg(rgb(theme.bg_panel)))
+                            }
+                            .cursor_pointer()
+                        })
+                        .when(selected_count == 0, |button| {
+                            button.text_color(rgb(theme.text_muted)).cursor_not_allowed()
+                        })
+                        .text_size(px(11.0))
+                        .child(Self::render_lucide_icon(
+                            if enabled {
+                                LucideIcon::Radio
+                            } else {
+                                LucideIcon::Play
+                            },
+                            11.0,
+                            if selected_count > 0 {
+                                rgb(theme.accent)
+                            } else {
+                                rgb(theme.text_muted)
+                            },
+                        ))
+                        .child(self.i18n.t(if enabled {
+                            "terminal.broadcast.pause_group"
+                        } else {
+                            "terminal.broadcast.start_group"
+                        }))
+                        .on_mouse_down(
+                            MouseButton::Left,
+                            cx.listener(move |this, _event, _window, cx| {
+                                if selected_count > 0 {
+                                    this.terminal
+                                        .update(cx, |terminal, _| terminal.toggle_broadcast());
+                                    cx.stop_propagation();
+                                    cx.notify();
+                                }
+                            }),
+                        ),
+                ),
         );
+
         if entries.is_empty() {
             menu = menu.child(
                 div()
-                    .p(px(8.0))
-                    .child(self.i18n.t("terminal.broadcast.no_targets")),
+                    .py(px(16.0))
+                    .px(px(8.0))
+                    .flex()
+                    .flex_col()
+                    .items_center()
+                    .justify_center()
+                    .gap(px(6.0))
+                    .text_color(rgb(theme.text_muted))
+                    .child(Self::render_lucide_icon(
+                        LucideIcon::Terminal,
+                        18.0,
+                        rgb(theme.text_muted),
+                    ))
+                    .child(
+                        div()
+                            .text_size(px(11.0))
+                            .child(self.i18n.t("terminal.broadcast.no_targets")),
+                    ),
             );
         }
+
         for entry in entries {
             let pane_id = entry.pane_id;
             let member = self.terminal.read(cx).sync_groups().member(pane_id);
             let checked = member.is_some_and(|member| member.group == selected_group_id);
             let other_group = member.filter(|member| member.group != selected_group_id);
+            let is_isolated = member.is_some_and(|member| member.isolated);
+            let kind_icon = match entry.kind {
+                TabKind::SshTerminal => LucideIcon::Server,
+                _ => LucideIcon::Terminal,
+            };
+
             let row = div()
+                .h(px(30.0))
                 .flex()
                 .items_center()
                 .gap(px(6.0))
                 .px(px(8.0))
-                .py(px(5.0))
-                .child(if checked {
-                    Self::render_lucide_icon(LucideIcon::Check, 12.0, rgb(theme.accent))
+                .rounded(px(self.tokens.radii.md))
+                .when(checked, |row| row.bg(rgba((theme.accent << 8) | 0x0f)))
+                .child(if other_group.is_some() {
+                    Self::render_lucide_icon(LucideIcon::Lock, 12.0, rgb(theme.text_muted))
+                } else if checked {
+                    Self::render_lucide_icon(LucideIcon::CheckSquare, 13.0, rgb(theme.accent))
                 } else {
-                    div().size(px(12.0)).into_any_element()
+                    Self::render_lucide_icon(LucideIcon::Square, 13.0, rgb(theme.text_muted))
                 })
-                .child(div().flex_1().min_w_0().truncate().child(entry.label))
+                .child(Self::render_lucide_icon(
+                    kind_icon,
+                    12.0,
+                    rgb(if checked {
+                        theme.accent
+                    } else {
+                        theme.text_muted
+                    }),
+                ))
+                .child(
+                    div()
+                        .flex_1()
+                        .min_w_0()
+                        .truncate()
+                        .font_weight(if checked {
+                            gpui::FontWeight::MEDIUM
+                        } else {
+                            gpui::FontWeight::NORMAL
+                        })
+                        .child(entry.label),
+                )
                 .child(
                     div()
                         .flex_none()
@@ -1224,6 +1428,10 @@ impl WorkspaceApp {
                 .when(Some(pane_id) == active_pane_id, |row| {
                     row.child(
                         div()
+                            .px(px(4.0))
+                            .py(px(1.0))
+                            .rounded(px(self.tokens.radii.sm))
+                            .bg(rgba((theme.accent << 8) | 0x22))
                             .text_size(px(10.0))
                             .text_color(rgb(theme.accent))
                             .child(self.i18n.t("terminal.broadcast.current")),
@@ -1232,27 +1440,53 @@ impl WorkspaceApp {
                 .when_some(other_group, |row, member| {
                     row.child(
                         div()
+                            .px(px(4.0))
+                            .py(px(1.0))
+                            .rounded(px(self.tokens.radii.sm))
+                            .bg(rgb(theme.bg_panel))
                             .text_size(px(10.0))
                             .text_color(rgb(theme.text_muted))
                             .child(self.terminal_sync_group_name(member.group)),
                     )
                 })
                 .when(checked, |row| {
-                    row.child(
-                        self.terminal_sync_action_button(
-                            self.i18n
-                                .t(if member.is_some_and(|member| member.isolated) {
-                                    "terminal.broadcast.resume_member"
-                                } else {
-                                    "terminal.broadcast.isolate_member"
+                    row.when(is_isolated, |r| {
+                        r.child(
+                            div()
+                                .px(px(4.0))
+                                .py(px(1.0))
+                                .rounded(px(self.tokens.radii.sm))
+                                .bg(rgba((theme.warning << 8) | 0x28))
+                                .text_size(px(10.0))
+                                .text_color(rgb(theme.warning))
+                                .child(self.i18n.t("terminal.broadcast.sync_isolated")),
+                        )
+                    })
+                    .child(
+                        div()
+                            .cursor_pointer()
+                            .px(px(5.0))
+                            .py(px(2.0))
+                            .rounded(px(self.tokens.radii.sm))
+                            .hover(|btn| btn.bg(rgb(theme.bg_hover)))
+                            .text_size(px(10.0))
+                            .text_color(rgb(if is_isolated {
+                                theme.accent
+                            } else {
+                                theme.text_muted
+                            }))
+                            .child(self.i18n.t(if is_isolated {
+                                "terminal.broadcast.resume_member"
+                            } else {
+                                "terminal.broadcast.isolate_member"
+                            }))
+                            .on_mouse_down(
+                                MouseButton::Left,
+                                cx.listener(move |this, _event, _window, cx| {
+                                    this.toggle_terminal_sync_isolation(pane_id, cx);
+                                    cx.stop_propagation();
                                 }),
-                            true,
-                            move |this, _, _, cx| {
-                                this.toggle_terminal_sync_isolation(pane_id, cx);
-                                cx.stop_propagation();
-                            },
-                            cx,
-                        ),
+                            ),
                     )
                 });
             menu = menu.child(self.render_terminal_broadcast_menu_action(

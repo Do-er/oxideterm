@@ -252,7 +252,9 @@ impl Render for TextEditorView {
             // Multiline inputs share the document viewport and scrollbar behavior.
             root = root.child(scrollbar);
         }
-        if let Some(scrollbar) = self.render_horizontal_scrollbar(cx.entity(), cx) {
+        if self.presentation == EditorPresentation::Document
+            && let Some(scrollbar) = self.render_horizontal_scrollbar(cx.entity(), cx)
+        {
             root = root.child(scrollbar);
         }
         if let Some(menu) = self.context_menu {

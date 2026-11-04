@@ -33,11 +33,10 @@ pub fn search_panel(tokens: &ThemeTokens) -> Div {
 pub fn search_row() -> Div {
     div()
         .flex()
-        .flex_wrap()
         .items_center()
-        .gap(px(8.0))
-        .px(px(12.0))
-        .py(px(8.0))
+        .gap(px(6.0))
+        .px(px(8.0))
+        .py(px(6.0))
 }
 
 pub fn search_input_height(line_count: usize, line_height: f32) -> f32 {
@@ -64,7 +63,7 @@ pub fn search_mode_button(tokens: &ThemeTokens, text: &'static str, selected: bo
             } else {
                 rgba(0x00000000)
             }),
-            ..IconButtonOptions::compact(24.0)
+            ..IconButtonOptions::compact(22.0)
         },
     )
     .flex_none()

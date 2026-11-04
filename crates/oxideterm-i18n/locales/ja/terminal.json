@@ -588,7 +588,6 @@
       "sync_enabled": "同期中",
       "groups": "同期グループ",
       "create_group": "新しいグループ",
-      "no_groups": "名前付きグループはありません",
       "temporary_group": "一時同期グループ",
       "group_name_placeholder": "グループ名",
       "group_members": "グループメンバー",

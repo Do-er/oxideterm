@@ -161,7 +161,6 @@
       "sync_enabled": "Syncing",
       "groups": "Sync groups",
       "create_group": "New group",
-      "no_groups": "No named groups yet",
       "temporary_group": "Temporary sync group",
       "group_name_placeholder": "Group name",
       "group_members": "Group members",

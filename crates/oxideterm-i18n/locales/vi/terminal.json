@@ -588,7 +588,6 @@
       "sync_enabled": "Đang đồng bộ",
       "groups": "Nhóm đồng bộ",
       "create_group": "Nhóm mới",
-      "no_groups": "Chưa có nhóm được đặt tên",
       "temporary_group": "Nhóm đồng bộ tạm thời",
       "group_name_placeholder": "Tên nhóm",
       "group_members": "Thành viên nhóm",

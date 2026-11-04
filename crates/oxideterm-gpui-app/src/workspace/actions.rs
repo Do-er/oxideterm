@@ -3257,6 +3257,26 @@ impl WorkspaceApp {
         cx.notify();
     }
 
+    pub(in crate::workspace) fn set_all_terminal_broadcast_group_members(
+        &mut self,
+        select: bool,
+        cx: &mut Context<Self>,
+    ) {
+        let group_id = self.terminal.read(cx).selected_broadcast_group_id();
+        let entries = self.terminal_broadcast_entries(cx);
+        for entry in entries {
+            let pane_id = entry.pane_id;
+            let member = self.terminal.read(cx).sync_groups().member(pane_id);
+            if member.is_some_and(|member| member.group != group_id) {
+                continue;
+            }
+            let is_selected = member.is_some_and(|member| member.group == group_id);
+            if select != is_selected {
+                self.toggle_terminal_broadcast_group_member(pane_id, cx);
+            }
+        }
+    }
+
     fn terminal_command_should_handoff_focus(&self, command: &str) -> bool {
         let Some(command_name) = terminal_command_executable(command) else {
             return false;
@@ -3322,82 +3342,111 @@ impl WorkspaceApp {
             .on_mouse_down(MouseButton::Left, |_, _, cx| cx.stop_propagation())
             .child(
                 search_row()
-                    .child(Self::render_lucide_icon(
-                        LucideIcon::Search,
-                        15.0,
-                        rgb(theme.text_muted),
-                    ))
                     .child(
                         div()
-                            .id(("terminal-search-input", pane_id.0))
-                            .aria_label(self.i18n.t("search.placeholder"))
+                            .id(("terminal-search-capsule", pane_id.0))
                             .flex_1()
                             .min_w(px(160.0))
-                            .max_w_full()
-                            .h(px(input_height))
+                            .flex()
+                            .items_center()
+                            .gap(px(6.0))
+                            .px(px(8.0))
+                            .py(px(2.0))
+                            .rounded(px(self.tokens.radii.sm))
+                            .bg(rgba((theme.bg_sunken << 8) | 0x99))
+                            .border_1()
+                            .border_color(rgba((theme.border << 8) | 0x99))
                             .capture_any_mouse_down(cx.listener(move |this, _, _, cx| {
                                 this.focus_search_pane(pane_id, cx);
                             }))
-                            .child(editor),
-                    )
-                    .child({
-                        let mut row = search_mode_group();
-                        for (index, text, key, selected) in [
-                            (
-                                0usize,
-                                "Aa",
-                                "search.match_case",
-                                search.options.case_sensitive,
-                            ),
-                            (1, ".*", "search.use_regex", search.options.regex),
-                        ] {
-                            let tokens = self.tokens;
-                            let label = self.i18n.t(key);
-                            row = row.child(
-                                search_mode_button(&tokens, text, selected)
-                                    .id(("terminal-search-mode", index))
-                                    .aria_label(label.clone())
-                                    .tooltip(move |_, cx| {
-                                        oxideterm_gpui_ui::tooltip::tooltip_view(
-                                            tokens,
-                                            label.clone(),
-                                            None,
-                                            cx,
-                                        )
-                                    })
-                                    .on_mouse_down(
-                                        MouseButton::Left,
-                                        cx.listener(move |this, _, window, cx| {
-                                            if let Some(search) =
-                                                this.search.panes.get_mut(&pane_id)
-                                            {
-                                                match index {
-                                                    0 => {
-                                                        search.options.case_sensitive =
-                                                            !search.options.case_sensitive
-                                                    }
-                                                    _ => {
-                                                        search.options.regex = !search.options.regex
-                                                    }
-                                                }
-                                            }
-                                            this.focus_search_editor(pane_id, window, cx);
-                                            this.update_search_query_for_pane(pane_id, true, cx);
-                                            cx.stop_propagation();
-                                        }),
+                            .child(Self::render_lucide_icon(
+                                LucideIcon::Search,
+                                14.0,
+                                rgb(theme.text_muted),
+                            ))
+                            .child(
+                                div()
+                                    .id(("terminal-search-input", pane_id.0))
+                                    .aria_label(self.i18n.t("search.placeholder"))
+                                    .flex_1()
+                                    .min_w_0()
+                                    .h(px(input_height))
+                                    .child(editor),
+                            )
+                            .child({
+                                let mut row = search_mode_group();
+                                for (index, text, key, selected) in [
+                                    (
+                                        0usize,
+                                        "Aa",
+                                        "search.match_case",
+                                        search.options.case_sensitive,
                                     ),
-                            );
-                        }
-                        row
-                    })
+                                    (1, ".*", "search.use_regex", search.options.regex),
+                                ] {
+                                    let tokens = self.tokens;
+                                    let label = self.i18n.t(key);
+                                    row = row.child(
+                                        search_mode_button(&tokens, text, selected)
+                                            .id(("terminal-search-mode", index))
+                                            .aria_label(label.clone())
+                                            .tooltip(move |_, cx| {
+                                                oxideterm_gpui_ui::tooltip::tooltip_view(
+                                                    tokens,
+                                                    label.clone(),
+                                                    None,
+                                                    cx,
+                                                )
+                                            })
+                                            .on_mouse_down(
+                                                MouseButton::Left,
+                                                cx.listener(move |this, _, window, cx| {
+                                                    if let Some(search) =
+                                                        this.search.panes.get_mut(&pane_id)
+                                                    {
+                                                        match index {
+                                                            0 => {
+                                                                search.options.case_sensitive =
+                                                                    !search.options.case_sensitive
+                                                            }
+                                                            _ => {
+                                                                search.options.regex =
+                                                                    !search.options.regex
+                                                            }
+                                                        }
+                                                    }
+                                                    this.focus_search_editor(pane_id, window, cx);
+                                                    this.update_search_query_for_pane(
+                                                        pane_id, true, cx,
+                                                    );
+                                                    cx.stop_propagation();
+                                                }),
+                                            ),
+                                    );
+                                }
+                                row
+                            }),
+                    )
                     .when(has_query, |row| {
+                        let (text_color, bg_color) = if invalid_pattern {
+                            (rgb(theme.error), rgba((theme.error << 8) | 0x22))
+                        } else if match_count == 0 {
+                            (rgb(theme.text_muted), rgba((theme.text_muted << 8) | 0x15))
+                        } else {
+                            (rgb(theme.text_muted), rgba((theme.bg_sunken << 8) | 0x88))
+                        };
                         row.child(
                             div()
                                 .flex_none()
-                                .max_w_full()
-                                .min_w(px(48.0))
-                                .text_size(px(12.0))
-                                .text_color(rgb(theme.text_muted))
+                                .flex()
+                                .items_center()
+                                .justify_center()
+                                .px(px(6.0))
+                                .py(px(2.0))
+                                .rounded(px(self.tokens.radii.sm))
+                                .bg(bg_color)
+                                .text_size(px(11.0))
+                                .text_color(text_color)
                                 .child(result_label),
                         )
                     })
@@ -3432,6 +3481,14 @@ impl WorkspaceApp {
                                 cx.stop_propagation();
                             }),
                         ),
+                    )
+                    .child(
+                        div()
+                            .w(px(1.0))
+                            .h(px(14.0))
+                            .mx(px(1.0))
+                            .bg(rgba((theme.border << 8) | 0x66))
+                            .flex_none(),
                     )
                     .child(
                         search_action_button(

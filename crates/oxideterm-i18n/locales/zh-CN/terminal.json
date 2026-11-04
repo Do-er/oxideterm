@@ -161,7 +161,6 @@
       "sync_enabled": "同步中",
       "groups": "同步组",
       "create_group": "新建组",
-      "no_groups": "暂无命名组",
       "temporary_group": "临时同步组",
       "group_name_placeholder": "组名称",
       "group_members": "组成员",

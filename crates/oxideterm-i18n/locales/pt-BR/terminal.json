@@ -588,7 +588,6 @@
       "sync_enabled": "Sincronizando",
       "groups": "Grupos de sincronização",
       "create_group": "Novo grupo",
-      "no_groups": "Nenhum grupo nomeado",
       "temporary_group": "Grupo temporário",
       "group_name_placeholder": "Nome do grupo",
       "group_members": "Membros do grupo",

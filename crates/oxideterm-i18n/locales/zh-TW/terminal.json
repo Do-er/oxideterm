@@ -588,7 +588,6 @@
       "sync_enabled": "同步中",
       "groups": "同步群組",
       "create_group": "新增群組",
-      "no_groups": "尚無命名群組",
       "temporary_group": "臨時同步群組",
       "group_name_placeholder": "群組名稱",
       "group_members": "群組成員",

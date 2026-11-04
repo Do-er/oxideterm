@@ -588,7 +588,6 @@
       "sync_enabled": "동기화 중",
       "groups": "동기화 그룹",
       "create_group": "새 그룹",
-      "no_groups": "이름이 지정된 그룹이 없습니다",
       "temporary_group": "임시 동기화 그룹",
       "group_name_placeholder": "그룹 이름",
       "group_members": "그룹 구성원",
