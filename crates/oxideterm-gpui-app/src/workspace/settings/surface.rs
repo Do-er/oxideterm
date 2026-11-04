@@ -470,6 +470,7 @@ impl WorkspaceApp {
                 launch_at_login.pending.hash(&mut hasher);
                 launch_at_login.error.hash(&mut hasher);
                 settings.general.minimize_to_tray_on_close.hash(&mut hasher);
+                settings.general.confirm_before_quit.hash(&mut hasher);
                 let cli = self.settings_workspace.read(cx).cli_companion_snapshot();
                 cli.loading.hash(&mut hasher);
                 cli.error.is_some().hash(&mut hasher);

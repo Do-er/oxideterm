@@ -287,7 +287,9 @@
       "minimize_to_tray_on_close": "Thu nhỏ xuống khay hệ thống khi đóng cửa sổ",
       "minimize_to_tray_on_close_hint": "Giữ OxideTerm chạy trong khay hệ thống khi nhấn nút đóng cửa sổ.",
       "keep_running_on_close": "Tiếp tục chạy OxideTerm sau khi đóng cửa sổ",
-      "keep_running_on_close_hint": "Sau khi đóng cửa sổ, OxideTerm sẽ tiếp tục chạy trong nền."
+      "keep_running_on_close_hint": "Sau khi đóng cửa sổ, OxideTerm sẽ tiếp tục chạy trong nền.",
+      "confirm_before_quit": "Xác nhận trước khi thoát ứng dụng",
+      "confirm_before_quit_hint": "Hỏi xác nhận trước khi thoát OxideTerm để tránh đóng nhầm các phiên thiết bị đầu cuối và kết nối đang hoạt động."
     },
     "terminal": {
       "timestamp_hover": "Hiển thị giờ địa phương khi di chuột",

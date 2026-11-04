@@ -40,6 +40,14 @@ impl WorkspaceApp {
                         cx,
                     ));
                 }
+                rows.push(self.card_separator());
+                rows.push(self.general_checkbox_row(
+                    "settings_view.general.confirm_before_quit",
+                    "settings_view.general.confirm_before_quit_hint",
+                    settings.general.confirm_before_quit,
+                    |settings, enabled| settings.general.confirm_before_quit = enabled,
+                    cx,
+                ));
                 self.settings_card(
                     "settings_view.tabs.general",
                     "settings_view.general.startup_hint",

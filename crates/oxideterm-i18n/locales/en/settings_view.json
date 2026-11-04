@@ -287,7 +287,9 @@
       "minimize_to_tray_on_close": "Minimize to tray when closing the window",
       "minimize_to_tray_on_close_hint": "Keep OxideTerm running in the system tray when the window close button is pressed.",
       "keep_running_on_close": "Keep OxideTerm running after closing the window",
-      "keep_running_on_close_hint": "Closing the window keeps OxideTerm running in the background."
+      "keep_running_on_close_hint": "Closing the window keeps OxideTerm running in the background.",
+      "confirm_before_quit": "Confirm before quitting the application",
+      "confirm_before_quit_hint": "Ask for confirmation before quitting OxideTerm to avoid closing active terminal sessions and connections."
     },
     "terminal": {
       "timestamp_hover": "Show Local Time on Hover",

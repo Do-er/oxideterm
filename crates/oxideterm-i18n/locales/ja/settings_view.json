@@ -287,7 +287,9 @@
       "minimize_to_tray_on_close": "ウィンドウを閉じるときにトレイへ最小化",
       "minimize_to_tray_on_close_hint": "閉じるボタンを押したときも、OxideTerm をシステムトレイで実行し続けます。",
       "keep_running_on_close": "ウィンドウを閉じた後も OxideTerm を実行し続ける",
-      "keep_running_on_close_hint": "ウィンドウを閉じても、OxideTerm はバックグラウンドで実行し続けます。"
+      "keep_running_on_close_hint": "ウィンドウを閉じても、OxideTerm はバックグラウンドで実行し続けます。",
+      "confirm_before_quit": "アプリケーション終了前に確認",
+      "confirm_before_quit_hint": "アクティブなターミナルセッションや接続を誤って閉じないよう、OxideTerm を終了する前に確認します。"
     },
     "terminal": {
       "timestamp_hover": "ホバーで現地時刻を表示",

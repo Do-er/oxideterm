@@ -136,6 +136,10 @@ fn start_app_quit(cx: &mut App) {
 impl WorkspaceApp {
     /// Keeps explicit quit intents behind the same confirmation used for terminal closes.
     pub(crate) fn request_application_quit(&mut self, cx: &mut Context<Self>) {
+        if !self.settings_store.settings().general.confirm_before_quit {
+            self.quit_after_confirmation(cx);
+            return;
+        }
         if self.tab_host.read(cx).close_confirm() != Some(&TabCloseConfirm::ApplicationQuit) {
             self.skip_future_ssh_close_confirmations = false;
             self.tab_host.update(cx, |host, cx| {
@@ -287,6 +291,28 @@ mod tests {
             cx.update(|window, _| window.root::<WorkspaceWindowShell>().flatten().unwrap());
         assert_eq!(retained_root, shell);
         knowledge::tests::assert_locked_quit_preserves_draft(&workspace, cx);
+        workspace.update(cx, |workspace, cx| {
+            workspace
+                .settings_store
+                .settings_mut()
+                .general
+                .confirm_before_quit = false;
+            workspace.request_application_quit(cx);
+            assert_eq!(workspace.tab_host.read(cx).close_confirm(), None);
+        });
+        let task = cx.update(|_, cx| cx.global_mut::<HistoryQuit>().task.take().unwrap());
+        cx.foreground_executor().block_test(task);
+        workspace.update(cx, |workspace, _| {
+            assert!(workspace.ai_entity.read(cx).history.quitting);
+            workspace.ai_entity.update(cx, |ai, _| {
+                ai.history.quitting = false;
+            });
+            workspace
+                .settings_store
+                .settings_mut()
+                .general
+                .confirm_before_quit = true;
+        });
         cx.update(|window, cx| window.request_close(cx));
         cx.update(|window, cx| window.draw(cx).clear(cx));
         cx.simulate_keystrokes("enter");

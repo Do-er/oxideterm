@@ -287,7 +287,9 @@
       "minimize_to_tray_on_close": "Minimizar a la bandeja al cerrar la ventana",
       "minimize_to_tray_on_close_hint": "Mantiene OxideTerm en ejecución en la bandeja del sistema al pulsar el botón de cerrar.",
       "keep_running_on_close": "Mantener OxideTerm en ejecución tras cerrar la ventana",
-      "keep_running_on_close_hint": "Al cerrar la ventana, OxideTerm seguirá ejecutándose en segundo plano."
+      "keep_running_on_close_hint": "Al cerrar la ventana, OxideTerm seguirá ejecutándose en segundo plano.",
+      "confirm_before_quit": "Confirmar antes de salir de la aplicación",
+      "confirm_before_quit_hint": "Solicita confirmación antes de salir de OxideTerm para evitar cerrar sesiones de terminal y conexiones activas."
     },
     "terminal": {
       "timestamp_hover": "Mostrar la hora local al pasar el cursor",

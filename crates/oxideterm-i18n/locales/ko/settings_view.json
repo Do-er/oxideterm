@@ -287,7 +287,9 @@
       "minimize_to_tray_on_close": "창을 닫을 때 트레이로 최소화",
       "minimize_to_tray_on_close_hint": "닫기 버튼을 누르면 OxideTerm을 시스템 트레이에서 계속 실행합니다.",
       "keep_running_on_close": "창을 닫은 후에도 OxideTerm 계속 실행",
-      "keep_running_on_close_hint": "창을 닫아도 OxideTerm은 백그라운드에서 계속 실행됩니다."
+      "keep_running_on_close_hint": "창을 닫아도 OxideTerm은 백그라운드에서 계속 실행됩니다.",
+      "confirm_before_quit": "애플리케이션 종료 전 확인",
+      "confirm_before_quit_hint": "활성 터미널 세션과 연결이 실수로 닫히지 않도록 OxideTerm을 종료하기 전에 확인을 요청합니다."
     },
     "terminal": {
       "timestamp_hover": "마우스를 올리면 현지 시간 표시",

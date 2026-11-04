@@ -287,7 +287,9 @@
       "minimize_to_tray_on_close": "关闭窗口时最小化到托盘",
       "minimize_to_tray_on_close_hint": "点击窗口关闭按钮时，让 OxideTerm 继续在系统托盘中运行。",
       "keep_running_on_close": "关闭窗口后继续运行 OxideTerm",
-      "keep_running_on_close_hint": "关闭窗口后，OxideTerm 将继续在后台运行。"
+      "keep_running_on_close_hint": "关闭窗口后，OxideTerm 将继续在后台运行。",
+      "confirm_before_quit": "退出应用前确认",
+      "confirm_before_quit_hint": "退出 OxideTerm 前弹出确认提示，防止误关活动终端会话和连接。"
     },
     "terminal": {
       "timestamp_hover": "悬停显示本地时间",

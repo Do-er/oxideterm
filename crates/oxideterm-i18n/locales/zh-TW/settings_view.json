@@ -287,7 +287,9 @@
       "minimize_to_tray_on_close": "關閉視窗時最小化到系統匣",
       "minimize_to_tray_on_close_hint": "按下視窗關閉按鈕時，讓 OxideTerm 繼續在系統匣中執行。",
       "keep_running_on_close": "關閉視窗後繼續執行 OxideTerm",
-      "keep_running_on_close_hint": "關閉視窗後，OxideTerm 將繼續在背景執行。"
+      "keep_running_on_close_hint": "關閉視窗後，OxideTerm 將繼續在背景執行。",
+      "confirm_before_quit": "結束應用程式前確認",
+      "confirm_before_quit_hint": "結束 OxideTerm 前彈出確認提示，防止誤關作用中的終端機工作階段與連線。"
     },
     "terminal": {
       "timestamp_hover": "懸停顯示本地時間",

@@ -121,6 +121,8 @@ fn settings_search_specs() -> Vec<SettingsSearchEntrySpec> {
             &[
                 "settings_view.general.startup_hint",
                 "settings_view.general.launch_at_login",
+                "settings_view.general.confirm_before_quit",
+                "settings_view.general.confirm_before_quit_hint",
             ],
         ),
         settings_search_entry(

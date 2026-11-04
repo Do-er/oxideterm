@@ -287,7 +287,9 @@
       "minimize_to_tray_on_close": "Beim Schließen in den Infobereich minimieren",
       "minimize_to_tray_on_close_hint": "OxideTerm im Infobereich weiter ausführen, wenn die Schließen-Schaltfläche gedrückt wird.",
       "keep_running_on_close": "OxideTerm nach dem Schließen des Fensters weiter ausführen",
-      "keep_running_on_close_hint": "Nach dem Schließen des Fensters wird OxideTerm im Hintergrund weiter ausgeführt."
+      "keep_running_on_close_hint": "Nach dem Schließen des Fensters wird OxideTerm im Hintergrund weiter ausgeführt.",
+      "confirm_before_quit": "Vor dem Beenden der Anwendung bestätigen",
+      "confirm_before_quit_hint": "Vor dem Beenden von OxideTerm um Bestätigung bitten, um das versehentliche Schließen aktiver Terminalsitzungen und Verbindungen zu verhindern."
     },
     "terminal": {
       "timestamp_hover": "Ortszeit beim Darüberfahren anzeigen",

@@ -8,6 +8,11 @@ pub struct GeneralSettings {
     )]
     pub minimize_to_tray_on_close: bool,
     #[serde(
+        rename = "confirmBeforeQuit",
+        default = "default_confirm_before_quit"
+    )]
+    pub confirm_before_quit: bool,
+    #[serde(
         rename = "externalConnectionUrisEnabled",
         default = "default_external_connection_uris_enabled"
     )]
@@ -24,6 +29,7 @@ impl Default for GeneralSettings {
             language: Language::ZhCn,
             update_channel: UpdateChannel::default(),
             minimize_to_tray_on_close: default_minimize_to_tray_on_close(),
+            confirm_before_quit: default_confirm_before_quit(),
             external_connection_uris_enabled: default_external_connection_uris_enabled(),
             update_proxy: UpdateProxySettings::default(),
             extra: ExtraFields::new(),
@@ -32,6 +38,10 @@ impl Default for GeneralSettings {
 }
 
 fn default_minimize_to_tray_on_close() -> bool {
+    true
+}
+
+fn default_confirm_before_quit() -> bool {
     true
 }
 
@@ -760,6 +770,11 @@ mod tests {
             .unwrap()
             .remove("enabled");
         let settings: TerminalSettings = serde_json::from_value(value).expect("terminal settings");
+        let general: GeneralSettings =
+            serde_json::from_str(r#"{"language":"zh-CN","updateChannel":"stable"}"#)
+                .expect("general settings");
+        assert!(general.minimize_to_tray_on_close);
+        assert!(general.confirm_before_quit);
 
         for (field, expected, read) in defaults {
             assert_eq!(read(&settings), expected, "legacy {field} default");
