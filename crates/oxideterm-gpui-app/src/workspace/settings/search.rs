@@ -275,9 +275,6 @@ fn settings_search_specs() -> Vec<SettingsSearchEntrySpec> {
             1,
             "settings_view.terminal.command_bar",
             &[
-                "settings_view.terminal.command_bar_git_status",
-                "settings_view.terminal.command_bar_project_tasks",
-                "settings_view.terminal.command_bar_current_directory_awareness",
                 "settings_view.terminal.autosuggest_local_history",
                 "settings_view.terminal.autosuggest_local_history_hint",
                 "terminal.history.save",

@@ -201,12 +201,10 @@ impl WorkspaceApp {
             }
             let accepted = if args.is_text {
                 std::str::from_utf8(&args.input).is_ok_and(|text| {
-                    pane.update(cx, |pane, cx| pane.send_command_sender_text_chunk(text, cx))
+                    pane.update(cx, |pane, cx| pane.send_composer_text_chunk(text, cx))
                 })
             } else {
-                pane.update(cx, |pane, cx| {
-                    pane.send_command_sender_raw_bytes(&args.input, cx)
-                })
+                pane.update(cx, |pane, cx| pane.send_composer_raw_bytes(&args.input, cx))
             };
             (terminal_ref, accepted)
         };
@@ -282,7 +280,7 @@ impl WorkspaceApp {
         }
         let result = pane.update(cx, |pane, cx| match action {
             TerminalControlAction::Interrupt => pane
-                .send_command_sender_raw_bytes(&[0x03], cx)
+                .send_composer_raw_bytes(&[0x03], cx)
                 .then_some(())
                 .ok_or_else(|| "The terminal rejected the interrupt input".to_string()),
             TerminalControlAction::Terminate => pane

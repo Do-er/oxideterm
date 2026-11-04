@@ -1256,8 +1256,8 @@ impl WorkspaceApp {
                 .quick_commands
                 .prepare_insertion(command, keep_open)
         });
-        self.ensure_terminal_command_sender_visible(cx);
-        self.replace_terminal_command_sender_text(command, cx);
+        self.ensure_terminal_command_composer_visible(cx);
+        self.replace_terminal_command_composer_text(command, cx);
     }
 
     pub(in crate::workspace) fn handle_quick_commands_key(
@@ -1332,9 +1332,9 @@ impl WorkspaceApp {
                             .prepare_highlighted_insertion(target.as_ref())
                     });
                     if let Some(command) = command {
-                        self.ensure_terminal_command_sender_visible(cx);
-                        let sender_id = self.replace_terminal_command_sender_text(command, cx);
-                        self.focus_terminal_command_sender_input(sender_id, window, cx);
+                        self.ensure_terminal_command_composer_visible(cx);
+                        let document_id = self.replace_terminal_command_composer_text(command, cx);
+                        self.focus_terminal_command_composer_input(document_id, window, cx);
                         cx.notify();
                     }
                     return;
@@ -2645,8 +2645,9 @@ impl WorkspaceApp {
                             if managing {
                                 window.focus(&this.focus_handle, cx);
                             } else {
-                                let sender_id = this.terminal_command_sender.read(cx).active_document_id();
-                                this.focus_terminal_command_sender_input(sender_id, window, cx);
+                                let document_id =
+                                    this.terminal_command_composer.read(cx).active_document_id();
+                                this.focus_terminal_command_composer_input(document_id, window, cx);
                             }
                             cx.stop_propagation();
                             cx.notify();
@@ -3604,8 +3605,8 @@ impl WorkspaceApp {
                 this.terminal.update(cx, |terminal, _cx| {
                     terminal.quick_commands.set_focused_input(input)
                 });
-                this.terminal_command_sender.update(cx, |sender, cx| {
-                    sender.set_compact_focused(false, cx);
+                this.terminal_command_composer.update(cx, |composer, cx| {
+                    composer.set_compact_focused(false, cx);
                 });
             },
             cx,

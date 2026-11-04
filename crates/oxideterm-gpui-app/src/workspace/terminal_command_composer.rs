@@ -11,29 +11,29 @@ use oxideterm_gpui_editor::{
 use oxideterm_gpui_terminal::TerminalPane;
 use oxideterm_gpui_ui::text_input::TextInputViewport;
 use oxideterm_terminal::{
-    TerminalSenderFrame, TerminalSenderInputMode, TerminalSenderPacing, TerminalSenderPlanError,
-    build_terminal_sender_plan,
+    TerminalSendFrame, TerminalSendInputMode, TerminalSendPacing, TerminalSendPlanError,
+    build_terminal_send_plan,
 };
 use oxideterm_theme::ThemeTokens;
 use oxideterm_workspace::PaneId;
 use zeroize::Zeroizing;
 
-pub(super) const TERMINAL_SENDER_DEFAULT_HEIGHT: f32 = 240.0;
-pub(super) const TERMINAL_SENDER_MIN_HEIGHT: f32 = 200.0;
-pub(super) const TERMINAL_SENDER_MAX_VIEWPORT_RATIO: f32 = 0.65;
-const TERMINAL_SENDER_MIN_TERMINAL_HEIGHT: f32 = 180.0;
-const TERMINAL_SENDER_WINDOW_CHROME_RESERVE: f32 = 96.0;
-pub(super) const TERMINAL_SENDER_RESIZE_HOTZONE_HEIGHT: f32 = 14.0;
-pub(super) const TERMINAL_SENDER_MIN_INTERVAL_MS: u64 = 20;
-pub(super) const TERMINAL_SENDER_MAX_INTERVAL_MS: u64 = 60_000;
-pub(super) const TERMINAL_SENDER_MAX_REPEAT_COUNT: u32 = 9_999;
-const TERMINAL_SENDER_PROGRESS_NOTIFY_INTERVAL: Duration = Duration::from_millis(100);
+pub(super) const TERMINAL_COMPOSER_DEFAULT_HEIGHT: f32 = 240.0;
+pub(super) const TERMINAL_COMPOSER_MIN_HEIGHT: f32 = 200.0;
+pub(super) const TERMINAL_COMPOSER_MAX_VIEWPORT_RATIO: f32 = 0.65;
+const TERMINAL_COMPOSER_MIN_TERMINAL_HEIGHT: f32 = 180.0;
+const TERMINAL_COMPOSER_WINDOW_CHROME_RESERVE: f32 = 96.0;
+pub(super) const TERMINAL_COMPOSER_RESIZE_HOTZONE_HEIGHT: f32 = 14.0;
+pub(super) const TERMINAL_COMPOSER_MIN_INTERVAL_MS: u64 = 20;
+pub(super) const TERMINAL_COMPOSER_MAX_INTERVAL_MS: u64 = 60_000;
+pub(super) const TERMINAL_COMPOSER_MAX_REPEAT_COUNT: u32 = 9_999;
+const TERMINAL_COMPOSER_PROGRESS_NOTIFY_INTERVAL: Duration = Duration::from_millis(100);
 
 #[derive(Clone, Copy, Debug, Eq, Hash, PartialEq)]
-pub(super) struct TerminalCommandSenderId(pub(super) u64);
+pub(super) struct TerminalCommandComposerId(pub(super) u64);
 
 #[derive(Clone, Copy, Debug, Eq, PartialEq)]
-pub(super) enum TerminalCommandSenderTargetScope {
+pub(super) enum TerminalCommandComposerTargetScope {
     Current,
     All,
     Broadcast,
@@ -41,7 +41,7 @@ pub(super) enum TerminalCommandSenderTargetScope {
 }
 
 #[derive(Clone, Copy, Debug, Eq, PartialEq)]
-pub(super) enum TerminalCommandSenderStatus {
+pub(super) enum TerminalCommandComposerStatus {
     Idle,
     Running,
     Completed,
@@ -50,7 +50,7 @@ pub(super) enum TerminalCommandSenderStatus {
 }
 
 #[derive(Clone, Copy, Debug, Eq, PartialEq)]
-pub(super) enum TerminalCommandSenderFailure {
+pub(super) enum TerminalCommandComposerFailure {
     EmptyInput,
     InvalidHex,
     NoTargets,
@@ -58,19 +58,19 @@ pub(super) enum TerminalCommandSenderFailure {
 }
 
 #[derive(Clone, Copy, Debug, Eq, PartialEq)]
-enum TerminalCommandSenderOutcome {
+enum TerminalCommandComposerOutcome {
     Completed,
     Stopped,
 }
 
 #[derive(Clone, Copy, Debug, Eq, PartialEq)]
-enum TerminalCommandSenderLayout {
+enum TerminalCommandComposerLayout {
     Hidden,
     Compact,
     Expanded,
 }
 
-impl TerminalCommandSenderLayout {
+impl TerminalCommandComposerLayout {
     fn toggled_visibility(self) -> Self {
         if self == Self::Hidden {
             Self::Compact
@@ -99,48 +99,48 @@ impl TerminalCommandSenderLayout {
 }
 
 #[derive(Clone)]
-pub(super) struct TerminalCommandSenderTarget {
+pub(super) struct TerminalCommandComposerTarget {
     pub(super) pane_id: PaneId,
     pub(super) pane: WeakEntity<TerminalPane>,
 }
 
 #[derive(Clone, Copy)]
-struct TerminalCommandSenderResizeDrag {
+struct TerminalCommandComposerResizeDrag {
     start_cursor_y: gpui::Pixels,
     start_height: f32,
 }
 
 #[derive(Clone)]
-pub(super) struct TerminalCommandSenderDocumentSnapshot {
-    pub(super) id: TerminalCommandSenderId,
+pub(super) struct TerminalCommandComposerDocumentSnapshot {
+    pub(super) id: TerminalCommandComposerId,
     pub(super) editor: Entity<TextEditorView>,
-    pub(super) input_mode: TerminalSenderInputMode,
-    pub(super) pacing: TerminalSenderPacing,
+    pub(super) input_mode: TerminalSendInputMode,
+    pub(super) pacing: TerminalSendPacing,
     pub(super) interval_ms: u64,
     pub(super) repeat_count: u32,
-    pub(super) target_scope: TerminalCommandSenderTargetScope,
+    pub(super) target_scope: TerminalCommandComposerTargetScope,
     pub(super) selected_targets: HashSet<PaneId>,
-    pub(super) status: TerminalCommandSenderStatus,
-    pub(super) failure: Option<TerminalCommandSenderFailure>,
+    pub(super) status: TerminalCommandComposerStatus,
+    pub(super) failure: Option<TerminalCommandComposerFailure>,
     pub(super) completed_units: u64,
     pub(super) total_units: u64,
     pub(super) accepted_writes: u64,
     pub(super) skipped_writes: u64,
 }
 
-struct TerminalCommandSenderDocument {
-    id: TerminalCommandSenderId,
+struct TerminalCommandComposerDocument {
+    id: TerminalCommandComposerId,
     editor: Entity<TextEditorView>,
     compact_draft: Zeroizing<String>,
     compact_viewport: TextInputViewport,
-    input_mode: TerminalSenderInputMode,
-    pacing: TerminalSenderPacing,
+    input_mode: TerminalSendInputMode,
+    pacing: TerminalSendPacing,
     interval_ms: u64,
     repeat_count: u32,
-    target_scope: TerminalCommandSenderTargetScope,
+    target_scope: TerminalCommandComposerTargetScope,
     selected_targets: HashSet<PaneId>,
-    status: TerminalCommandSenderStatus,
-    failure: Option<TerminalCommandSenderFailure>,
+    status: TerminalCommandComposerStatus,
+    failure: Option<TerminalCommandComposerFailure>,
     completed_units: u64,
     total_units: u64,
     accepted_writes: u64,
@@ -149,9 +149,9 @@ struct TerminalCommandSenderDocument {
     last_progress_notify: Option<Instant>,
 }
 
-impl TerminalCommandSenderDocument {
-    fn snapshot(&self) -> TerminalCommandSenderDocumentSnapshot {
-        TerminalCommandSenderDocumentSnapshot {
+impl TerminalCommandComposerDocument {
+    fn snapshot(&self) -> TerminalCommandComposerDocumentSnapshot {
+        TerminalCommandComposerDocumentSnapshot {
             id: self.id,
             editor: self.editor.clone(),
             input_mode: self.input_mode,
@@ -170,23 +170,23 @@ impl TerminalCommandSenderDocument {
     }
 }
 
-struct TerminalCommandSenderRunTarget {
+struct TerminalCommandComposerRunTarget {
     pane_id: PaneId,
     pane: WeakEntity<TerminalPane>,
 }
 
-/// Owns sender documents, target snapshots, timers, cancellation, and progress.
-pub(super) struct TerminalCommandSenderEntity {
-    layout: TerminalCommandSenderLayout,
+/// Owns composer documents, target snapshots, timers, cancellation, and progress.
+pub(super) struct TerminalCommandComposerEntity {
+    layout: TerminalCommandComposerLayout,
     compact_focused: bool,
     compact_suggestions_open: bool,
     compact_suggestion_highlighted: Option<usize>,
     panel_height: f32,
-    resize_drag: Option<TerminalCommandSenderResizeDrag>,
-    documents: Vec<TerminalCommandSenderDocument>,
-    active_document_id: TerminalCommandSenderId,
-    active_tasks: HashMap<TerminalCommandSenderId, Task<()>>,
-    target_owners: HashMap<PaneId, TerminalCommandSenderId>,
+    resize_drag: Option<TerminalCommandComposerResizeDrag>,
+    documents: Vec<TerminalCommandComposerDocument>,
+    active_document_id: TerminalCommandComposerId,
+    active_tasks: HashMap<TerminalCommandComposerId, Task<()>>,
+    target_owners: HashMap<PaneId, TerminalCommandComposerId>,
     next_document_id: u64,
     compact_editor_placeholder: String,
     expanded_editor_placeholder: String,
@@ -194,7 +194,7 @@ pub(super) struct TerminalCommandSenderEntity {
     editor_tokens: ThemeTokens,
 }
 
-impl TerminalCommandSenderEntity {
+impl TerminalCommandComposerEntity {
     pub(super) fn new(
         tokens: ThemeTokens,
         compact_editor_placeholder: String,
@@ -202,21 +202,21 @@ impl TerminalCommandSenderEntity {
         editor_context_menu_labels: EditorContextMenuLabels,
         cx: &mut Context<Self>,
     ) -> Self {
-        let first_id = TerminalCommandSenderId(1);
+        let first_id = TerminalCommandComposerId(1);
         let first = Self::new_document(
             first_id,
             tokens,
             &compact_editor_placeholder,
             &editor_context_menu_labels,
-            TerminalCommandSenderLayout::Compact.editor_presentation(),
+            TerminalCommandComposerLayout::Compact.editor_presentation(),
             cx,
         );
         Self {
-            layout: TerminalCommandSenderLayout::Compact,
+            layout: TerminalCommandComposerLayout::Compact,
             compact_focused: false,
             compact_suggestions_open: false,
             compact_suggestion_highlighted: None,
-            panel_height: TERMINAL_SENDER_DEFAULT_HEIGHT,
+            panel_height: TERMINAL_COMPOSER_DEFAULT_HEIGHT,
             resize_drag: None,
             documents: vec![first],
             active_document_id: first_id,
@@ -231,13 +231,13 @@ impl TerminalCommandSenderEntity {
     }
 
     fn new_document(
-        id: TerminalCommandSenderId,
+        id: TerminalCommandComposerId,
         tokens: ThemeTokens,
         placeholder: &str,
         context_menu_labels: &EditorContextMenuLabels,
         presentation: EditorPresentation,
         cx: &mut Context<Self>,
-    ) -> TerminalCommandSenderDocument {
+    ) -> TerminalCommandComposerDocument {
         let placeholder = placeholder.to_string();
         let context_menu_labels = context_menu_labels.clone();
         let editor = cx.new(|cx| {
@@ -256,18 +256,18 @@ impl TerminalCommandSenderEntity {
             editor.set_context_menu_labels(context_menu_labels);
             editor
         });
-        TerminalCommandSenderDocument {
+        TerminalCommandComposerDocument {
             id,
             editor,
             compact_draft: Zeroizing::new(String::new()),
             compact_viewport: TextInputViewport::default(),
-            input_mode: TerminalSenderInputMode::Text,
-            pacing: TerminalSenderPacing::Line,
+            input_mode: TerminalSendInputMode::Text,
+            pacing: TerminalSendPacing::Line,
             interval_ms: 1_000,
             repeat_count: 1,
-            target_scope: TerminalCommandSenderTargetScope::Current,
+            target_scope: TerminalCommandComposerTargetScope::Current,
             selected_targets: HashSet::new(),
-            status: TerminalCommandSenderStatus::Idle,
+            status: TerminalCommandComposerStatus::Idle,
             failure: None,
             completed_units: 0,
             total_units: 0,
@@ -279,11 +279,11 @@ impl TerminalCommandSenderEntity {
     }
 
     pub(super) fn is_expanded(&self) -> bool {
-        self.layout == TerminalCommandSenderLayout::Expanded
+        self.layout == TerminalCommandComposerLayout::Expanded
     }
 
     pub(super) fn is_visible(&self) -> bool {
-        self.layout != TerminalCommandSenderLayout::Hidden
+        self.layout != TerminalCommandComposerLayout::Hidden
     }
 
     pub(super) fn toggle_visible(&mut self, cx: &mut Context<Self>) -> bool {
@@ -317,19 +317,21 @@ impl TerminalCommandSenderEntity {
         self.set_expanded(!self.is_expanded(), cx);
     }
 
-    pub(super) fn document_snapshots(&self) -> Vec<TerminalCommandSenderDocumentSnapshot> {
+    pub(super) fn document_snapshots(&self) -> Vec<TerminalCommandComposerDocumentSnapshot> {
         self.documents
             .iter()
-            .map(TerminalCommandSenderDocument::snapshot)
+            .map(TerminalCommandComposerDocument::snapshot)
             .collect()
     }
 
-    pub(super) fn active_document_snapshot(&self) -> Option<TerminalCommandSenderDocumentSnapshot> {
+    pub(super) fn active_document_snapshot(
+        &self,
+    ) -> Option<TerminalCommandComposerDocumentSnapshot> {
         self.document(self.active_document_id)
-            .map(TerminalCommandSenderDocument::snapshot)
+            .map(TerminalCommandComposerDocument::snapshot)
     }
 
-    pub(super) fn active_document_id(&self) -> TerminalCommandSenderId {
+    pub(super) fn active_document_id(&self) -> TerminalCommandComposerId {
         self.active_document_id
     }
 
@@ -338,7 +340,7 @@ impl TerminalCommandSenderEntity {
     }
 
     pub(super) fn set_compact_focused(&mut self, focused: bool, cx: &mut Context<Self>) {
-        let focused = focused && self.layout == TerminalCommandSenderLayout::Compact;
+        let focused = focused && self.layout == TerminalCommandComposerLayout::Compact;
         if self.compact_focused != focused {
             self.compact_focused = focused;
             if !focused {
@@ -411,23 +413,23 @@ impl TerminalCommandSenderEntity {
         &mut self,
         text: String,
         cx: &mut Context<Self>,
-    ) -> TerminalCommandSenderId {
-        let sender_id = self.editable_active_document_id(cx);
-        if let Some(document) = self.document_mut(sender_id) {
+    ) -> TerminalCommandComposerId {
+        let document_id = self.editable_active_document_id(cx);
+        if let Some(document) = self.document_mut(document_id) {
             document.compact_draft = Zeroizing::new(text);
             document.failure = None;
         }
         self.dismiss_compact_suggestions();
         cx.notify();
-        sender_id
+        document_id
     }
 
     pub(super) fn clear_compact_text(
         &mut self,
-        sender_id: TerminalCommandSenderId,
+        document_id: TerminalCommandComposerId,
         cx: &mut Context<Self>,
     ) {
-        if let Some(document) = self.document_mut(sender_id) {
+        if let Some(document) = self.document_mut(document_id) {
             document.compact_draft = Zeroizing::new(String::new());
             document.compact_viewport = TextInputViewport::default();
             self.dismiss_compact_suggestions();
@@ -439,86 +441,43 @@ impl TerminalCommandSenderEntity {
         &mut self,
         text: String,
         cx: &mut Context<Self>,
-    ) -> TerminalCommandSenderId {
+    ) -> TerminalCommandComposerId {
         if !self.is_expanded() {
             return self.replace_active_compact_text(text, cx);
         }
-        let (sender_id, editor) = self.editable_active_editor(cx);
+        let (document_id, editor) = self.editable_active_editor(cx);
         editor.update(cx, |editor, cx| {
             editor.replace_text_external(text, cx);
             editor.move_cursor_to_document_end(cx);
         });
-        sender_id
-    }
-
-    pub(super) fn append_active_text(
-        &mut self,
-        suffix: &str,
-        separate_with_space: bool,
-        cx: &mut Context<Self>,
-    ) -> TerminalCommandSenderId {
-        if !self.is_expanded() {
-            let sender_id = self.editable_active_document_id(cx);
-            if let Some(document) = self.document_mut(sender_id) {
-                if separate_with_space
-                    && document
-                        .compact_draft
-                        .chars()
-                        .next_back()
-                        .is_some_and(|last| !last.is_whitespace())
-                {
-                    document.compact_draft.push(' ');
-                }
-                document.compact_draft.push_str(suffix);
-                document.failure = None;
-                self.dismiss_compact_suggestions();
-                cx.notify();
-            }
-            return sender_id;
-        }
-        let (sender_id, editor) = self.editable_active_editor(cx);
-        let mut text = Zeroizing::new(editor.read(cx).buffer().text());
-        if separate_with_space
-            && text
-                .chars()
-                .next_back()
-                .is_some_and(|last| !last.is_whitespace())
-        {
-            text.push(' ');
-        }
-        text.push_str(suffix);
-        editor.update(cx, |editor, cx| {
-            editor.replace_text_external(std::mem::take(&mut *text), cx);
-            editor.move_cursor_to_document_end(cx);
-        });
-        sender_id
+        document_id
     }
 
     pub(super) fn running_count(&self) -> usize {
         self.documents
             .iter()
-            .filter(|document| document.status == TerminalCommandSenderStatus::Running)
+            .filter(|document| document.status == TerminalCommandComposerStatus::Running)
             .count()
     }
 
     pub(super) fn set_active_document(
         &mut self,
-        sender_id: TerminalCommandSenderId,
+        document_id: TerminalCommandComposerId,
         cx: &mut Context<Self>,
     ) {
-        if self.active_document_id == sender_id || self.document(sender_id).is_none() {
+        if self.active_document_id == document_id || self.document(document_id).is_none() {
             return;
         }
-        self.active_document_id = sender_id;
+        self.active_document_id = document_id;
         self.dismiss_compact_suggestions();
         cx.notify();
     }
 
-    pub(super) fn add_document(&mut self, cx: &mut Context<Self>) -> TerminalCommandSenderId {
-        let sender_id = TerminalCommandSenderId(self.next_document_id);
+    pub(super) fn add_document(&mut self, cx: &mut Context<Self>) -> TerminalCommandComposerId {
+        let document_id = TerminalCommandComposerId(self.next_document_id);
         self.next_document_id = self.next_document_id.wrapping_add(1).max(1);
         self.documents.push(Self::new_document(
-            sender_id,
+            document_id,
             self.editor_tokens,
             if self.is_expanded() {
                 &self.expanded_editor_placeholder
@@ -529,29 +488,29 @@ impl TerminalCommandSenderEntity {
             self.layout.editor_presentation(),
             cx,
         ));
-        self.active_document_id = sender_id;
+        self.active_document_id = document_id;
         cx.notify();
-        sender_id
+        document_id
     }
 
     pub(super) fn remove_document(
         &mut self,
-        sender_id: TerminalCommandSenderId,
+        document_id: TerminalCommandComposerId,
         cx: &mut Context<Self>,
     ) -> bool {
         if self.documents.len() == 1 {
             return false;
         }
-        self.cancel_task(sender_id);
+        self.cancel_task(document_id);
         let Some(index) = self
             .documents
             .iter()
-            .position(|document| document.id == sender_id)
+            .position(|document| document.id == document_id)
         else {
             return false;
         };
         self.documents.remove(index);
-        if self.active_document_id == sender_id {
+        if self.active_document_id == document_id {
             let next_index = index.min(self.documents.len().saturating_sub(1));
             self.active_document_id = self.documents[next_index].id;
         }
@@ -561,17 +520,17 @@ impl TerminalCommandSenderEntity {
 
     pub(super) fn set_input_mode(
         &mut self,
-        sender_id: TerminalCommandSenderId,
-        mode: TerminalSenderInputMode,
+        document_id: TerminalCommandComposerId,
+        mode: TerminalSendInputMode,
         cx: &mut Context<Self>,
     ) {
         if self
-            .document(sender_id)
-            .is_some_and(|document| document.status == TerminalCommandSenderStatus::Running)
+            .document(document_id)
+            .is_some_and(|document| document.status == TerminalCommandComposerStatus::Running)
         {
             return;
         }
-        if let Some(document) = self.document_mut(sender_id)
+        if let Some(document) = self.document_mut(document_id)
             && document.input_mode != mode
         {
             document.input_mode = mode;
@@ -583,23 +542,23 @@ impl TerminalCommandSenderEntity {
 
     pub(super) fn set_pacing(
         &mut self,
-        sender_id: TerminalCommandSenderId,
-        pacing: TerminalSenderPacing,
+        document_id: TerminalCommandComposerId,
+        pacing: TerminalSendPacing,
         cx: &mut Context<Self>,
     ) {
         if self
-            .document(sender_id)
-            .is_some_and(|document| document.status == TerminalCommandSenderStatus::Running)
+            .document(document_id)
+            .is_some_and(|document| document.status == TerminalCommandComposerStatus::Running)
         {
             return;
         }
-        if let Some(document) = self.document_mut(sender_id)
+        if let Some(document) = self.document_mut(document_id)
             && document.pacing != pacing
         {
             document.pacing = pacing;
             document.interval_ms = document.interval_ms.max(match pacing {
-                TerminalSenderPacing::Line => 100,
-                TerminalSenderPacing::Character => TERMINAL_SENDER_MIN_INTERVAL_MS,
+                TerminalSendPacing::Line => 100,
+                TerminalSendPacing::Character => TERMINAL_COMPOSER_MIN_INTERVAL_MS,
             });
             document.failure = None;
             cx.notify();
@@ -608,27 +567,27 @@ impl TerminalCommandSenderEntity {
 
     pub(super) fn adjust_interval(
         &mut self,
-        sender_id: TerminalCommandSenderId,
+        document_id: TerminalCommandComposerId,
         delta_ms: i64,
         cx: &mut Context<Self>,
     ) {
         if self
-            .document(sender_id)
-            .is_some_and(|document| document.status == TerminalCommandSenderStatus::Running)
+            .document(document_id)
+            .is_some_and(|document| document.status == TerminalCommandComposerStatus::Running)
         {
             return;
         }
-        if let Some(document) = self.document_mut(sender_id) {
+        if let Some(document) = self.document_mut(document_id) {
             let minimum = match document.pacing {
-                TerminalSenderPacing::Line => 100,
-                TerminalSenderPacing::Character => TERMINAL_SENDER_MIN_INTERVAL_MS,
+                TerminalSendPacing::Line => 100,
+                TerminalSendPacing::Character => TERMINAL_COMPOSER_MIN_INTERVAL_MS,
             };
             let next = if delta_ms.is_negative() {
                 document.interval_ms.saturating_sub(delta_ms.unsigned_abs())
             } else {
                 document.interval_ms.saturating_add(delta_ms as u64)
             }
-            .clamp(minimum, TERMINAL_SENDER_MAX_INTERVAL_MS);
+            .clamp(minimum, TERMINAL_COMPOSER_MAX_INTERVAL_MS);
             if next != document.interval_ms {
                 document.interval_ms = next;
                 cx.notify();
@@ -638,17 +597,17 @@ impl TerminalCommandSenderEntity {
 
     pub(super) fn adjust_repeat_count(
         &mut self,
-        sender_id: TerminalCommandSenderId,
+        document_id: TerminalCommandComposerId,
         delta: i32,
         cx: &mut Context<Self>,
     ) {
         if self
-            .document(sender_id)
-            .is_some_and(|document| document.status == TerminalCommandSenderStatus::Running)
+            .document(document_id)
+            .is_some_and(|document| document.status == TerminalCommandComposerStatus::Running)
         {
             return;
         }
-        if let Some(document) = self.document_mut(sender_id) {
+        if let Some(document) = self.document_mut(document_id) {
             let current = document.repeat_count;
             let next = if delta.is_negative() {
                 let abs_delta = delta.unsigned_abs();
@@ -660,9 +619,11 @@ impl TerminalCommandSenderEntity {
             } else {
                 let add_delta = delta as u32;
                 if current == 0 {
-                    add_delta.clamp(1, TERMINAL_SENDER_MAX_REPEAT_COUNT)
+                    add_delta.clamp(1, TERMINAL_COMPOSER_MAX_REPEAT_COUNT)
                 } else {
-                    current.saturating_add(add_delta).min(TERMINAL_SENDER_MAX_REPEAT_COUNT)
+                    current
+                        .saturating_add(add_delta)
+                        .min(TERMINAL_COMPOSER_MAX_REPEAT_COUNT)
                 }
             };
             if next != document.repeat_count {
@@ -674,16 +635,16 @@ impl TerminalCommandSenderEntity {
 
     pub(super) fn cycle_repeat_preset(
         &mut self,
-        sender_id: TerminalCommandSenderId,
+        document_id: TerminalCommandComposerId,
         cx: &mut Context<Self>,
     ) {
         if self
-            .document(sender_id)
-            .is_some_and(|document| document.status == TerminalCommandSenderStatus::Running)
+            .document(document_id)
+            .is_some_and(|document| document.status == TerminalCommandComposerStatus::Running)
         {
             return;
         }
-        if let Some(document) = self.document_mut(sender_id) {
+        if let Some(document) = self.document_mut(document_id) {
             let next = match document.repeat_count {
                 0 => 1,
                 1..=9 => 10,
@@ -700,17 +661,17 @@ impl TerminalCommandSenderEntity {
 
     pub(super) fn set_target_scope(
         &mut self,
-        sender_id: TerminalCommandSenderId,
-        scope: TerminalCommandSenderTargetScope,
+        document_id: TerminalCommandComposerId,
+        scope: TerminalCommandComposerTargetScope,
         cx: &mut Context<Self>,
     ) {
         if self
-            .document(sender_id)
-            .is_some_and(|document| document.status == TerminalCommandSenderStatus::Running)
+            .document(document_id)
+            .is_some_and(|document| document.status == TerminalCommandComposerStatus::Running)
         {
             return;
         }
-        if let Some(document) = self.document_mut(sender_id)
+        if let Some(document) = self.document_mut(document_id)
             && document.target_scope != scope
         {
             document.target_scope = scope;
@@ -722,21 +683,21 @@ impl TerminalCommandSenderEntity {
 
     pub(super) fn toggle_selected_target(
         &mut self,
-        sender_id: TerminalCommandSenderId,
+        document_id: TerminalCommandComposerId,
         pane_id: PaneId,
         cx: &mut Context<Self>,
     ) {
         if self
-            .document(sender_id)
-            .is_some_and(|document| document.status == TerminalCommandSenderStatus::Running)
+            .document(document_id)
+            .is_some_and(|document| document.status == TerminalCommandComposerStatus::Running)
         {
             return;
         }
-        if let Some(document) = self.document_mut(sender_id) {
+        if let Some(document) = self.document_mut(document_id) {
             if !document.selected_targets.remove(&pane_id) {
                 document.selected_targets.insert(pane_id);
             }
-            document.target_scope = TerminalCommandSenderTargetScope::Selected;
+            document.target_scope = TerminalCommandComposerTargetScope::Selected;
             document.failure = None;
             cx.notify();
         }
@@ -744,20 +705,20 @@ impl TerminalCommandSenderEntity {
 
     pub(super) fn set_selected_targets(
         &mut self,
-        sender_id: TerminalCommandSenderId,
+        document_id: TerminalCommandComposerId,
         targets: &[PaneId],
         cx: &mut Context<Self>,
     ) {
         if self
-            .document(sender_id)
-            .is_some_and(|document| document.status == TerminalCommandSenderStatus::Running)
+            .document(document_id)
+            .is_some_and(|document| document.status == TerminalCommandComposerStatus::Running)
         {
             return;
         }
-        if let Some(document) = self.document_mut(sender_id) {
+        if let Some(document) = self.document_mut(document_id) {
             document.selected_targets.clear();
             document.selected_targets.extend(targets.iter().copied());
-            document.target_scope = TerminalCommandSenderTargetScope::Selected;
+            document.target_scope = TerminalCommandComposerTargetScope::Selected;
             document.failure = None;
             cx.notify();
         }
@@ -783,17 +744,17 @@ impl TerminalCommandSenderEntity {
 
     pub(super) fn start(
         &mut self,
-        sender_id: TerminalCommandSenderId,
+        document_id: TerminalCommandComposerId,
         current_pane_id: Option<PaneId>,
-        candidates: Vec<TerminalCommandSenderTarget>,
+        candidates: Vec<TerminalCommandComposerTarget>,
         cx: &mut Context<Self>,
     ) -> bool {
-        let Some(document) = self.document(sender_id) else {
+        let Some(document) = self.document(document_id) else {
             return false;
         };
         // Starting is not an implicit restart gesture. Refusing a second Start
         // keeps the active task and its target ownership unchanged.
-        if document.status == TerminalCommandSenderStatus::Running {
+        if document.status == TerminalCommandComposerStatus::Running {
             return false;
         }
         let input = if self.is_expanded() {
@@ -807,35 +768,35 @@ impl TerminalCommandSenderEntity {
         let interval = Duration::from_millis(document.interval_ms);
         let scope = document.target_scope;
         let selected_targets = document.selected_targets.clone();
-        let plan = match build_terminal_sender_plan(input, mode, pacing, repeat_count) {
+        let plan = match build_terminal_send_plan(input, mode, pacing, repeat_count) {
             Ok(plan) => plan,
             Err(error) => {
-                self.set_failure(sender_id, plan_failure(error), cx);
+                self.set_failure(document_id, plan_failure(error), cx);
                 return false;
             }
         };
 
         let targets = resolve_run_targets(scope, current_pane_id, &selected_targets, candidates);
         if targets.is_empty() {
-            self.set_failure(sender_id, TerminalCommandSenderFailure::NoTargets, cx);
+            self.set_failure(document_id, TerminalCommandComposerFailure::NoTargets, cx);
             return false;
         }
         if targets.iter().any(|target| {
             self.target_owners
                 .get(&target.pane_id)
-                .is_some_and(|owner| *owner != sender_id)
+                .is_some_and(|owner| *owner != document_id)
         }) {
-            self.set_failure(sender_id, TerminalCommandSenderFailure::TargetBusy, cx);
+            self.set_failure(document_id, TerminalCommandComposerFailure::TargetBusy, cx);
             return false;
         }
 
-        self.cancel_task(sender_id);
+        self.cancel_task(document_id);
         let generation = {
             let document = self
-                .document_mut(sender_id)
-                .expect("sender document disappeared before task start");
+                .document_mut(document_id)
+                .expect("composer document disappeared before task start");
             document.generation = document.generation.wrapping_add(1);
-            document.status = TerminalCommandSenderStatus::Running;
+            document.status = TerminalCommandComposerStatus::Running;
             document.failure = None;
             document.completed_units = 0;
             document.total_units = plan.total_units();
@@ -845,16 +806,16 @@ impl TerminalCommandSenderEntity {
             document.generation
         };
         for target in &targets {
-            self.target_owners.insert(target.pane_id, sender_id);
+            self.target_owners.insert(target.pane_id, document_id);
         }
         if let Some(editor) = self
-            .document(sender_id)
+            .document(document_id)
             .map(|document| document.editor.clone())
         {
             editor.update(cx, |editor, _cx| editor.set_read_only(true));
         }
 
-        let task = cx.spawn(async move |sender, cx| {
+        let task = cx.spawn(async move |composer, cx| {
             let mut stopped_for_missing_targets = false;
             let mut repeat_index: u64 = 0;
             let is_infinite = plan.is_infinite();
@@ -867,9 +828,9 @@ impl TerminalCommandSenderEntity {
                     let is_final_unit = !is_infinite
                         && repeat_index + 1 == limit
                         && frame_index + 1 == plan.frames().len();
-                    let should_continue = sender
-                        .update(cx, |sender, cx| {
-                            sender.dispatch_frame(sender_id, generation, frame, &targets, cx)
+                    let should_continue = composer
+                        .update(cx, |composer, cx| {
+                            composer.dispatch_frame(document_id, generation, frame, &targets, cx)
                         })
                         .unwrap_or(false);
                     if !should_continue {
@@ -882,39 +843,39 @@ impl TerminalCommandSenderEntity {
                 }
                 repeat_index = repeat_index.saturating_add(1);
             }
-            let _ = sender.update(cx, |sender, cx| {
-                sender.finish_run(
-                    sender_id,
+            let _ = composer.update(cx, |composer, cx| {
+                composer.finish_run(
+                    document_id,
                     generation,
                     if stopped_for_missing_targets {
-                        TerminalCommandSenderOutcome::Stopped
+                        TerminalCommandComposerOutcome::Stopped
                     } else {
-                        TerminalCommandSenderOutcome::Completed
+                        TerminalCommandComposerOutcome::Completed
                     },
                     cx,
                 );
             });
         });
-        self.active_tasks.insert(sender_id, task);
+        self.active_tasks.insert(document_id, task);
         cx.notify();
         true
     }
 
     pub(super) fn stop(
         &mut self,
-        sender_id: TerminalCommandSenderId,
+        document_id: TerminalCommandComposerId,
         cx: &mut Context<Self>,
     ) -> bool {
         let running = self
-            .document(sender_id)
-            .is_some_and(|document| document.status == TerminalCommandSenderStatus::Running);
+            .document(document_id)
+            .is_some_and(|document| document.status == TerminalCommandComposerStatus::Running);
         if !running {
             return false;
         }
-        self.cancel_task(sender_id);
-        if let Some(document) = self.document_mut(sender_id) {
+        self.cancel_task(document_id);
+        if let Some(document) = self.document_mut(document_id) {
             document.generation = document.generation.wrapping_add(1);
-            document.status = TerminalCommandSenderStatus::Stopped;
+            document.status = TerminalCommandComposerStatus::Stopped;
             document.editor.update(cx, |editor, _cx| {
                 editor.set_read_only(false);
             });
@@ -927,27 +888,27 @@ impl TerminalCommandSenderEntity {
         let running_ids = self
             .documents
             .iter()
-            .filter(|document| document.status == TerminalCommandSenderStatus::Running)
+            .filter(|document| document.status == TerminalCommandComposerStatus::Running)
             .map(|document| document.id)
             .collect::<Vec<_>>();
-        for sender_id in running_ids {
-            let _ = self.stop(sender_id, cx);
+        for document_id in running_ids {
+            let _ = self.stop(document_id, cx);
         }
     }
 
     fn dispatch_frame(
         &mut self,
-        sender_id: TerminalCommandSenderId,
+        document_id: TerminalCommandComposerId,
         generation: u64,
-        frame: &TerminalSenderFrame,
-        targets: &[TerminalCommandSenderRunTarget],
+        frame: &TerminalSendFrame,
+        targets: &[TerminalCommandComposerRunTarget],
         cx: &mut Context<Self>,
     ) -> bool {
-        let Some(document) = self.document(sender_id) else {
+        let Some(document) = self.document(document_id) else {
             return false;
         };
         if document.generation != generation
-            || document.status != TerminalCommandSenderStatus::Running
+            || document.status != TerminalCommandComposerStatus::Running
         {
             return false;
         }
@@ -957,13 +918,9 @@ impl TerminalCommandSenderEntity {
         let mut live_targets = 0usize;
         for target in targets {
             let result = target.pane.update(cx, |pane, cx| match frame {
-                TerminalSenderFrame::TextLine(line) => pane.send_command_sender_line(line, cx),
-                TerminalSenderFrame::TextChunk(text) => {
-                    pane.send_command_sender_text_chunk(text, cx)
-                }
-                TerminalSenderFrame::RawBytes(bytes) => {
-                    pane.send_command_sender_raw_bytes(bytes, cx)
-                }
+                TerminalSendFrame::TextLine(line) => pane.send_composer_line(line, cx),
+                TerminalSendFrame::TextChunk(text) => pane.send_composer_text_chunk(text, cx),
+                TerminalSendFrame::RawBytes(bytes) => pane.send_composer_raw_bytes(bytes, cx),
             });
             match result {
                 Ok(true) => {
@@ -978,7 +935,7 @@ impl TerminalCommandSenderEntity {
             }
         }
         let panel_expanded = self.is_expanded();
-        let Some(document) = self.document_mut(sender_id) else {
+        let Some(document) = self.document_mut(document_id) else {
             return false;
         };
         document.completed_units = document.completed_units.saturating_add(1);
@@ -988,7 +945,7 @@ impl TerminalCommandSenderEntity {
         let progress_complete =
             document.total_units > 0 && document.completed_units >= document.total_units;
         let repaint_due = document.last_progress_notify.is_none_or(|last| {
-            now.duration_since(last) >= TERMINAL_SENDER_PROGRESS_NOTIFY_INTERVAL
+            now.duration_since(last) >= TERMINAL_COMPOSER_PROGRESS_NOTIFY_INTERVAL
         });
         if panel_expanded && (progress_complete || repaint_due) {
             document.last_progress_notify = Some(now);
@@ -1000,38 +957,38 @@ impl TerminalCommandSenderEntity {
 
     fn finish_run(
         &mut self,
-        sender_id: TerminalCommandSenderId,
+        document_id: TerminalCommandComposerId,
         generation: u64,
-        outcome: TerminalCommandSenderOutcome,
+        outcome: TerminalCommandComposerOutcome,
         cx: &mut Context<Self>,
     ) {
-        let Some(document) = self.document_mut(sender_id) else {
+        let Some(document) = self.document_mut(document_id) else {
             return;
         };
         if document.generation != generation
-            || document.status != TerminalCommandSenderStatus::Running
+            || document.status != TerminalCommandComposerStatus::Running
         {
             return;
         }
         document.status = match outcome {
-            TerminalCommandSenderOutcome::Completed => TerminalCommandSenderStatus::Completed,
-            TerminalCommandSenderOutcome::Stopped => TerminalCommandSenderStatus::Stopped,
+            TerminalCommandComposerOutcome::Completed => TerminalCommandComposerStatus::Completed,
+            TerminalCommandComposerOutcome::Stopped => TerminalCommandComposerStatus::Stopped,
         };
         document.editor.update(cx, |editor, _cx| {
             editor.set_read_only(false);
         });
-        self.release_target_ownership(sender_id);
+        self.release_target_ownership(document_id);
         cx.notify();
     }
 
     fn set_failure(
         &mut self,
-        sender_id: TerminalCommandSenderId,
-        failure: TerminalCommandSenderFailure,
+        document_id: TerminalCommandComposerId,
+        failure: TerminalCommandComposerFailure,
         cx: &mut Context<Self>,
     ) {
-        if let Some(document) = self.document_mut(sender_id) {
-            document.status = TerminalCommandSenderStatus::Failed;
+        if let Some(document) = self.document_mut(document_id) {
+            document.status = TerminalCommandComposerStatus::Failed;
             document.failure = Some(failure);
             document.completed_units = 0;
             document.total_units = 0;
@@ -1041,33 +998,33 @@ impl TerminalCommandSenderEntity {
         }
     }
 
-    fn cancel_task(&mut self, sender_id: TerminalCommandSenderId) {
+    fn cancel_task(&mut self, document_id: TerminalCommandComposerId) {
         // Dropping the Entity-owned GPUI task cancels its pending timer.
-        self.active_tasks.remove(&sender_id);
-        self.release_target_ownership(sender_id);
+        self.active_tasks.remove(&document_id);
+        self.release_target_ownership(document_id);
     }
 
-    fn release_target_ownership(&mut self, sender_id: TerminalCommandSenderId) {
-        self.target_owners.retain(|_, owner| *owner != sender_id);
+    fn release_target_ownership(&mut self, document_id: TerminalCommandComposerId) {
+        self.target_owners.retain(|_, owner| *owner != document_id);
     }
 
     fn editable_active_editor(
         &mut self,
         cx: &mut Context<Self>,
-    ) -> (TerminalCommandSenderId, Entity<TextEditorView>) {
-        let sender_id = self.editable_active_document_id(cx);
+    ) -> (TerminalCommandComposerId, Entity<TextEditorView>) {
+        let document_id = self.editable_active_document_id(cx);
         let editor = self
-            .document(sender_id)
-            .expect("active sender document disappeared")
+            .document(document_id)
+            .expect("active composer document disappeared")
             .editor
             .clone();
-        (sender_id, editor)
+        (document_id, editor)
     }
 
-    fn editable_active_document_id(&mut self, cx: &mut Context<Self>) -> TerminalCommandSenderId {
+    fn editable_active_document_id(&mut self, cx: &mut Context<Self>) -> TerminalCommandComposerId {
         if self
             .document(self.active_document_id)
-            .is_some_and(|document| document.status == TerminalCommandSenderStatus::Running)
+            .is_some_and(|document| document.status == TerminalCommandComposerStatus::Running)
         {
             self.add_document(cx)
         } else {
@@ -1077,24 +1034,24 @@ impl TerminalCommandSenderEntity {
 
     fn document(
         &self,
-        sender_id: TerminalCommandSenderId,
-    ) -> Option<&TerminalCommandSenderDocument> {
+        document_id: TerminalCommandComposerId,
+    ) -> Option<&TerminalCommandComposerDocument> {
         self.documents
             .iter()
-            .find(|document| document.id == sender_id)
+            .find(|document| document.id == document_id)
     }
 
     fn document_mut(
         &mut self,
-        sender_id: TerminalCommandSenderId,
-    ) -> Option<&mut TerminalCommandSenderDocument> {
+        document_id: TerminalCommandComposerId,
+    ) -> Option<&mut TerminalCommandComposerDocument> {
         self.documents
             .iter_mut()
-            .find(|document| document.id == sender_id)
+            .find(|document| document.id == document_id)
     }
 
     pub(super) fn panel_height_for_viewport(&self, viewport_height: f32) -> f32 {
-        adjusted_sender_panel_height(self.panel_height, 0.0, viewport_height)
+        adjusted_composer_panel_height(self.panel_height, 0.0, viewport_height)
     }
 
     pub(super) fn is_resizing(&self) -> bool {
@@ -1109,7 +1066,7 @@ impl TerminalCommandSenderEntity {
     ) {
         let current_height = self.panel_height_for_viewport(viewport_height);
         self.panel_height = current_height;
-        self.resize_drag = Some(TerminalCommandSenderResizeDrag {
+        self.resize_drag = Some(TerminalCommandComposerResizeDrag {
             start_cursor_y: cursor_y,
             start_height: current_height,
         });
@@ -1130,7 +1087,7 @@ impl TerminalCommandSenderEntity {
             self.finish_resize(cx);
             return;
         }
-        let next_height = adjusted_sender_panel_height(
+        let next_height = adjusted_composer_panel_height(
             drag.start_height,
             f32::from(cursor_y - drag.start_cursor_y),
             viewport_height,
@@ -1149,7 +1106,7 @@ impl TerminalCommandSenderEntity {
 
     pub(super) fn reset_height(&mut self, viewport_height: f32, cx: &mut Context<Self>) {
         let height =
-            adjusted_sender_panel_height(TERMINAL_SENDER_DEFAULT_HEIGHT, 0.0, viewport_height);
+            adjusted_composer_panel_height(TERMINAL_COMPOSER_DEFAULT_HEIGHT, 0.0, viewport_height);
         let changed = (height - self.panel_height).abs() >= f32::EPSILON;
         self.panel_height = height;
         self.resize_drag = None;
@@ -1200,19 +1157,19 @@ impl TerminalCommandSenderEntity {
 
     fn sync_text_for_layout_change(
         &mut self,
-        next_layout: TerminalCommandSenderLayout,
+        next_layout: TerminalCommandComposerLayout,
         cx: &mut Context<Self>,
     ) {
         // The rendered surface is the sole live editor; layout boundaries transfer its draft.
-        if self.layout == TerminalCommandSenderLayout::Expanded
-            && next_layout != TerminalCommandSenderLayout::Expanded
+        if self.layout == TerminalCommandComposerLayout::Expanded
+            && next_layout != TerminalCommandComposerLayout::Expanded
         {
             for document in &mut self.documents {
                 document.compact_draft = Zeroizing::new(document.editor.read(cx).buffer().text());
                 document.compact_viewport = TextInputViewport::default();
             }
-        } else if self.layout != TerminalCommandSenderLayout::Expanded
-            && next_layout == TerminalCommandSenderLayout::Expanded
+        } else if self.layout != TerminalCommandComposerLayout::Expanded
+            && next_layout == TerminalCommandComposerLayout::Expanded
         {
             for document in &self.documents {
                 let text = document.compact_draft.to_string();
@@ -1226,56 +1183,56 @@ impl TerminalCommandSenderEntity {
 }
 
 fn resolve_run_targets(
-    scope: TerminalCommandSenderTargetScope,
+    scope: TerminalCommandComposerTargetScope,
     current_pane_id: Option<PaneId>,
     selected_targets: &HashSet<PaneId>,
-    candidates: Vec<TerminalCommandSenderTarget>,
-) -> Vec<TerminalCommandSenderRunTarget> {
+    candidates: Vec<TerminalCommandComposerTarget>,
+) -> Vec<TerminalCommandComposerRunTarget> {
     let mut seen = HashSet::new();
     candidates
         .into_iter()
         .filter(|target| match scope {
-            TerminalCommandSenderTargetScope::Current => current_pane_id == Some(target.pane_id),
-            TerminalCommandSenderTargetScope::All => true,
-            TerminalCommandSenderTargetScope::Broadcast => {
+            TerminalCommandComposerTargetScope::Current => current_pane_id == Some(target.pane_id),
+            TerminalCommandComposerTargetScope::All => true,
+            TerminalCommandComposerTargetScope::Broadcast => {
                 selected_targets.contains(&target.pane_id)
             }
-            TerminalCommandSenderTargetScope::Selected => {
+            TerminalCommandComposerTargetScope::Selected => {
                 selected_targets.contains(&target.pane_id)
             }
         })
         .filter(|target| seen.insert(target.pane_id))
-        .map(|target| TerminalCommandSenderRunTarget {
+        .map(|target| TerminalCommandComposerRunTarget {
             pane_id: target.pane_id,
             pane: target.pane,
         })
         .collect()
 }
 
-fn plan_failure(error: TerminalSenderPlanError) -> TerminalCommandSenderFailure {
+fn plan_failure(error: TerminalSendPlanError) -> TerminalCommandComposerFailure {
     match error {
-        TerminalSenderPlanError::EmptyInput | TerminalSenderPlanError::EmptyHexInput => {
-            TerminalCommandSenderFailure::EmptyInput
+        TerminalSendPlanError::EmptyInput | TerminalSendPlanError::EmptyHexInput => {
+            TerminalCommandComposerFailure::EmptyInput
         }
-        TerminalSenderPlanError::InvalidHexDigit | TerminalSenderPlanError::OddHexDigitCount => {
-            TerminalCommandSenderFailure::InvalidHex
+        TerminalSendPlanError::InvalidHexDigit | TerminalSendPlanError::OddHexDigitCount => {
+            TerminalCommandComposerFailure::InvalidHex
         }
-        TerminalSenderPlanError::ZeroRepeatCount | TerminalSenderPlanError::UnitCountOverflow => {
-            TerminalCommandSenderFailure::EmptyInput
+        TerminalSendPlanError::ZeroRepeatCount | TerminalSendPlanError::UnitCountOverflow => {
+            TerminalCommandComposerFailure::EmptyInput
         }
     }
 }
 
-fn adjusted_sender_panel_height(start_height: f32, delta_y: f32, viewport_height: f32) -> f32 {
-    // Moving the divider upward grows the bottom sender panel.
-    let ratio_limit = viewport_height * TERMINAL_SENDER_MAX_VIEWPORT_RATIO;
+fn adjusted_composer_panel_height(start_height: f32, delta_y: f32, viewport_height: f32) -> f32 {
+    // Moving the divider upward grows the bottom composer panel.
+    let ratio_limit = viewport_height * TERMINAL_COMPOSER_MAX_VIEWPORT_RATIO;
     let terminal_limit = viewport_height
-        - TERMINAL_SENDER_WINDOW_CHROME_RESERVE
-        - TERMINAL_SENDER_MIN_TERMINAL_HEIGHT;
+        - TERMINAL_COMPOSER_WINDOW_CHROME_RESERVE
+        - TERMINAL_COMPOSER_MIN_TERMINAL_HEIGHT;
     let maximum = ratio_limit
         .min(terminal_limit)
-        .max(TERMINAL_SENDER_MIN_HEIGHT);
-    (start_height - delta_y).clamp(TERMINAL_SENDER_MIN_HEIGHT, maximum)
+        .max(TERMINAL_COMPOSER_MIN_HEIGHT);
+    (start_height - delta_y).clamp(TERMINAL_COMPOSER_MIN_HEIGHT, maximum)
 }
 
 #[cfg(test)]
@@ -1297,19 +1254,19 @@ mod tests {
     #[test]
     fn plan_errors_map_without_retaining_input_details() {
         assert_eq!(
-            plan_failure(TerminalSenderPlanError::InvalidHexDigit),
-            TerminalCommandSenderFailure::InvalidHex
+            plan_failure(TerminalSendPlanError::InvalidHexDigit),
+            TerminalCommandComposerFailure::InvalidHex
         );
         assert_eq!(
-            plan_failure(TerminalSenderPlanError::EmptyInput),
-            TerminalCommandSenderFailure::EmptyInput
+            plan_failure(TerminalSendPlanError::EmptyInput),
+            TerminalCommandComposerFailure::EmptyInput
         );
     }
 
     #[gpui::test]
     fn compact_and_expanded_inputs_sync_only_when_layout_changes(cx: &mut TestAppContext) {
-        let sender = cx.new(|cx| {
-            TerminalCommandSenderEntity::new(
+        let composer = cx.new(|cx| {
+            TerminalCommandComposerEntity::new(
                 default_tokens(),
                 "Command".to_string(),
                 "Commands".to_string(),
@@ -1317,17 +1274,17 @@ mod tests {
                 cx,
             )
         });
-        sender.update(cx, |sender, cx| {
-            sender.replace_active_compact_text("echo compact".to_string(), cx);
-            sender.set_expanded(true, cx);
+        composer.update(cx, |composer, cx| {
+            composer.replace_active_compact_text("echo compact".to_string(), cx);
+            composer.set_expanded(true, cx);
         });
-        let editor = sender
-            .read_with(cx, |sender, _cx| {
-                sender
+        let editor = composer
+            .read_with(cx, |composer, _cx| {
+                composer
                     .active_document_snapshot()
                     .map(|snapshot| snapshot.editor)
             })
-            .expect("active sender editor");
+            .expect("active composer editor");
         assert_eq!(
             editor.read_with(cx, |editor, _cx| editor.buffer().text()),
             "echo compact"
@@ -1336,16 +1293,16 @@ mod tests {
         editor.update(cx, |editor, cx| {
             editor.replace_text_external("echo expanded".to_string(), cx);
         });
-        sender.update(cx, |sender, cx| sender.set_expanded(false, cx));
-        sender.read_with(cx, |sender, _cx| {
-            assert_eq!(sender.active_compact_draft(), Some("echo expanded"));
+        composer.update(cx, |composer, cx| composer.set_expanded(false, cx));
+        composer.read_with(cx, |composer, _cx| {
+            assert_eq!(composer.active_compact_draft(), Some("echo expanded"));
         });
     }
 
     #[gpui::test]
     fn compact_suggestion_selection_starts_at_the_directional_edge(cx: &mut TestAppContext) {
-        let sender = cx.new(|cx| {
-            TerminalCommandSenderEntity::new(
+        let composer = cx.new(|cx| {
+            TerminalCommandComposerEntity::new(
                 default_tokens(),
                 "Command".to_string(),
                 "Commands".to_string(),
@@ -1354,22 +1311,22 @@ mod tests {
             )
         });
 
-        sender.update(cx, |sender, cx| {
+        composer.update(cx, |composer, cx| {
             assert_eq!(
-                sender.move_compact_suggestion_selection(3, true, cx),
+                composer.move_compact_suggestion_selection(3, true, cx),
                 Some(0)
             );
             assert_eq!(
-                sender.move_compact_suggestion_selection(3, true, cx),
+                composer.move_compact_suggestion_selection(3, true, cx),
                 Some(1)
             );
             assert_eq!(
-                sender.move_compact_suggestion_selection(3, false, cx),
+                composer.move_compact_suggestion_selection(3, false, cx),
                 Some(0)
             );
-            assert!(sender.dismiss_compact_suggestions());
+            assert!(composer.dismiss_compact_suggestions());
             assert_eq!(
-                sender.move_compact_suggestion_selection(3, false, cx),
+                composer.move_compact_suggestion_selection(3, false, cx),
                 Some(2)
             );
         });
@@ -1377,8 +1334,8 @@ mod tests {
 
     #[gpui::test]
     fn adjust_repeat_count_supports_infinite_and_presets(cx: &mut TestAppContext) {
-        let sender = cx.new(|cx| {
-            TerminalCommandSenderEntity::new(
+        let composer = cx.new(|cx| {
+            TerminalCommandComposerEntity::new(
                 default_tokens(),
                 "Command".to_string(),
                 "Commands".to_string(),
@@ -1387,40 +1344,40 @@ mod tests {
             )
         });
 
-        sender.update(cx, |sender, cx| {
-            let sender_id = sender.active_document_id();
+        composer.update(cx, |composer, cx| {
+            let document_id = composer.active_document_id();
 
             // Default is 1
-            assert_eq!(sender.document(sender_id).unwrap().repeat_count, 1);
+            assert_eq!(composer.document(document_id).unwrap().repeat_count, 1);
 
             // 1 clicked minus -> 0 (infinite)
-            sender.adjust_repeat_count(sender_id, -1, cx);
-            assert_eq!(sender.document(sender_id).unwrap().repeat_count, 0);
+            composer.adjust_repeat_count(document_id, -1, cx);
+            assert_eq!(composer.document(document_id).unwrap().repeat_count, 0);
 
             // From 0, clicking minus stays 0
-            sender.adjust_repeat_count(sender_id, -1, cx);
-            assert_eq!(sender.document(sender_id).unwrap().repeat_count, 0);
+            composer.adjust_repeat_count(document_id, -1, cx);
+            assert_eq!(composer.document(document_id).unwrap().repeat_count, 0);
 
             // From 0, clicking plus (delta 1) returns to 1
-            sender.adjust_repeat_count(sender_id, 1, cx);
-            assert_eq!(sender.document(sender_id).unwrap().repeat_count, 1);
+            composer.adjust_repeat_count(document_id, 1, cx);
+            assert_eq!(composer.document(document_id).unwrap().repeat_count, 1);
 
             // Step by 1000
-            sender.adjust_repeat_count(sender_id, 1000, cx);
-            assert_eq!(sender.document(sender_id).unwrap().repeat_count, 1001);
+            composer.adjust_repeat_count(document_id, 1000, cx);
+            assert_eq!(composer.document(document_id).unwrap().repeat_count, 1001);
 
             // Cycle presets
-            sender.document_mut(sender_id).unwrap().repeat_count = 1;
-            sender.cycle_repeat_preset(sender_id, cx);
-            assert_eq!(sender.document(sender_id).unwrap().repeat_count, 10);
-            sender.cycle_repeat_preset(sender_id, cx);
-            assert_eq!(sender.document(sender_id).unwrap().repeat_count, 100);
-            sender.cycle_repeat_preset(sender_id, cx);
-            assert_eq!(sender.document(sender_id).unwrap().repeat_count, 1000);
-            sender.cycle_repeat_preset(sender_id, cx);
-            assert_eq!(sender.document(sender_id).unwrap().repeat_count, 0);
-            sender.cycle_repeat_preset(sender_id, cx);
-            assert_eq!(sender.document(sender_id).unwrap().repeat_count, 1);
+            composer.document_mut(document_id).unwrap().repeat_count = 1;
+            composer.cycle_repeat_preset(document_id, cx);
+            assert_eq!(composer.document(document_id).unwrap().repeat_count, 10);
+            composer.cycle_repeat_preset(document_id, cx);
+            assert_eq!(composer.document(document_id).unwrap().repeat_count, 100);
+            composer.cycle_repeat_preset(document_id, cx);
+            assert_eq!(composer.document(document_id).unwrap().repeat_count, 1000);
+            composer.cycle_repeat_preset(document_id, cx);
+            assert_eq!(composer.document(document_id).unwrap().repeat_count, 0);
+            composer.cycle_repeat_preset(document_id, cx);
+            assert_eq!(composer.document(document_id).unwrap().repeat_count, 1);
         });
     }
 }

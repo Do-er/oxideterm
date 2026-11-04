@@ -44,4 +44,4 @@ The quick-command bar has a searchable group selector and a horizontally scrolla
 
 Manage commands, ordering, group icons, and colors in command management. Group colors also identify their commands; reset a custom color to return to the theme default. Groups and their appearance travel with supported export and cloud-sync data. Hover a command to see its full name and a bounded preview before sending it. Check the active terminal and any broadcast destinations before execution.
 
-See [Desktop Workflows](desktop.md) for split layouts and [Application Guide](app.md) for the advanced command sender.
+See [Desktop Workflows](desktop.md) for split layouts and [Application Guide](app.md) for the advanced command composer.

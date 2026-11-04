@@ -54,11 +54,11 @@ Terminal-adjacent helpers stay tied to the active terminal pane:
 - When an X/Y/ZMODEM prompt appears after a real transfer command such as `rz`, `sz`, `rx`, or `rb`, choose the local file or directory and watch progress from the visible prompt/notification.
 - Manage privilege credentials from Settings. Do not place sudo/su passwords in connection names, notes, quick commands, AI prompts, logs, or support bundles.
 
-### Advanced command sender
+### Advanced command composer
 
-Use the advanced command sender when the same input must be delivered to one or more terminal panes on a schedule. It supports text or hexadecimal input, line or character pacing, repeat counts, and current, all, or explicitly selected terminal targets.
+Use the advanced command composer when the same input must be delivered to one or more terminal panes on a schedule. It supports text or hexadecimal input, line or character pacing, repeat counts, and current, all, or explicitly selected terminal targets.
 
-The sender freezes its target panes when a job starts. Changing tabs or opening panes does not widen a running job, and a closed target is skipped rather than replaced or reconnected. Hiding the sender panel does not cancel an active job; stop it explicitly when needed. Progress counts local terminal-input acceptance, not remote command completion.
+The composer freezes its target panes when a task starts. Changing tabs or opening panes does not widen a running job, and a closed target is skipped rather than replaced or reconnected. Hiding the composer panel does not cancel an active task; stop it explicitly when needed. Progress counts local terminal-input acceptance, not remote command completion.
 
 ## Saved Connections
 

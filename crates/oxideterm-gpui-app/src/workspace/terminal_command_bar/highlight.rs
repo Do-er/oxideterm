@@ -154,9 +154,6 @@ impl WorkspaceApp {
             self.blur_terminal_quick_commands_input(cx);
             self.dismiss_terminal_recording_menu();
             self.dismiss_terminal_broadcast_menu(cx);
-            self.close_terminal_cwd_picker(cx);
-            self.close_terminal_git_branch_picker(cx);
-            self.close_terminal_project_panel(cx);
         }
         cx.notify();
     }

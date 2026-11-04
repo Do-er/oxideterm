@@ -850,7 +850,7 @@
       "display_behavior": "表示動作",
       "display_behavior_hint": "端末の余白、スクロール、文字エンコーディングを設定します。",
       "command_bar_dispatch_follow_broadcast": "送信先をブロードキャスト同期グループに連動",
-      "command_bar_dispatch_follow_broadcast_hint": "コマンドバーでブロードキャスト同期が有効な場合、コマンド送信とクイックコマンドは自動的にグループ内の全端末へ送信されます。",
+      "command_bar_dispatch_follow_broadcast_hint": "コマンドバーでブロードキャスト同期が有効な場合、コマンド作成とクイックコマンドは自動的にグループ内の全端末へ送信されます。",
       "command_bar_composer_title": "コマンド作成と一括送信",
       "command_bar_composer_description": "複数行スクリプトの下書き、行/文字ごとの遅延送信、および複数端末への送信ポリシー。"
     },

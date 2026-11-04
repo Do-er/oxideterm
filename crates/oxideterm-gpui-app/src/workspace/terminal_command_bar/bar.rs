@@ -22,23 +22,6 @@ impl WorkspaceApp {
             rgba((theme.bg << 8) | COMMAND_BAR_BG_ALPHA)
         };
         let workspace = cx.entity();
-        let cwd_display_enabled = self.terminal_current_directory_awareness_enabled()
-            && self
-                .settings_store
-                .settings()
-                .terminal
-                .command_bar
-                .show_current_directory;
-        let cwd_snapshot = cwd_display_enabled
-            .then(|| self.active_terminal_cwd_snapshot(cx))
-            .flatten();
-        let cwd_supported =
-            cwd_display_enabled && self.active_terminal_cwd_scope_and_pane(cx).is_some();
-        let git_snapshot = self.active_terminal_git_snapshot(cx);
-        let project_tasks_enabled = self.terminal_project_tasks_enabled();
-        let project_snapshot = project_tasks_enabled
-            .then(|| self.active_terminal_project_snapshot(cx))
-            .flatten();
         let active_pane_id = self.active_pane_id(cx);
         let split_controls_visible = matches!(
             self.active_terminal_kind(cx),
@@ -76,12 +59,9 @@ impl WorkspaceApp {
             self.i18n.t("terminal.broadcast.select_targets")
         };
         let quick_commands_open = self.terminal.read(cx).quick_commands.is_open();
-        let (command_sender_expanded, command_sender_running_count) = {
-            let sender = self.terminal_command_sender.read(cx);
-            (
-                sender.is_expanded(),
-                sender.running_count(),
-            )
+        let (composer_expanded, composer_running_count) = {
+            let composer = self.terminal_command_composer.read(cx);
+            (composer.is_expanded(), composer.running_count())
         };
         let recording_status = self.active_terminal_recording_status(cx);
         let recording_active = recording_status.state != TerminalRecordingState::Idle;
@@ -115,17 +95,6 @@ impl WorkspaceApp {
             .when(self.terminal_highlight_popover_open, |bar| {
                 bar.child(self.render_terminal_highlight_popover(cx))
             })
-            .when(self.terminal.read(cx).git_panel_open(), |bar| {
-                bar.child(self.render_terminal_git_branch_picker(cx))
-            })
-            .when(
-                cwd_display_enabled && self.terminal.read(cx).cwd_picker_open(),
-                |bar| bar.child(self.render_terminal_cwd_picker(cx)),
-            )
-            .when(
-                project_tasks_enabled && self.terminal.read(cx).project_panel_open(),
-                |bar| bar.child(self.render_terminal_project_panel(cx)),
-            )
             .child(
                 div()
                     .w_full()
@@ -148,45 +117,54 @@ impl WorkspaceApp {
                                     .relative()
                                     .child(self.terminal_command_action_button(
                                         LucideIcon::ListChecks,
-                                        if command_sender_expanded {
+                                        if composer_expanded {
                                             rgb(theme.accent)
-                                        } else if command_sender_running_count > 0 {
+                                        } else if composer_running_count > 0 {
                                             rgb(theme.warning)
                                         } else {
                                             rgb(theme.text_muted)
                                         },
                                         false,
-                                        Some(if command_sender_expanded {
+                                        Some(if composer_expanded {
                                             rgba((theme.accent << 8) | 0x26)
                                         } else {
                                             rgba(0x00000000)
                                         }),
-                                        "terminal-command-sender-toggle",
-                                        if command_sender_running_count > 0 {
+                                        "terminal-command-composer-toggle",
+                                        if composer_running_count > 0 {
                                             format!(
                                                 "{} ({})",
-                                                self.i18n.t("terminal.sender.title"),
-                                                command_sender_running_count
+                                                self.i18n.t("terminal.composer.title"),
+                                                composer_running_count
                                             )
                                         } else {
-                                            self.i18n.t("terminal.sender.title")
+                                            self.i18n.t("terminal.composer.title")
                                         },
                                         move |this, _event, window, cx| {
-                                            let expanding =
-                                                !this.terminal_command_sender.read(cx).is_expanded();
+                                            let expanding = !this
+                                                .terminal_command_composer
+                                                .read(cx)
+                                                .is_expanded();
                                             if expanding {
                                                 this.close_terminal_quick_commands_panel(cx);
                                                 this.close_terminal_command_overlays(cx);
                                                 this.ime_marked_text = None;
                                             }
-                                            this.terminal_command_sender.update(cx, |sender, cx| {
-                                                sender.toggle_expanded(cx);
-                                            });
-                                            let sender_id =
-                                                this.terminal_command_sender.read(cx).active_document_id();
+                                            this.terminal_command_composer.update(
+                                                cx,
+                                                |composer, cx| {
+                                                    composer.toggle_expanded(cx);
+                                                },
+                                            );
+                                            let document_id = this
+                                                .terminal_command_composer
+                                                .read(cx)
+                                                .active_document_id();
                                             if expanding {
-                                                this.focus_terminal_command_sender_editor(
-                                                    sender_id, window, cx,
+                                                this.focus_terminal_command_composer_editor(
+                                                    document_id,
+                                                    window,
+                                                    cx,
                                                 );
                                             } else {
                                                 this.focus_active_pane(window, cx);
@@ -195,7 +173,7 @@ impl WorkspaceApp {
                                         },
                                         cx,
                                     ))
-                                    .when(command_sender_running_count > 0, |container| {
+                                    .when(composer_running_count > 0, |container| {
                                         container.child(
                                             div()
                                                 .absolute()
@@ -212,7 +190,7 @@ impl WorkspaceApp {
                                                 .text_size(px(9.0))
                                                 .font_weight(gpui::FontWeight::BOLD)
                                                 .text_color(rgb(theme.bg))
-                                                .child(command_sender_running_count.to_string()),
+                                                .child(composer_running_count.to_string()),
                                         )
                                     }),
                             )
@@ -319,37 +297,7 @@ impl WorkspaceApp {
                                         });
                                     }
                                 },
-                            ))
-                            .when(
-                                cwd_supported || git_snapshot.is_some() || project_snapshot.is_some(),
-                                |row| {
-                                    row.child(
-                                        div()
-                                            .w(px(1.0))
-                                            .h(px(14.0))
-                                            .bg(rgba((theme.border << 8) | 0x80))
-                                            .mx(px(2.0)),
-                                    )
-                                },
-                            )
-                            .when(cwd_supported, |row| {
-                                row.child(self.terminal_command_context_chip_slot(
-                                    TERMINAL_COMMAND_CONTEXT_CHIP_MAX_WIDTH,
-                                    self.render_terminal_cwd_chip(cwd_snapshot, cx),
-                                ))
-                            })
-                            .when_some(git_snapshot, |row, snapshot| {
-                                row.child(self.terminal_command_context_chip_slot(
-                                    TERMINAL_COMMAND_CONTEXT_CHIP_MAX_WIDTH,
-                                    self.render_terminal_git_chip(snapshot, cx),
-                                ))
-                            })
-                            .when_some(project_snapshot, |row, snapshot| {
-                                row.child(self.terminal_command_context_chip_slot(
-                                    TERMINAL_COMMAND_PROJECT_CHIP_MAX_WIDTH,
-                                    self.render_terminal_project_chip(snapshot, cx),
-                                ))
-                            }),
+                            )),
                     )
                     .child(
                         div()
@@ -632,9 +580,6 @@ impl WorkspaceApp {
             self.blur_terminal_quick_commands_input(cx);
             self.dismiss_terminal_broadcast_menu(cx);
             self.dismiss_terminal_highlight_popover();
-            self.close_terminal_cwd_picker(cx);
-            self.close_terminal_git_branch_picker(cx);
-            self.close_terminal_project_panel(cx);
         }
         cx.notify();
     }

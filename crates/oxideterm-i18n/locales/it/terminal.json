@@ -132,7 +132,8 @@
       "folded_exit_code": "Codice di uscita {{code}}",
       "previous_command": "Comando precedente",
       "next_command": "Comando successivo",
-      "clear_screen": "Pulisci schermo"
+      "clear_screen": "Pulisci schermo",
+      "open_sftp": "Apri SFTP"
     },
     "modem": {
       "timeout": "Il dispositivo remoto non ha risposto in tempo. Avvia il suo programma di trasferimento e riprova.",
@@ -544,11 +545,11 @@
       "insert": "Inserisci",
       "execute": "Esegui"
     },
-    "sender": {
-      "task": "Invio",
+    "composer": {
+      "task": "Attività",
       "placeholder": "Inserisci comandi o byte esadecimali...",
-      "add_task": "Aggiungi attività di invio",
-      "remove_task": "Rimuovi attività di invio",
+      "add_task": "Aggiungi attività",
+      "remove_task": "Rimuovi attività",
       "text": "Testo",
       "hex": "Esadecimale",
       "by_line": "Per riga",
@@ -572,8 +573,8 @@
       "error_empty": "Inserisci il contenuto da inviare",
       "error_hex": "Input esadecimale non valido",
       "error_targets": "Nessun terminale di destinazione",
-      "error_busy": "Una destinazione è usata da un altro invio",
-      "title": "Invio comandi",
+      "error_busy": "Una destinazione è usata da un'altra attività",
+      "title": "Compositore comandi",
       "broadcast": "Broadcast",
       "fallback_current": "Sincronizzazione disattivata, invio solo al terminale corrente",
       "broadcast_active": "Segue le destinazioni broadcast attive"

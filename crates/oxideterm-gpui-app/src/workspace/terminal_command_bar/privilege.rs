@@ -910,9 +910,9 @@ impl WorkspaceApp {
             )
             .child(self.render_terminal_command_bar(cx))
             .child(self.render_terminal_quick_commands_panel(cx))
-            // The toolbar is the sender header. Hidden, compact, and expanded
+            // The toolbar is the composer header. Hidden, compact, and expanded
             // layouts all retain the same document and running jobs below it.
-            .child(self.render_terminal_command_sender_panel(window, cx))
+            .child(self.render_terminal_command_composer_panel(window, cx))
             .on_children_prepainted(move |bounds, window, _| {
                 // Only the terminal and dock share this budget; all other rows have already
                 // consumed their actual layout heights, including an optional quick bar.

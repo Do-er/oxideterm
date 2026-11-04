@@ -7,24 +7,24 @@ use unicode_segmentation::UnicodeSegmentation;
 use zeroize::Zeroizing;
 
 #[derive(Clone, Copy, Debug, Eq, PartialEq)]
-pub enum TerminalSenderInputMode {
+pub enum TerminalSendInputMode {
     Text,
     Hex,
 }
 
 #[derive(Clone, Copy, Debug, Eq, PartialEq)]
-pub enum TerminalSenderPacing {
+pub enum TerminalSendPacing {
     Line,
     Character,
 }
 
-pub enum TerminalSenderFrame {
+pub enum TerminalSendFrame {
     TextLine(Zeroizing<String>),
     TextChunk(Zeroizing<String>),
     RawBytes(Zeroizing<Vec<u8>>),
 }
 
-impl TerminalSenderFrame {
+impl TerminalSendFrame {
     pub fn text(&self) -> Option<&str> {
         match self {
             Self::TextLine(text) | Self::TextChunk(text) => Some(text),
@@ -40,7 +40,7 @@ impl TerminalSenderFrame {
     }
 }
 
-impl fmt::Debug for TerminalSenderFrame {
+impl fmt::Debug for TerminalSendFrame {
     fn fmt(&self, formatter: &mut fmt::Formatter<'_>) -> fmt::Result {
         let (kind, byte_len) = match self {
             Self::TextLine(text) => ("text-line", text.len()),
@@ -48,21 +48,21 @@ impl fmt::Debug for TerminalSenderFrame {
             Self::RawBytes(bytes) => ("raw-bytes", bytes.len()),
         };
         formatter
-            .debug_struct("TerminalSenderFrame")
+            .debug_struct("TerminalSendFrame")
             .field("kind", &kind)
             .field("byte_len", &byte_len)
             .finish()
     }
 }
 
-pub struct TerminalSenderPlan {
-    frames: Vec<TerminalSenderFrame>,
+pub struct TerminalSendPlan {
+    frames: Vec<TerminalSendFrame>,
     repeat_count: u32,
     total_units: u64,
 }
 
-impl TerminalSenderPlan {
-    pub fn frames(&self) -> &[TerminalSenderFrame] {
+impl TerminalSendPlan {
+    pub fn frames(&self) -> &[TerminalSendFrame] {
         &self.frames
     }
 
@@ -79,10 +79,10 @@ impl TerminalSenderPlan {
     }
 }
 
-impl fmt::Debug for TerminalSenderPlan {
+impl fmt::Debug for TerminalSendPlan {
     fn fmt(&self, formatter: &mut fmt::Formatter<'_>) -> fmt::Result {
         formatter
-            .debug_struct("TerminalSenderPlan")
+            .debug_struct("TerminalSendPlan")
             .field("frame_count", &self.frames.len())
             .field("repeat_count", &self.repeat_count)
             .field("total_units", &self.total_units)
@@ -91,7 +91,7 @@ impl fmt::Debug for TerminalSenderPlan {
 }
 
 #[derive(Clone, Copy, Debug, Eq, PartialEq)]
-pub enum TerminalSenderPlanError {
+pub enum TerminalSendPlanError {
     EmptyInput,
     EmptyHexInput,
     InvalidHexDigit,
@@ -100,77 +100,74 @@ pub enum TerminalSenderPlanError {
     UnitCountOverflow,
 }
 
-impl fmt::Display for TerminalSenderPlanError {
+impl fmt::Display for TerminalSendPlanError {
     fn fmt(&self, formatter: &mut fmt::Formatter<'_>) -> fmt::Result {
         formatter.write_str(match self {
-            Self::EmptyInput => "sender input is empty",
-            Self::EmptyHexInput => "hex sender input contains no bytes",
-            Self::InvalidHexDigit => "hex sender input contains an invalid digit",
-            Self::OddHexDigitCount => "hex sender input contains an odd number of digits",
-            Self::ZeroRepeatCount => "sender repeat count must be at least one",
-            Self::UnitCountOverflow => "sender unit count exceeds the supported range",
+            Self::EmptyInput => "composer input is empty",
+            Self::EmptyHexInput => "hex composer input contains no bytes",
+            Self::InvalidHexDigit => "hex composer input contains an invalid digit",
+            Self::OddHexDigitCount => "hex composer input contains an odd number of digits",
+            Self::ZeroRepeatCount => "composer repeat count must be at least one",
+            Self::UnitCountOverflow => "composer unit count exceeds the supported range",
         })
     }
 }
 
-impl std::error::Error for TerminalSenderPlanError {}
+impl std::error::Error for TerminalSendPlanError {}
 
-pub fn build_terminal_sender_plan(
+pub fn build_terminal_send_plan(
     input: Zeroizing<String>,
-    input_mode: TerminalSenderInputMode,
-    pacing: TerminalSenderPacing,
+    input_mode: TerminalSendInputMode,
+    pacing: TerminalSendPacing,
     repeat_count: u32,
-) -> Result<TerminalSenderPlan, TerminalSenderPlanError> {
+) -> Result<TerminalSendPlan, TerminalSendPlanError> {
     if input.is_empty() {
-        return Err(TerminalSenderPlanError::EmptyInput);
+        return Err(TerminalSendPlanError::EmptyInput);
     }
     // The normalized copy and every derived frame zeroize independently. This
-    // keeps async sender captures bounded even when commands contain secrets.
+    // keeps async dispatch captures bounded even when commands contain secrets.
     let frames = match input_mode {
-        TerminalSenderInputMode::Text => build_text_frames(&input, pacing),
-        TerminalSenderInputMode::Hex => build_hex_frames(&input, pacing)?,
+        TerminalSendInputMode::Text => build_text_frames(&input, pacing),
+        TerminalSendInputMode::Hex => build_hex_frames(&input, pacing)?,
     };
     if frames.is_empty() {
         return Err(match input_mode {
-            TerminalSenderInputMode::Text => TerminalSenderPlanError::EmptyInput,
-            TerminalSenderInputMode::Hex => TerminalSenderPlanError::EmptyHexInput,
+            TerminalSendInputMode::Text => TerminalSendPlanError::EmptyInput,
+            TerminalSendInputMode::Hex => TerminalSendPlanError::EmptyHexInput,
         });
     }
     let frame_count =
-        u64::try_from(frames.len()).map_err(|_| TerminalSenderPlanError::UnitCountOverflow)?;
+        u64::try_from(frames.len()).map_err(|_| TerminalSendPlanError::UnitCountOverflow)?;
     let total_units = if repeat_count == 0 {
         0
     } else {
         checked_total_units(frame_count, repeat_count)?
     };
 
-    Ok(TerminalSenderPlan {
+    Ok(TerminalSendPlan {
         frames,
         repeat_count,
         total_units,
     })
 }
 
-fn checked_total_units(
-    frame_count: u64,
-    repeat_count: u32,
-) -> Result<u64, TerminalSenderPlanError> {
+fn checked_total_units(frame_count: u64, repeat_count: u32) -> Result<u64, TerminalSendPlanError> {
     frame_count
         .checked_mul(u64::from(repeat_count))
-        .ok_or(TerminalSenderPlanError::UnitCountOverflow)
+        .ok_or(TerminalSendPlanError::UnitCountOverflow)
 }
 
-fn build_text_frames(input: &str, pacing: TerminalSenderPacing) -> Vec<TerminalSenderFrame> {
+fn build_text_frames(input: &str, pacing: TerminalSendPacing) -> Vec<TerminalSendFrame> {
     let normalized = Zeroizing::new(input.replace("\r\n", "\n").replace('\r', "\n"));
     match pacing {
-        TerminalSenderPacing::Line => normalized
+        TerminalSendPacing::Line => normalized
             .split_terminator('\n')
-            .map(|line| TerminalSenderFrame::TextLine(Zeroizing::new(line.to_string())))
+            .map(|line| TerminalSendFrame::TextLine(Zeroizing::new(line.to_string())))
             .collect(),
-        TerminalSenderPacing::Character => normalized
+        TerminalSendPacing::Character => normalized
             .graphemes(true)
             .map(|grapheme| {
-                TerminalSenderFrame::TextChunk(Zeroizing::new(if grapheme == "\n" {
+                TerminalSendFrame::TextChunk(Zeroizing::new(if grapheme == "\n" {
                     "\r".to_string()
                 } else {
                     grapheme.to_string()
@@ -182,32 +179,32 @@ fn build_text_frames(input: &str, pacing: TerminalSenderPacing) -> Vec<TerminalS
 
 fn build_hex_frames(
     input: &str,
-    pacing: TerminalSenderPacing,
-) -> Result<Vec<TerminalSenderFrame>, TerminalSenderPlanError> {
+    pacing: TerminalSendPacing,
+) -> Result<Vec<TerminalSendFrame>, TerminalSendPlanError> {
     match pacing {
-        TerminalSenderPacing::Line => {
+        TerminalSendPacing::Line => {
             let normalized = Zeroizing::new(input.replace("\r\n", "\n").replace('\r', "\n"));
             let mut frames = Vec::new();
             for line in normalized.split('\n') {
                 let bytes = parse_hex_bytes(line)?;
                 if !bytes.is_empty() {
-                    frames.push(TerminalSenderFrame::RawBytes(bytes));
+                    frames.push(TerminalSendFrame::RawBytes(bytes));
                 }
             }
             Ok(frames)
         }
-        TerminalSenderPacing::Character => {
+        TerminalSendPacing::Character => {
             let bytes = parse_hex_bytes(input)?;
             Ok(bytes
                 .iter()
                 .copied()
-                .map(|byte| TerminalSenderFrame::RawBytes(Zeroizing::new(vec![byte])))
+                .map(|byte| TerminalSendFrame::RawBytes(Zeroizing::new(vec![byte])))
                 .collect())
         }
     }
 }
 
-fn parse_hex_bytes(input: &str) -> Result<Zeroizing<Vec<u8>>, TerminalSenderPlanError> {
+fn parse_hex_bytes(input: &str) -> Result<Zeroizing<Vec<u8>>, TerminalSendPlanError> {
     let mut bytes = Zeroizing::new(Vec::new());
     for token in input.split(|character: char| {
         character.is_ascii_whitespace() || matches!(character, ',' | ':' | ';' | '-' | '_')
@@ -220,18 +217,18 @@ fn parse_hex_bytes(input: &str) -> Result<Zeroizing<Vec<u8>>, TerminalSenderPlan
             .or_else(|| token.strip_prefix("0X"))
             .unwrap_or(token);
         if digits.is_empty() {
-            return Err(TerminalSenderPlanError::InvalidHexDigit);
+            return Err(TerminalSendPlanError::InvalidHexDigit);
         }
         if !digits.is_ascii() || !digits.as_bytes().iter().all(u8::is_ascii_hexdigit) {
-            return Err(TerminalSenderPlanError::InvalidHexDigit);
+            return Err(TerminalSendPlanError::InvalidHexDigit);
         }
         if digits.len() % 2 != 0 {
-            return Err(TerminalSenderPlanError::OddHexDigitCount);
+            return Err(TerminalSendPlanError::OddHexDigitCount);
         }
         for pair_start in (0..digits.len()).step_by(2) {
             let pair = &digits[pair_start..pair_start + 2];
-            let byte = u8::from_str_radix(pair, 16)
-                .map_err(|_| TerminalSenderPlanError::InvalidHexDigit)?;
+            let byte =
+                u8::from_str_radix(pair, 16).map_err(|_| TerminalSendPlanError::InvalidHexDigit)?;
             bytes.push(byte);
         }
     }
@@ -244,11 +241,11 @@ mod tests {
 
     fn plan(
         input: &str,
-        mode: TerminalSenderInputMode,
-        pacing: TerminalSenderPacing,
+        mode: TerminalSendInputMode,
+        pacing: TerminalSendPacing,
         repeat_count: u32,
-    ) -> Result<TerminalSenderPlan, TerminalSenderPlanError> {
-        build_terminal_sender_plan(
+    ) -> Result<TerminalSendPlan, TerminalSendPlanError> {
+        build_terminal_send_plan(
             Zeroizing::new(input.to_string()),
             mode,
             pacing,
@@ -260,8 +257,8 @@ mod tests {
     fn text_line_plan_normalizes_endings_and_preserves_empty_lines() {
         let plan = plan(
             "echo one\r\n\r\necho two\n",
-            TerminalSenderInputMode::Text,
-            TerminalSenderPacing::Line,
+            TerminalSendInputMode::Text,
+            TerminalSendPacing::Line,
             2,
         )
         .unwrap();
@@ -283,8 +280,8 @@ mod tests {
         ] {
             let plan = plan(
                 input,
-                TerminalSenderInputMode::Text,
-                TerminalSenderPacing::Character,
+                TerminalSendInputMode::Text,
+                TerminalSendPacing::Character,
                 1,
             )
             .unwrap();
@@ -303,20 +300,20 @@ mod tests {
         for (input, pacing, repeats, expected, units) in [
             (
                 "0x0d, 0A\ndead-beef",
-                TerminalSenderPacing::Line,
+                TerminalSendPacing::Line,
                 1,
                 vec![&[0x0d, 0x0a][..], &[0xde, 0xad, 0xbe, 0xef][..]],
                 2,
             ),
             (
                 "00 ff 7f",
-                TerminalSenderPacing::Character,
+                TerminalSendPacing::Character,
                 3,
                 vec![&[0x00][..], &[0xff][..], &[0x7f][..]],
                 9,
             ),
         ] {
-            let plan = plan(input, TerminalSenderInputMode::Hex, pacing, repeats).unwrap();
+            let plan = plan(input, TerminalSendInputMode::Hex, pacing, repeats).unwrap();
             let frames = plan
                 .frames()
                 .iter()
@@ -333,47 +330,47 @@ mod tests {
         assert_eq!(
             plan(
                 "abc",
-                TerminalSenderInputMode::Hex,
-                TerminalSenderPacing::Line,
+                TerminalSendInputMode::Hex,
+                TerminalSendPacing::Line,
                 1,
             )
             .unwrap_err(),
-            TerminalSenderPlanError::OddHexDigitCount
+            TerminalSendPlanError::OddHexDigitCount
         );
         assert_eq!(
             plan(
                 "not-secret",
-                TerminalSenderInputMode::Hex,
-                TerminalSenderPacing::Line,
+                TerminalSendInputMode::Hex,
+                TerminalSendPacing::Line,
                 1,
             )
             .unwrap_err(),
-            TerminalSenderPlanError::InvalidHexDigit
+            TerminalSendPlanError::InvalidHexDigit
         );
         assert!(
-            !TerminalSenderPlanError::InvalidHexDigit
+            !TerminalSendPlanError::InvalidHexDigit
                 .to_string()
                 .contains("not-secret")
         );
         assert_eq!(
             plan(
                 "aa 0x",
-                TerminalSenderInputMode::Hex,
-                TerminalSenderPacing::Line,
+                TerminalSendInputMode::Hex,
+                TerminalSendPacing::Line,
                 1,
             )
             .unwrap_err(),
-            TerminalSenderPlanError::InvalidHexDigit
+            TerminalSendPlanError::InvalidHexDigit
         );
         assert_eq!(
             plan(
                 " , ; ",
-                TerminalSenderInputMode::Hex,
-                TerminalSenderPacing::Line,
+                TerminalSendInputMode::Hex,
+                TerminalSendPacing::Line,
                 1,
             )
             .unwrap_err(),
-            TerminalSenderPlanError::EmptyHexInput
+            TerminalSendPlanError::EmptyHexInput
         );
     }
 
@@ -381,8 +378,8 @@ mod tests {
     fn plan_supports_infinite_repeats_when_count_is_zero() {
         let plan = plan(
             "echo one",
-            TerminalSenderInputMode::Text,
-            TerminalSenderPacing::Line,
+            TerminalSendInputMode::Text,
+            TerminalSendPacing::Line,
             0,
         )
         .unwrap();
@@ -392,7 +389,7 @@ mod tests {
         assert_eq!(plan.frames().len(), 1);
         assert_eq!(
             checked_total_units(u64::MAX, 2).unwrap_err(),
-            TerminalSenderPlanError::UnitCountOverflow
+            TerminalSendPlanError::UnitCountOverflow
         );
     }
 
@@ -400,8 +397,8 @@ mod tests {
     fn plan_debug_redacts_frame_contents() {
         let plan = plan(
             "token=super-secret",
-            TerminalSenderInputMode::Text,
-            TerminalSenderPacing::Line,
+            TerminalSendInputMode::Text,
+            TerminalSendPacing::Line,
             1,
         )
         .unwrap();

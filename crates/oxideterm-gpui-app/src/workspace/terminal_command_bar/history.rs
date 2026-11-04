@@ -358,8 +358,8 @@ impl WorkspaceApp {
         if let Some(history) = self.active_command_history(cx) {
             history.remove(command);
         }
-        self.terminal_command_sender
-            .update(cx, |sender, cx| sender.show_compact_history(cx));
+        self.terminal_command_composer
+            .update(cx, |composer, cx| composer.show_compact_history(cx));
         cx.notify();
     }
 }

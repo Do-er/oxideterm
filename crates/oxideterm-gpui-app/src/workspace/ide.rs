@@ -701,26 +701,6 @@ impl WorkspaceApp {
         .detach();
     }
 
-    pub(in crate::workspace) fn open_ide_folder_picker_tab_at_path(
-        &mut self,
-        node_id: NodeId,
-        path: String,
-        cx: &mut Context<Self>,
-    ) {
-        let initial_path = if path.trim().is_empty() {
-            None
-        } else {
-            Some(path)
-        };
-        self.open_ide_folder_picker_tab_with_initial_path(
-            node_id,
-            initial_path,
-            IdeOpenIntent::ChooseFolder,
-            None,
-            cx,
-        );
-    }
-
     fn open_ide_folder_picker_tab_with_initial_path(
         &mut self,
         node_id: NodeId,

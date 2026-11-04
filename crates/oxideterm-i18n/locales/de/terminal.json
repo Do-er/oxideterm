@@ -132,7 +132,8 @@
       "folded_exit_code": "Exit-Code {{code}}",
       "previous_command": "Vorheriger Befehl",
       "next_command": "Nächster Befehl",
-      "clear_screen": "Bildschirm leeren"
+      "clear_screen": "Bildschirm leeren",
+      "open_sftp": "SFTP öffnen"
     },
     "modem": {
       "timeout": "Die Gegenstelle hat nicht rechtzeitig geantwortet. Starten Sie dort das Übertragungsprogramm und versuchen Sie es erneut.",
@@ -544,11 +545,11 @@
       "insert": "Einfügen",
       "execute": "Ausführen"
     },
-    "sender": {
-      "task": "Sender",
+    "composer": {
+      "task": "Aufgabe",
       "placeholder": "Befehle oder Hexadezimalbytes eingeben...",
-      "add_task": "Sendeauftrag hinzufügen",
-      "remove_task": "Sendeauftrag entfernen",
+      "add_task": "Aufgabe hinzufügen",
+      "remove_task": "Aufgabe entfernen",
       "text": "Text",
       "hex": "Hex",
       "by_line": "Zeilenweise",
@@ -572,8 +573,8 @@
       "error_empty": "Zu sendenden Inhalt eingeben",
       "error_hex": "Ungültige Hexadezimaleingabe",
       "error_targets": "Kein Zielterminal",
-      "error_busy": "Ein Ziel wird von einem anderen Sender verwendet",
-      "title": "Befehls-Sender",
+      "error_busy": "Ein Ziel wird von einer anderen Aufgabe verwendet",
+      "title": "Befehls-Composer",
       "broadcast": "Broadcast",
       "fallback_current": "Sync deaktiviert, sendet nur an aktuelles Terminal",
       "broadcast_active": "Folgt aktiven Broadcast-Zielen"

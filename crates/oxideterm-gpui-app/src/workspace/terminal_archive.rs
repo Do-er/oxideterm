@@ -284,15 +284,15 @@ impl WorkspaceApp {
         }
         let pane_id = preview.pane_id;
         // A separate draft preserves existing input and stays pinned to the clicked pane.
-        let sender_id = self.terminal_command_sender.update(cx, |sender, cx| {
-            let id = sender.add_document(cx);
-            sender.replace_active_text(command.to_string(), cx);
-            sender.toggle_selected_target(id, pane_id, cx);
+        let document_id = self.terminal_command_composer.update(cx, |composer, cx| {
+            let id = composer.add_document(cx);
+            composer.replace_active_text(command.to_string(), cx);
+            composer.toggle_selected_target(id, pane_id, cx);
             id
         });
         self.archive_command = None;
         self.close_terminal_command_overlays(cx);
-        self.focus_terminal_command_sender_input(sender_id, window, cx);
+        self.focus_terminal_command_composer_input(document_id, window, cx);
         cx.notify();
     }
 

@@ -132,7 +132,8 @@
       "folded_exit_code": "Código de salida {{code}}",
       "previous_command": "Comando anterior",
       "next_command": "Comando siguiente",
-      "clear_screen": "Limpiar pantalla"
+      "clear_screen": "Limpiar pantalla",
+      "open_sftp": "Abrir SFTP"
     },
     "modem": {
       "timeout": "El equipo remoto no respondió a tiempo. Inicie su programa de transferencia y vuelva a intentarlo.",
@@ -544,11 +545,11 @@
       "insert": "Insertar",
       "execute": "Ejecutar"
     },
-    "sender": {
-      "task": "Emisor",
+    "composer": {
+      "task": "Tarea",
       "placeholder": "Introduce comandos o bytes hexadecimales...",
-      "add_task": "Añadir tarea de envío",
-      "remove_task": "Eliminar tarea de envío",
+      "add_task": "Añadir tarea",
+      "remove_task": "Eliminar tarea",
       "text": "Texto",
       "hex": "Hex",
       "by_line": "Por línea",
@@ -572,8 +573,8 @@
       "error_empty": "Introduce contenido para enviar",
       "error_hex": "Entrada hexadecimal no válida",
       "error_targets": "No hay terminal de destino",
-      "error_busy": "Otro emisor está usando un destino",
-      "title": "Emisor de comandos",
+      "error_busy": "Otra tarea está usando un destino",
+      "title": "Compositor de comandos",
       "broadcast": "Difusión",
       "fallback_current": "Sincronización desactivada, se envía solo al terminal actual",
       "broadcast_active": "Siguiendo los destinos de difusión activos"

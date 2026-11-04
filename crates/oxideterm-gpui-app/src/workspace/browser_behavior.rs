@@ -440,7 +440,7 @@ pub(crate) enum BrowserPointerCaptureOwner {
     AiSidebarResize,
     SftpPaneResize,
     SftpQueueResize,
-    TerminalCommandSenderResize,
+    TerminalCommandComposerResize,
     TerminalQuickCommandsResize,
     PaneSplitter,
     SettingsSlider,
@@ -463,7 +463,7 @@ struct BrowserPointerCaptureState {
     ai_sidebar_resizing: bool,
     sftp_pane_resizing: bool,
     sftp_queue_resizing: bool,
-    terminal_command_sender_resizing: bool,
+    terminal_command_composer_resizing: bool,
     terminal_quick_commands_resizing: bool,
     pane_splitter_dragging: bool,
     settings_slider_dragging: bool,
@@ -522,7 +522,7 @@ pub(crate) fn pointer_capture_needs_workspace_overlay(owner: BrowserPointerCaptu
             | BrowserPointerCaptureOwner::AiSidebarResize
             | BrowserPointerCaptureOwner::SftpPaneResize
             | BrowserPointerCaptureOwner::SftpQueueResize
-            | BrowserPointerCaptureOwner::TerminalCommandSenderResize
+            | BrowserPointerCaptureOwner::TerminalCommandComposerResize
             | BrowserPointerCaptureOwner::TerminalQuickCommandsResize
             | BrowserPointerCaptureOwner::TabDrag
     )
@@ -543,7 +543,10 @@ impl WorkspaceApp {
             ai_sidebar_resizing: self.ai_entity.read(cx).chat_ui().sidebar_resizing,
             sftp_pane_resizing: sftp.pane_resize_active(),
             sftp_queue_resizing: sftp.queue_resize_active(),
-            terminal_command_sender_resizing: self.terminal_command_sender.read(cx).is_resizing(),
+            terminal_command_composer_resizing: self
+                .terminal_command_composer
+                .read(cx)
+                .is_resizing(),
             terminal_quick_commands_resizing: self
                 .terminal
                 .read(cx)
@@ -578,8 +581,8 @@ fn resolve_browser_pointer_capture_owner(
         Some(BrowserPointerCaptureOwner::SftpQueueResize)
     } else if state.terminal_quick_commands_resizing {
         Some(BrowserPointerCaptureOwner::TerminalQuickCommandsResize)
-    } else if state.terminal_command_sender_resizing {
-        Some(BrowserPointerCaptureOwner::TerminalCommandSenderResize)
+    } else if state.terminal_command_composer_resizing {
+        Some(BrowserPointerCaptureOwner::TerminalCommandComposerResize)
     } else if state.pane_splitter_dragging {
         Some(BrowserPointerCaptureOwner::PaneSplitter)
     } else if state.settings_slider_dragging {
@@ -661,10 +664,10 @@ mod tests {
             ),
             (
                 BrowserPointerCaptureState {
-                    terminal_command_sender_resizing: true,
+                    terminal_command_composer_resizing: true,
                     ..BrowserPointerCaptureState::default()
                 },
-                Some(BrowserPointerCaptureOwner::TerminalCommandSenderResize),
+                Some(BrowserPointerCaptureOwner::TerminalCommandComposerResize),
             ),
             (
                 BrowserPointerCaptureState {
@@ -699,7 +702,7 @@ mod tests {
             BrowserPointerCaptureOwner::SftpQueueResize
         ));
         assert!(pointer_capture_needs_workspace_overlay(
-            BrowserPointerCaptureOwner::TerminalCommandSenderResize
+            BrowserPointerCaptureOwner::TerminalCommandComposerResize
         ));
         assert!(pointer_capture_needs_workspace_overlay(
             BrowserPointerCaptureOwner::TerminalQuickCommandsResize

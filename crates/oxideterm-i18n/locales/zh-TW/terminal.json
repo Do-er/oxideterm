@@ -132,7 +132,8 @@
       "folded_exit_code": "結束代碼 {{code}}",
       "previous_command": "上一個命令",
       "next_command": "下一個命令",
-      "clear_screen": "清除螢幕"
+      "clear_screen": "清除螢幕",
+      "open_sftp": "開啟 SFTP"
     },
     "modem": {
       "timeout": "等待對端回應逾時。請啟動對端的傳輸程式後重試。",
@@ -544,11 +545,11 @@
       "insert": "插入",
       "execute": "執行"
     },
-    "sender": {
-      "task": "傳送器",
+    "composer": {
+      "task": "工作",
       "placeholder": "輸入命令或十六進位位元組……",
-      "add_task": "新增傳送工作",
-      "remove_task": "移除傳送工作",
+      "add_task": "新增工作",
+      "remove_task": "移除工作",
       "text": "文字",
       "hex": "十六進位",
       "by_line": "逐行",
@@ -572,8 +573,8 @@
       "error_empty": "請輸入要傳送的內容",
       "error_hex": "十六進位輸入無效",
       "error_targets": "沒有可用的目標終端",
-      "error_busy": "目標正由另一個傳送工作使用",
-      "title": "命令發送器",
+      "error_busy": "目標正由另一個工作使用",
+      "title": "命令編寫",
       "broadcast": "廣播",
       "fallback_current": "未啟用同步，將僅發往當前終端",
       "broadcast_active": "跟隨廣播目標同步中"

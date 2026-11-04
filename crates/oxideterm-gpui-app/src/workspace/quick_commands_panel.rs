@@ -13,7 +13,7 @@ const MIN_TERMINAL_HEIGHT: f32 = 180.0;
 const RESIZE_HOTZONE: f32 = 6.0;
 
 pub(in crate::workspace) struct QuickCommandsPanelState {
-    // Layout measurements exclude the toolbar, quick bar, and sender input.
+    // Layout measurements exclude the toolbar, quick bar, and composer input.
     pub(in crate::workspace) available_height: Rc<Cell<f32>>,
     height: f32,
     drag: Option<(Pixels, f32)>,
@@ -102,11 +102,11 @@ impl WorkspaceApp {
         window: &mut Window,
         cx: &mut Context<Self>,
     ) {
-        // The sender retains its drafts and running jobs while its expanded surface closes.
-        self.terminal_command_sender.update(cx, |sender, cx| {
-            sender.set_expanded(false, cx);
-            sender.set_compact_focused(false, cx);
-            sender.dismiss_compact_suggestions();
+        // The composer retains its drafts and running jobs while its expanded surface closes.
+        self.terminal_command_composer.update(cx, |composer, cx| {
+            composer.set_expanded(false, cx);
+            composer.set_compact_focused(false, cx);
+            composer.dismiss_compact_suggestions();
         });
         self.close_terminal_command_overlays(cx);
         self.ime_marked_text = None;

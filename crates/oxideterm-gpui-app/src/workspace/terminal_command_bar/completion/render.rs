@@ -10,7 +10,7 @@ fn terminal_command_suggestion_risk_tone(risk: &str) -> StatusTone {
 }
 
 impl WorkspaceApp {
-    pub(in crate::workspace) fn render_terminal_command_sender_suggestions(
+    pub(in crate::workspace) fn render_terminal_command_composer_suggestions(
         &self,
         suggestions: &[TerminalCommandSuggestion],
         highlighted: Option<usize>,
@@ -73,8 +73,8 @@ impl WorkspaceApp {
                         );
                     }
                     this.terminal_history_all_connections = all;
-                    this.terminal_command_sender
-                        .update(cx, |sender, cx| sender.show_compact_history(cx));
+                    this.terminal_command_composer
+                        .update(cx, |composer, cx| composer.show_compact_history(cx));
                     cx.stop_propagation();
                     cx.notify();
                 }),
@@ -217,7 +217,7 @@ impl WorkspaceApp {
                     .on_mouse_down(
                         MouseButton::Left,
                         cx.listener(move |this, _event, _window, cx| {
-                            this.accept_terminal_command_sender_suggestion(
+                            this.accept_terminal_command_composer_suggestion(
                                 &suggestion_for_click,
                                 cx,
                             );

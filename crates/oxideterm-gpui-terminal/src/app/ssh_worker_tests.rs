@@ -610,7 +610,7 @@ fn ssh_worker_output_reaches_a_painted_pane_without_followup_output(cx: &mut Tes
             })
         {
             pane.update(cx, |pane, cx| {
-                assert!(pane.send_command_sender_text_chunk("paint-input", cx));
+                assert!(pane.send_composer_text_chunk("paint-input", cx));
             });
             continue_output.take().unwrap().send(()).unwrap();
         }

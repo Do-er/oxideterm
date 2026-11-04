@@ -1104,24 +1104,9 @@ impl WorkspaceApp {
             return true;
         }
 
-        if self.close_terminal_cwd_picker(cx) {
-            cx.notify();
-            return true;
-        }
-
-        if self.close_terminal_git_branch_picker(cx) {
-            cx.notify();
-            return true;
-        }
-
-        if self.close_terminal_project_panel(cx) {
-            cx.notify();
-            return true;
-        }
-
         if self
-            .terminal_command_sender
-            .update(cx, |sender, _cx| sender.dismiss_compact_suggestions())
+            .terminal_command_composer
+            .update(cx, |composer, _cx| composer.dismiss_compact_suggestions())
         {
             cx.notify();
             return true;
@@ -1211,9 +1196,6 @@ impl WorkspaceApp {
             self.blur_terminal_quick_commands_input(cx);
             self.dismiss_terminal_recording_menu();
             self.dismiss_terminal_highlight_popover();
-            self.close_terminal_cwd_picker(cx);
-            self.close_terminal_git_branch_picker(cx);
-            self.close_terminal_project_panel(cx);
             self.terminal.update(cx, |terminal, _cx| {
                 terminal.set_broadcast_menu_open(true);
             });
@@ -1266,7 +1248,7 @@ impl WorkspaceApp {
         }
 
         if self.search_editor_focused(window, cx)
-            || self.terminal_command_sender_editor_focused(window, cx)
+            || self.terminal_command_composer_editor_focused(window, cx)
             || self.quick_command_text_editor_focused(window, cx)
         {
             // Child editor handlers own the bubble path while focused.
@@ -1449,18 +1431,6 @@ impl WorkspaceApp {
         };
         if quick_commands_focused {
             self.handle_quick_commands_key(event, window, cx);
-            return;
-        }
-
-        if self.handle_terminal_cwd_picker_key(event, window, cx) {
-            return;
-        }
-
-        if self.handle_terminal_git_branch_picker_key(event, cx) {
-            return;
-        }
-
-        if self.handle_terminal_project_panel_key(event, cx) {
             return;
         }
 

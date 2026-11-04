@@ -69,12 +69,10 @@ mod tabs;
 mod terminal_archive;
 mod terminal_cast;
 mod terminal_command_bar;
-mod terminal_command_sender;
+mod terminal_command_composer;
 mod terminal_context_actions;
 mod terminal_cwd;
 mod terminal_entity;
-mod terminal_git;
-mod terminal_project;
 mod terminal_sync_groups;
 mod terminal_triggers_runtime;
 mod version_migration;
@@ -316,7 +314,7 @@ use self::sidebar::{
     ai_now_ms,
 };
 use self::tabs::{TabRemovalTransition, TerminalLocation};
-use self::terminal_entity::{WorkspaceTerminalEntity, WorkspaceTerminalEvent};
+use self::terminal_entity::WorkspaceTerminalEntity;
 use self::window_intent::WorkspaceWindowIntentEntity;
 use crate::{
     CloseOtherTabs, ClosePane, CloseSearch, CloseTab, CommandPalette, Copy, Cut, Find, FindNext,
@@ -845,8 +843,8 @@ pub(crate) struct WorkspaceApp {
     terminal_rule_highlight_section_expanded: bool,
     terminal_command_context_highlight_section_expanded: bool,
     terminal_selection_highlight_section_expanded: bool,
-    terminal_command_sender: Entity<terminal_command_sender::TerminalCommandSenderEntity>,
-    _terminal_command_sender_observation: Subscription,
+    terminal_command_composer: Entity<terminal_command_composer::TerminalCommandComposerEntity>,
+    _terminal_command_composer_observation: Subscription,
     local_terminal_command_history: SharedTerminalCommandHistory,
     terminal_history_store: TerminalHistoryStore,
     _terminal_history_updates: Task<()>,
@@ -1059,7 +1057,6 @@ pub(crate) struct WorkspaceApp {
     archive_command: Option<terminal_archive::ArchiveCommandPreview>,
     ssh_tunnels: ssh_tunnels::SshTunnels,
     terminal: Entity<WorkspaceTerminalEntity>,
-    _terminal_subscription: Subscription,
     overlay: Entity<WorkspaceOverlayEntity>,
     _overlay_observation: Subscription,
     // Producers release before the writer, so their final cancellation records can drain.

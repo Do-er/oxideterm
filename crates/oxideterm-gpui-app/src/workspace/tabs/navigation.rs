@@ -329,8 +329,8 @@ impl WorkspaceApp {
             self.clear_ime_selection();
         }
         self.clear_ai_sidebar_keyboard_focus(cx);
-        self.terminal_command_sender.update(cx, |sender, cx| {
-            sender.set_compact_focused(false, cx);
+        self.terminal_command_composer.update(cx, |composer, cx| {
+            composer.set_compact_focused(false, cx);
         });
         if let Some(surface) = self.active_ide_surface(cx) {
             window.focus(&surface.read(cx).focus_handle(cx), cx);

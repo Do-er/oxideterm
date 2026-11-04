@@ -132,7 +132,8 @@
       "folded_exit_code": "Code de sortie {{code}}",
       "previous_command": "Commande précédente",
       "next_command": "Commande suivante",
-      "clear_screen": "Effacer l'écran"
+      "clear_screen": "Effacer l'écran",
+      "open_sftp": "Ouvrir SFTP"
     },
     "modem": {
       "timeout": "Le correspondant n’a pas répondu à temps. Lancez son programme de transfert, puis réessayez.",
@@ -544,11 +545,11 @@
       "insert": "Insérer",
       "execute": "Exécuter"
     },
-    "sender": {
-      "task": "Émetteur",
+    "composer": {
+      "task": "Tâche",
       "placeholder": "Saisissez des commandes ou des octets hexadécimaux...",
-      "add_task": "Ajouter une tâche d’envoi",
-      "remove_task": "Supprimer la tâche d’envoi",
+      "add_task": "Ajouter une tâche",
+      "remove_task": "Supprimer la tâche",
       "text": "Texte",
       "hex": "Hex",
       "by_line": "Par ligne",
@@ -572,8 +573,8 @@
       "error_empty": "Saisissez le contenu à envoyer",
       "error_hex": "Entrée hexadécimale invalide",
       "error_targets": "Aucun terminal cible",
-      "error_busy": "Une cible est utilisée par un autre émetteur",
-      "title": "Émetteur de commandes",
+      "error_busy": "Une cible est utilisée par une autre tâche",
+      "title": "Compositeur de commandes",
       "broadcast": "Diffusion",
       "fallback_current": "Sync désactivée, envoi au terminal actuel uniquement",
       "broadcast_active": "Suit les cibles de diffusion actives"

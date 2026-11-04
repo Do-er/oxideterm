@@ -129,6 +129,15 @@ impl WorkspaceApp {
         };
 
         match action {
+            TerminalContextAction::OpenSftp => {
+                let session = self.session_id_for_pane(pane_id, cx);
+                if let Some(node_id) = session
+                    .and_then(|session_id| self.workspace_runtime.read(cx).ssh_terminal_node_id(session_id))
+                {
+                    self.open_sftp_tab(node_id, window, cx);
+                }
+                true
+            }
             TerminalContextAction::ConvertToShellIde => {
                 self.request_shell_ide(pane_id, source_pane, window, cx);
                 true
@@ -178,9 +187,9 @@ impl WorkspaceApp {
                     self.close_terminal_ai_inline_panel(window, cx);
                 }
                 self.close_terminal_command_overlays(cx);
-                let sender_id = self.replace_terminal_command_sender_text(command, cx);
+                let document_id = self.replace_terminal_command_composer_text(command, cx);
                 self.ime_marked_text = None;
-                self.focus_terminal_command_sender_input(sender_id, window, cx);
+                self.focus_terminal_command_composer_input(document_id, window, cx);
                 cx.notify();
                 true
             }

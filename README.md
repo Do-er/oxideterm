@@ -42,7 +42,7 @@ For a guided tour, see the [documentation](https://oxideterm.app).
 | | |
 |---|---|
 | **Terminals and protocols** | Local shells, SSH, Mosh, Telnet, Serial, split panes, multi-hop routes, SSH agent and agent forwarding, 2FA and TOTP credentials, X11 forwarding, shell integration, command marks, configurable session logs, recording, Sixel and Kitty graphics, trzsz transfers |
-| **tmux and broadcast** | Native `tmux -CC` control mode with pane layouts and draggable dividers, named broadcast groups, and an advanced multi-target command sender for scheduled, repeatable input |
+| **tmux and broadcast** | Native `tmux -CC` control mode with pane layouts and draggable dividers, named broadcast groups, and an advanced multi-target command composer for scheduled, repeatable input |
 | **Reliability** | Grace Period reconnect keeps TUI apps alive through short network drops, then restores forwards, transfers, and open editor files |
 | **Files and editing** | SFTP dual-pane manager, transfer queues with speed limits and ETA, bookmarks, a built-in remote editor with safe writes, conflict handling, and workspace restore |
 | **Networking** | Local, remote, and dynamic SOCKS5 forwarding, saved rules, remote port detection, connection topology, ad-hoc socket debugging |

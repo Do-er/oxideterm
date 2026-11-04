@@ -117,11 +117,11 @@
       "group_quick_commands": "Quick Commands",
       "source_quick_command": "quick"
     },
-    "sender": {
-      "task": "Sender",
+    "composer": {
+      "task": "Task",
       "placeholder": "Enter commands or hexadecimal bytes...",
-      "add_task": "Add sender task",
-      "remove_task": "Remove sender task",
+      "add_task": "Add task",
+      "remove_task": "Remove task",
       "text": "Text",
       "hex": "Hex",
       "by_line": "By line",
@@ -145,8 +145,8 @@
       "error_empty": "Enter content to send",
       "error_hex": "Invalid hexadecimal input",
       "error_targets": "No target terminal",
-      "error_busy": "A target is used by another sender",
-      "title": "Command Sender",
+      "error_busy": "A target is used by another task",
+      "title": "Command Composer",
       "broadcast": "Broadcast",
       "fallback_current": "Sync disabled, sending to current terminal only",
       "broadcast_active": "Following active broadcast targets"
@@ -215,7 +215,8 @@
       "folded_exit_code": "Exit code {{code}}",
       "previous_command": "Previous command",
       "next_command": "Next command",
-      "clear_screen": "Clear screen"
+      "clear_screen": "Clear screen",
+      "open_sftp": "Open SFTP"
     },
     "modem": {
       "timeout": "The peer did not respond in time. Start its transfer program, then retry.",

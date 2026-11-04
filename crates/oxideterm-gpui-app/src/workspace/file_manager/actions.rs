@@ -81,22 +81,6 @@ impl WorkspaceApp {
         cx.notify();
     }
 
-    pub(in crate::workspace) fn open_file_manager_tab_at_path(
-        &mut self,
-        path: String,
-        window: &mut Window,
-        cx: &mut Context<Self>,
-    ) {
-        self.open_file_manager_tab(window, cx);
-        if !path.trim().is_empty() {
-            // The cwd picker can browse away from the active terminal's
-            // confirmed cwd before opening the surface, so apply that explicit
-            // selection after the tab is active.
-            self.set_file_manager_path(path, cx);
-        }
-        cx.notify();
-    }
-
     pub(in crate::workspace) fn handle_file_manager_key(
         &mut self,
         event: &KeyDownEvent,

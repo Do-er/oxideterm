@@ -1351,18 +1351,6 @@ impl WorkspaceApp {
         set_tauri_backdrop_blur_allowed(self.render_policy.allow_background_blur);
         self.sftp_transfer_manager
             .apply_settings(sftp_runtime_settings_from_settings(&settings));
-        if !settings.terminal.command_bar.enabled || !settings.terminal.command_bar.project_tasks {
-            // Close stale project task UI when the owning awareness feature is disabled.
-            self.close_terminal_project_panel(cx);
-        }
-        if !settings.terminal.command_bar.enabled
-            || !settings.terminal.command_bar.current_directory_awareness
-            || !settings.terminal.command_bar.show_current_directory
-        {
-            // CWD picker state is transient command-bar chrome; disabling the
-            // feature should not leave an orphaned popover around.
-            self.close_terminal_cwd_picker(cx);
-        }
         let saved_group_ids = settings
             .terminal
             .broadcast_groups
@@ -1555,7 +1543,7 @@ impl WorkspaceApp {
         // surfaces keep their own GPUI owners, so push typography/wrap/autosave
         // changes into each open surface after the settings store changes.
         self.apply_ide_runtime_settings_to_surfaces(cx);
-        self.sync_terminal_command_sender_appearance(cx);
+        self.sync_terminal_command_composer_appearance(cx);
         self.sync_search_editor_appearance(cx);
         self.sync_active_terminal_metadata_context(cx);
     }

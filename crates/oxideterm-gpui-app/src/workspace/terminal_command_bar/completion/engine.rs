@@ -1,7 +1,7 @@
 use super::*;
 
 impl WorkspaceApp {
-    pub(in crate::workspace) fn terminal_command_sender_history_suggestions(
+    pub(in crate::workspace) fn terminal_command_composer_history_suggestions(
         &self,
         input: &str,
         allow_empty_history: bool,
@@ -14,7 +14,7 @@ impl WorkspaceApp {
             .command_bar
             .smart_completion
             && !self
-                .terminal_command_sender
+                .terminal_command_composer
                 .read(cx)
                 .compact_suggestions_open()
         {
@@ -24,14 +24,14 @@ impl WorkspaceApp {
         self.terminal_command_history_suggestions(input, allow_empty_history, &context, cx)
     }
 
-    pub(in crate::workspace) fn terminal_command_sender_visible_history_suggestions(
+    pub(in crate::workspace) fn terminal_command_composer_visible_history_suggestions(
         &self,
         input: &str,
         cx: &mut Context<Self>,
     ) -> Vec<TerminalCommandSuggestion> {
-        let suggestions = self.terminal_command_sender_history_suggestions(input, false, cx);
+        let suggestions = self.terminal_command_composer_history_suggestions(input, false, cx);
         if suggestions.is_empty() {
-            self.terminal_command_sender_history_suggestions(input, true, cx)
+            self.terminal_command_composer_history_suggestions(input, true, cx)
         } else {
             suggestions
         }

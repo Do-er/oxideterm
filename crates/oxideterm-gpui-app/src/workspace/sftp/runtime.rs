@@ -1234,17 +1234,6 @@ impl WorkspaceApp {
         cx.notify();
     }
 
-    pub(in crate::workspace) fn open_sftp_tab_at_remote_path(
-        &mut self,
-        node_id: NodeId,
-        path: String,
-        window: &mut Window,
-        cx: &mut Context<Self>,
-    ) {
-        let remote_path = (!path.trim().is_empty()).then_some(path);
-        self.open_sftp_with_preference(node_id, remote_path, window, cx);
-    }
-
     pub(in crate::workspace) fn choose_sftp_presentation(
         &mut self,
         preference: oxideterm_settings::SftpPresentationPreference,

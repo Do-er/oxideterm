@@ -31,7 +31,6 @@ use super::quick_commands::{
 use super::session_manager::{SessionManagerInput, SessionManagerState};
 use super::sftp::SftpInput;
 use super::sidebar::{ai_input_line_index_for_offset, ai_input_visual_lines};
-use super::terminal_git::TerminalGitPanelSection;
 use oxideterm_gpui_settings_view::SettingsInput;
 use oxideterm_gpui_ui::{
     tauri_ui_font_family,
@@ -135,11 +134,7 @@ pub(super) enum WorkspaceImeTarget {
     AuditPolicy(super::audit::AuditPolicyInput),
     KnowledgeSearch,
     KnowledgeRename,
-    TerminalCommandSenderCompact,
-    TerminalCwdSearch,
-    TerminalGitBranchSearch,
-    TerminalGitCommitMessage,
-    TerminalProjectSearch,
+    TerminalCommandComposerCompact,
     TerminalBroadcastGroupName,
     TerminalCastSearch,
     HostProcessSearch,
@@ -532,11 +527,7 @@ impl WorkspaceImeTarget {
             Self::AuditPolicy(super::audit::AuditPolicyInput::Capacity) => 27,
             Self::KnowledgeSearch => 23,
             Self::KnowledgeRename => 24,
-            Self::TerminalCommandSenderCompact => 2,
-            Self::TerminalCwdSearch => 18,
-            Self::TerminalGitBranchSearch => 17,
-            Self::TerminalGitCommitMessage => 20,
-            Self::TerminalProjectSearch => 19,
+            Self::TerminalCommandComposerCompact => 2,
             Self::TerminalBroadcastGroupName => 21,
             Self::TerminalCastSearch => 3,
             Self::HostProcessSearch => 6,
@@ -905,8 +896,8 @@ impl InputHandler for WorkspaceInputHandler {
                 WorkspaceImeTarget::QuickCommand(input) => {
                     Some(view.terminal.read(cx).quick_commands.input_viewport(input))
                 }
-                WorkspaceImeTarget::TerminalCommandSenderCompact => view
-                    .terminal_command_sender
+                WorkspaceImeTarget::TerminalCommandComposerCompact => view
+                    .terminal_command_composer
                     .read(cx)
                     .active_compact_viewport(),
                 _ => view
@@ -1346,29 +1337,9 @@ impl WorkspaceApp {
                 return Some(WorkspaceImeTarget::QuickCommand(input));
             }
 
-            if self.terminal.read(cx).cwd_picker_open() {
-                return Some(WorkspaceImeTarget::TerminalCwdSearch);
-            }
-
-            if self.terminal.read(cx).git_panel_open() {
-                return match self.terminal.read(cx).git_panel_active_section() {
-                    TerminalGitPanelSection::Branches => {
-                        Some(WorkspaceImeTarget::TerminalGitBranchSearch)
-                    }
-                    TerminalGitPanelSection::Changes => {
-                        Some(WorkspaceImeTarget::TerminalGitCommitMessage)
-                    }
-                    _ => None,
-                };
-            }
-
-            if self.terminal.read(cx).project_panel_open() {
-                return Some(WorkspaceImeTarget::TerminalProjectSearch);
-            }
-
-            let sender = self.terminal_command_sender.read(cx);
+            let sender = self.terminal_command_composer.read(cx);
             if sender.is_visible() && !sender.is_expanded() && sender.compact_focused() {
-                return Some(WorkspaceImeTarget::TerminalCommandSenderCompact);
+                return Some(WorkspaceImeTarget::TerminalCommandComposerCompact);
             }
         }
 
@@ -1878,8 +1849,8 @@ impl WorkspaceApp {
             WorkspaceImeTarget::QuickCommand(input) => {
                 Some(self.terminal.read(cx).quick_commands.input_viewport(input))
             }
-            WorkspaceImeTarget::TerminalCommandSenderCompact => self
-                .terminal_command_sender
+            WorkspaceImeTarget::TerminalCommandComposerCompact => self
+                .terminal_command_composer
                 .read(cx)
                 .active_compact_viewport(),
             _ => self
@@ -2268,7 +2239,7 @@ impl WorkspaceApp {
             {
                 super::settings_mono_font_family(self.settings_store.settings())
             }
-            WorkspaceImeTarget::TerminalCommandSenderCompact => {
+            WorkspaceImeTarget::TerminalCommandComposerCompact => {
                 super::settings_mono_font_family(self.settings_store.settings())
             }
             _ => tauri_ui_font_family(&self.settings_store.settings().appearance.ui_font_family),
@@ -2301,35 +2272,11 @@ impl WorkspaceApp {
                 .rename
                 .as_ref()
                 .map(|rename| rename.name.clone()),
-            WorkspaceImeTarget::TerminalCommandSenderCompact => self
-                .terminal_command_sender
+            WorkspaceImeTarget::TerminalCommandComposerCompact => self
+                .terminal_command_composer
                 .read(cx)
                 .active_compact_draft()
                 .map(str::to_string),
-            WorkspaceImeTarget::TerminalCwdSearch => {
-                let terminal = self.terminal.read(cx);
-                terminal
-                    .cwd_picker_open()
-                    .then(|| terminal.cwd_query().to_string())
-            }
-            WorkspaceImeTarget::TerminalGitBranchSearch => {
-                let terminal = self.terminal.read(cx);
-                terminal
-                    .git_panel_open()
-                    .then(|| terminal.git_panel_query().to_string())
-            }
-            WorkspaceImeTarget::TerminalGitCommitMessage => {
-                let terminal = self.terminal.read(cx);
-                terminal
-                    .git_panel_open()
-                    .then(|| terminal.git_commit_message().to_string())
-            }
-            WorkspaceImeTarget::TerminalProjectSearch => {
-                let terminal = self.terminal.read(cx);
-                terminal
-                    .project_panel_open()
-                    .then(|| terminal.project_query().to_string())
-            }
             WorkspaceImeTarget::TerminalBroadcastGroupName => self
                 .terminal
                 .read(cx)
@@ -3274,55 +3221,20 @@ impl WorkspaceApp {
                 self.show_active_input_caret(cx);
                 cx.notify();
             }
-            WorkspaceImeTarget::TerminalCommandSenderCompact => {
+            WorkspaceImeTarget::TerminalCommandComposerCompact => {
                 let mut draft = Zeroizing::new(
-                    self.terminal_command_sender
+                    self.terminal_command_composer
                         .read(cx)
                         .active_compact_draft()
                         .unwrap_or_default()
                         .to_string(),
                 );
                 replace_utf16(&mut draft, replacement_range, text);
-                self.terminal_command_sender.update(cx, |sender, cx| {
+                self.terminal_command_composer.update(cx, |sender, cx| {
                     sender.replace_active_compact_text(std::mem::take(&mut *draft), cx);
                 });
                 self.show_active_input_caret(cx);
                 cx.notify();
-            }
-            WorkspaceImeTarget::TerminalCwdSearch => {
-                if self.terminal.update(cx, |terminal, _cx| {
-                    terminal.replace_cwd_query(replacement_range, text)
-                }) {
-                    self.show_active_input_caret(cx);
-                    cx.notify();
-                }
-            }
-            WorkspaceImeTarget::TerminalGitBranchSearch => {
-                if self.terminal.update(cx, |terminal, _cx| {
-                    terminal.replace_git_panel_query(replacement_range, text)
-                }) {
-                    self.show_active_input_caret(cx);
-                    cx.notify();
-                }
-            }
-            WorkspaceImeTarget::TerminalGitCommitMessage => {
-                if self.terminal.update(cx, |terminal, _cx| {
-                    terminal.replace_git_commit_message(replacement_range, text)
-                }) {
-                    self.show_active_input_caret(cx);
-                    cx.notify();
-                }
-            }
-            WorkspaceImeTarget::TerminalProjectSearch => {
-                if self.terminal.read(cx).project_panel_open()
-                    && let Some(key) = self.active_terminal_project_key(cx)
-                    && self.terminal.update(cx, |terminal, _cx| {
-                        terminal.replace_project_query(&key, replacement_range, text)
-                    })
-                {
-                    self.show_active_input_caret(cx);
-                    cx.notify();
-                }
             }
             WorkspaceImeTarget::TerminalBroadcastGroupName => {
                 if self.terminal.update(cx, |terminal, _cx| {
@@ -4388,7 +4300,7 @@ mod tests {
         caret.advance_tick(now + std::time::Duration::from_secs(1));
         assert!(!visibility.visible());
 
-        assert!(caret.sync_active_target(Some(WorkspaceImeTarget::TerminalCwdSearch)));
+        assert!(caret.sync_active_target(Some(WorkspaceImeTarget::TerminalCastSearch)));
         assert!(visibility.visible());
         assert_eq!(
             caret.next_tick_delay(now),
@@ -4659,7 +4571,7 @@ mod tests {
             );
         }
         assert_eq!(
-            ime_text_snapshot(WorkspaceImeTarget::TerminalCwdSearch, secret),
+            ime_text_snapshot(WorkspaceImeTarget::TerminalCastSearch, secret),
             secret
         );
     }
@@ -4752,7 +4664,7 @@ mod tests {
             ));
         }
         assert!(!path_completion_owns_vertical_navigation(
-            WorkspaceImeTarget::TerminalCwdSearch,
+            WorkspaceImeTarget::TerminalCastSearch,
             "arrowdown",
             true,
             false,
@@ -4775,7 +4687,7 @@ mod tests {
             CopyShortcutOwner::SelectedRange(2..5)
         );
         assert_eq!(
-            copy_shortcut_owner_for_target(WorkspaceImeTarget::TerminalCwdSearch, Some(&(3..3))),
+            copy_shortcut_owner_for_target(WorkspaceImeTarget::TerminalCastSearch, Some(&(3..3))),
             CopyShortcutOwner::FocusedEditableInput
         );
         assert_eq!(

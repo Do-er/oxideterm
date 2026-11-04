@@ -145,10 +145,10 @@ impl WorkspaceApp {
         self.finish_ai_sidebar_resize(cx);
         self.finish_sftp_pane_resize(cx);
         self.finish_sftp_queue_resize(cx);
-        self.finish_terminal_command_sender_resize(cx);
+        self.finish_terminal_command_composer_resize(cx);
         // A locked workspace must not keep sending unattended terminal input.
-        self.terminal_command_sender
-            .update(cx, |sender, cx| sender.stop_all(cx));
+        self.terminal_command_composer
+            .update(cx, |composer, cx| composer.stop_all(cx));
         self.suspend_public_mcp_runtime(cx);
         self.finish_split_drag(cx);
         self.close_terminal_command_overlays(cx);

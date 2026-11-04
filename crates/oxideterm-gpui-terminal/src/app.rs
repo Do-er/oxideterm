@@ -718,6 +718,7 @@ pub(crate) enum FreeTypeDragAction {
 #[derive(Clone, Copy, Debug, Eq, PartialEq)]
 pub enum TerminalContextAction {
     ConvertToShellIde,
+    OpenSftp,
     Reconnect,
     PluginTextTool,
     SendSelectionToAi,
@@ -3052,17 +3053,17 @@ impl TerminalPane {
         true
     }
 
-    pub fn send_command_sender_line(&mut self, line: &str, cx: &mut Context<Self>) -> bool {
+    pub fn send_composer_line(&mut self, line: &str, cx: &mut Context<Self>) -> bool {
         let mut input = zeroize::Zeroizing::new(line.replace("\r\n", "\r").replace('\n', "\r"));
         input.push('\r');
-        self.send_command_sender_text(&input, true, cx)
+        self.send_composer_text(&input, true, cx)
     }
 
-    pub fn send_command_sender_text_chunk(&mut self, text: &str, cx: &mut Context<Self>) -> bool {
+    pub fn send_composer_text_chunk(&mut self, text: &str, cx: &mut Context<Self>) -> bool {
         if text.is_empty() {
             return false;
         }
-        self.send_command_sender_text(text, false, cx)
+        self.send_composer_text(text, false, cx)
     }
 
     pub fn send_trigger_text(
@@ -3119,7 +3120,7 @@ impl TerminalPane {
         self.pending_trigger_matches.drain(..).collect()
     }
 
-    pub fn send_command_sender_raw_bytes(&mut self, bytes: &[u8], cx: &mut Context<Self>) -> bool {
+    pub fn send_composer_raw_bytes(&mut self, bytes: &[u8], cx: &mut Context<Self>) -> bool {
         if bytes.is_empty() || !self.terminal_accepts_input() {
             return false;
         }
@@ -3161,7 +3162,7 @@ impl TerminalPane {
         true
     }
 
-    fn send_command_sender_text(
+    fn send_composer_text(
         &mut self,
         text: &str,
         whole_line: bool,
@@ -3215,7 +3216,7 @@ impl TerminalPane {
         // Only a complete, non-secret line gets a tentative command mark;
         // partial and opaque sends remain dispatch records until the shell reports more.
         let privilege =
-            self.observe_privilege_input("command-sender-text", &bytes, Instant::now(), cx);
+            self.observe_privilege_input("command-composer-text", &bytes, Instant::now(), cx);
         let at_shell_prompt = self.shell_integration_status.detected
             && self.shell_integration_status.state == ShellIntegrationLifecycleState::Prompt;
         let text_history_input = std::str::from_utf8(&bytes).is_ok()

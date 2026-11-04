@@ -2202,6 +2202,18 @@ impl TerminalPane {
                     }))
                     .when(self.session_kind == TerminalSessionKind::SshPty, |menu| {
                         menu.child(self.render_terminal_context_menu_item(
+                            self.preferences.command_selection_labels.open_sftp.clone(),
+                            self.terminal_exited,
+                            |this, _, _, cx| {
+                                this.request_context_action(
+                                    TerminalContextAction::OpenSftp,
+                                    false,
+                                    cx,
+                                )
+                            },
+                            cx,
+                        ))
+                        .child(self.render_terminal_context_menu_item(
                             self.preferences.command_selection_labels.shell_ide.clone(),
                             self.terminal_exited,
                             |this, _, _, cx| {

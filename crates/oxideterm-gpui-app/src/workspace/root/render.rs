@@ -540,10 +540,7 @@ impl WorkspaceApp {
                 } else if this.handle_privilege_credential_picker_key(event, window, cx) {
                     window.prevent_default();
                     cx.stop_propagation();
-                } else if this.handle_terminal_git_branch_picker_key(event, cx) {
-                    window.prevent_default();
-                    cx.stop_propagation();
-                } else if this.handle_compact_terminal_command_sender_key(event, window, cx) {
+                } else if this.handle_compact_terminal_command_composer_key(event, window, cx) {
                     window.prevent_default();
                     cx.stop_propagation();
                 } else if active_ime_target.is_some()
@@ -615,9 +612,6 @@ impl WorkspaceApp {
                     this.handle_quick_commands_key(event, window, cx);
                     window.prevent_default();
                     cx.stop_propagation();
-                } else if this.handle_terminal_git_branch_picker_key(event, cx) {
-                    window.prevent_default();
-                    cx.stop_propagation();
                 } else if this.handle_terminal_command_overlay_escape(event, window, cx) {
                     window.prevent_default();
                     cx.stop_propagation();
@@ -637,12 +631,13 @@ impl WorkspaceApp {
                 } else if this.handle_privilege_prompt_helper_key(event, window, cx) {
                     window.prevent_default();
                     cx.stop_propagation();
-                } else if this.terminal_command_sender_editor_focused(window, cx) {
+                } else if this.terminal_command_composer_editor_focused(window, cx) {
                     if event.keystroke.key == "enter"
                         && (event.keystroke.modifiers.control || event.keystroke.modifiers.platform)
                     {
-                        let sender_id = this.terminal_command_sender.read(cx).active_document_id();
-                        this.start_terminal_command_sender(sender_id, cx);
+                        let document_id =
+                            this.terminal_command_composer.read(cx).active_document_id();
+                        this.start_terminal_command_composer(document_id, cx);
                         window.prevent_default();
                         cx.stop_propagation();
                     }
@@ -793,7 +788,7 @@ impl WorkspaceApp {
                 this.update_ai_sidebar_resize(event, window, cx);
                 this.update_sftp_pane_resize(event, window, cx);
                 this.update_sftp_queue_resize(event, window, cx);
-                this.update_terminal_command_sender_resize(event, window, cx);
+                this.update_terminal_command_composer_resize(event, window, cx);
                 this.update_terminal_quick_commands_resize(event, cx);
                 this.update_split_drag(event, window, cx);
                 this.update_settings_slider_drag(event, cx);
@@ -1545,7 +1540,7 @@ impl WorkspaceApp {
             Some(
                 browser_behavior::BrowserPointerCaptureOwner::EmbeddedSftpSidebarResize
                 | browser_behavior::BrowserPointerCaptureOwner::SftpQueueResize
-                | browser_behavior::BrowserPointerCaptureOwner::TerminalCommandSenderResize
+                | browser_behavior::BrowserPointerCaptureOwner::TerminalCommandComposerResize
                 | browser_behavior::BrowserPointerCaptureOwner::TerminalQuickCommandsResize,
             ) => CursorStyle::ResizeRow,
             _ => CursorStyle::ResizeColumn,
@@ -1571,7 +1566,7 @@ impl WorkspaceApp {
                 this.update_ai_sidebar_resize(event, window, cx);
                 this.update_sftp_pane_resize(event, window, cx);
                 this.update_sftp_queue_resize(event, window, cx);
-                this.update_terminal_command_sender_resize(event, window, cx);
+                this.update_terminal_command_composer_resize(event, window, cx);
                 this.update_terminal_quick_commands_resize(event, cx);
                 cx.stop_propagation();
             }))
@@ -1601,7 +1596,7 @@ impl WorkspaceApp {
         self.finish_ai_sidebar_resize(cx);
         self.finish_sftp_pane_resize(cx);
         self.finish_sftp_queue_resize(cx);
-        self.finish_terminal_command_sender_resize(cx);
+        self.finish_terminal_command_composer_resize(cx);
         self.finish_terminal_quick_commands_resize(cx);
         self.finish_split_drag(cx);
         self.finish_settings_slider_drag(cx);
@@ -1766,26 +1761,6 @@ impl WorkspaceApp {
         // Producers submit through the Entity-owned channel so the root never
         // retains a second sender or owns delivery lifetime.
         let _ = self.overlay.read(cx).notice_sender().send(notice);
-    }
-
-    pub(in crate::workspace) fn handle_workspace_terminal_event(
-        &mut self,
-        event: &WorkspaceTerminalEvent,
-        cx: &mut Context<Self>,
-    ) {
-        match event {
-            WorkspaceTerminalEvent::GitMetadataChanged => {
-                cx.notify();
-            }
-            WorkspaceTerminalEvent::ProjectMetadataChanged => {
-                if let Some(key) = self.active_terminal_project_key(cx) {
-                    self.terminal.update(cx, |terminal, _cx| {
-                        terminal.ensure_project_task_highlight(&key);
-                    });
-                }
-                cx.notify();
-            }
-        }
     }
 
     pub(in crate::workspace) fn apply_workspace_runtime_connection_trace_event(

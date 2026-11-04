@@ -643,12 +643,6 @@ impl WorkspaceApp {
                 && self.terminal.read(cx).broadcast_menu_open())
             || (anchor.id == SelectAnchorId::TerminalCommandBar
                 && self.terminal.read(cx).quick_commands.is_open())
-            || (anchor.id == SelectAnchorId::TerminalCwdMenu
-                && self.terminal.read(cx).cwd_picker_open())
-            || (anchor.id == SelectAnchorId::TerminalGitBranchMenu
-                && self.terminal.read(cx).git_panel_open())
-            || (anchor.id == SelectAnchorId::TerminalProjectMenu
-                && self.terminal.read(cx).project_panel_open())
             || (anchor.id == SelectAnchorId::SessionManagerViewMode
                 && self.session_manager.read(cx).view_mode_menu_open)
             || (matches!(
@@ -884,9 +878,9 @@ impl WorkspaceApp {
             self.ime_marked_text = None;
             self.clear_ime_selection();
         }
-        if self.terminal_command_sender.read(cx).compact_focused() {
-            self.terminal_command_sender.update(cx, |sender, cx| {
-                sender.set_compact_focused(false, cx);
+        if self.terminal_command_composer.read(cx).compact_focused() {
+            self.terminal_command_composer.update(cx, |composer, cx| {
+                composer.set_compact_focused(false, cx);
             });
             self.ime_marked_text = None;
             changed = true;
@@ -944,9 +938,6 @@ impl WorkspaceApp {
             changed = true;
         }
         if self.blur_terminal_quick_commands_input(cx) {
-            changed = true;
-        }
-        if self.close_terminal_git_branch_picker(cx) {
             changed = true;
         }
         if self.session_manager.update(cx, |session_manager, cx| {

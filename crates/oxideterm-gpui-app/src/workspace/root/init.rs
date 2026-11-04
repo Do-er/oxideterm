@@ -335,20 +335,7 @@ impl WorkspaceApp {
                 workspace.handle_sftp_surface_event(sftp::SftpSurfaceId::Sidebar, event, cx);
             },
         );
-        let terminal = cx.new(|cx| {
-            WorkspaceTerminalEntity::new(
-                forwarding_runtime.clone(),
-                node_router.clone(),
-                settings_store.path(),
-                cx,
-            )
-        });
-        let terminal_subscription = cx.subscribe(
-            &terminal,
-            |workspace, _terminal, event: &WorkspaceTerminalEvent, cx| {
-                workspace.handle_workspace_terminal_event(event, cx);
-            },
-        );
+        let terminal = cx.new(|_cx| WorkspaceTerminalEntity::new(settings_store.path()));
         let connection_flow_observation =
             cx.observe(&connection_flow, |_workspace, _connection_flow, cx| {
                 // Connection-flow lifecycle changes repaint mounted dialogs without root mirrors.
@@ -552,25 +539,25 @@ impl WorkspaceApp {
         let command_palette =
             cx.new(|_| command_palette::CommandPaletteEntity::new(forwarding_runtime.clone()));
         let command_palette_observation = cx.observe(&command_palette, |_, _, cx| cx.notify());
-        let sender_context_menu_labels = oxideterm_gpui_editor::EditorContextMenuLabels {
+        let composer_context_menu_labels = oxideterm_gpui_editor::EditorContextMenuLabels {
             copy: i18n.t("menu.copy"),
             cut: i18n.t("fileManager.cut"),
             paste: i18n.t("menu.paste"),
             select_all: i18n.t("fileManager.selectAll"),
         };
-        let compact_sender_placeholder = i18n.t("terminal.command_bar.command_placeholder");
-        let expanded_sender_placeholder = i18n.t("terminal.sender.placeholder");
-        let terminal_command_sender = cx.new(|cx| {
-            terminal_command_sender::TerminalCommandSenderEntity::new(
+        let compact_composer_placeholder = i18n.t("terminal.command_bar.command_placeholder");
+        let expanded_composer_placeholder = i18n.t("terminal.composer.placeholder");
+        let terminal_command_composer = cx.new(|cx| {
+            terminal_command_composer::TerminalCommandComposerEntity::new(
                 tokens,
-                compact_sender_placeholder,
-                expanded_sender_placeholder,
-                sender_context_menu_labels,
+                compact_composer_placeholder,
+                expanded_composer_placeholder,
+                composer_context_menu_labels,
                 cx,
             )
         });
-        let terminal_command_sender_observation =
-            cx.observe(&terminal_command_sender, |_, _, cx| cx.notify());
+        let terminal_command_composer_observation =
+            cx.observe(&terminal_command_composer, |_, _, cx| cx.notify());
         let ide_workspace = cx.new({
             let fs = ai_entity.read(cx).agent_fs().clone();
             let backend_runtime = forwarding_runtime.clone();
@@ -615,8 +602,8 @@ impl WorkspaceApp {
             terminal_rule_highlight_section_expanded: true,
             terminal_command_context_highlight_section_expanded: true,
             terminal_selection_highlight_section_expanded: true,
-            terminal_command_sender,
-            _terminal_command_sender_observation: terminal_command_sender_observation,
+            terminal_command_composer,
+            _terminal_command_composer_observation: terminal_command_composer_observation,
             local_terminal_command_history,
             terminal_history_store,
             _terminal_history_updates: terminal_history_updates,
@@ -902,7 +889,6 @@ impl WorkspaceApp {
             archive_command: None,
             ssh_tunnels: ssh_tunnels::SshTunnels::default(),
             terminal,
-            _terminal_subscription: terminal_subscription,
             overlay,
             _overlay_observation: overlay_observation,
         };
@@ -938,7 +924,7 @@ impl WorkspaceApp {
                 default_session_tree_path().with_file_name("standalone_sessions.json"),
                 &workspace.connection_store,
             );
-        workspace.sync_terminal_command_sender_appearance(cx);
+        workspace.sync_terminal_command_composer_appearance(cx);
         workspace.sync_active_terminal_metadata_context(cx);
         workspace.sync_active_terminal_recording_elapsed_tick(cx);
         workspace.sync_active_privilege_prompt_inline_hint(cx);
@@ -1319,6 +1305,7 @@ impl WorkspaceApp {
                 select_all: self.i18n.t("terminal.command_selection.select_all"),
                 shell_ide: self.i18n.t("terminal.shell_ide.convert"),
                 shell_ide_preparing: self.i18n.t("terminal.shell_ide.preparing"),
+                open_sftp: self.i18n.t("terminal.command_selection.open_sftp"),
                 send_to_ai: self.i18n.t("terminal.command_selection.send_to_ai"),
                 fill_command_bar: self.i18n.t("terminal.command_selection.fill_command_bar"),
                 insert_selection_into_command: self

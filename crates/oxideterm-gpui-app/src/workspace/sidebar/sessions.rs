@@ -797,7 +797,7 @@ impl WorkspaceApp {
             .min_w_0()
             .flex_none()
             .h(px(
-                crate::workspace::terminal_command_bar::TERMINAL_SENDER_COMPACT_HEIGHT,
+                crate::workspace::terminal_command_bar::TERMINAL_COMPOSER_COMPACT_HEIGHT,
             ))
             .px(px(self.tokens.spacing.three))
             .py_0()

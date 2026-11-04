@@ -132,7 +132,8 @@
       "folded_exit_code": "종료 코드 {{code}}",
       "previous_command": "이전 명령",
       "next_command": "다음 명령",
-      "clear_screen": "화면 지우기"
+      "clear_screen": "화면 지우기",
+      "open_sftp": "SFTP 열기"
     },
     "modem": {
       "timeout": "상대 측의 응답 시간이 초과되었습니다. 상대 측 전송 프로그램을 실행한 뒤 다시 시도하세요.",
@@ -544,11 +545,11 @@
       "insert": "삽입",
       "execute": "실행"
     },
-    "sender": {
-      "task": "송신기",
+    "composer": {
+      "task": "작업",
       "placeholder": "명령 또는 16진수 바이트 입력...",
-      "add_task": "송신 작업 추가",
-      "remove_task": "송신 작업 제거",
+      "add_task": "작업 추가",
+      "remove_task": "작업 제거",
       "text": "텍스트",
       "hex": "16진수",
       "by_line": "줄 단위",
@@ -572,8 +573,8 @@
       "error_empty": "전송할 내용을 입력하세요",
       "error_hex": "잘못된 16진수 입력",
       "error_targets": "대상 터미널이 없습니다",
-      "error_busy": "대상이 다른 송신 작업에서 사용 중입니다",
-      "title": "명령 발송기",
+      "error_busy": "대상이 다른 작업에서 사용 중입니다",
+      "title": "명령 작성기",
       "broadcast": "브로드캐스트",
       "fallback_current": "동기화 꺼짐, 현재 터미널로만 전송",
       "broadcast_active": "브로드캐스트 대상 동기화 중"

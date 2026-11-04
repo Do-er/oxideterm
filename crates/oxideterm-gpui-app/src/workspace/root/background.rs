@@ -349,7 +349,7 @@ impl WorkspaceApp {
                 )
             });
         }
-        self.sync_terminal_command_sender_appearance(cx);
+        self.sync_terminal_command_composer_appearance(cx);
         self.sync_search_editor_appearance(cx);
         self.apply_ide_runtime_settings_to_surfaces(cx);
         let theme = oxideterm_settings_model::ThemeTarget::Application

@@ -117,11 +117,11 @@
       "group_quick_commands": "快捷命令",
       "source_quick_command": "快捷命令"
     },
-    "sender": {
-      "task": "发送器",
+    "composer": {
+      "task": "任务",
       "placeholder": "输入命令或十六进制字节……",
-      "add_task": "添加发送任务",
-      "remove_task": "移除发送任务",
+      "add_task": "添加任务",
+      "remove_task": "移除任务",
       "text": "文本",
       "hex": "十六进制",
       "by_line": "按行",
@@ -145,8 +145,8 @@
       "error_empty": "请输入要发送的内容",
       "error_hex": "十六进制输入无效",
       "error_targets": "没有可用的目标终端",
-      "error_busy": "目标正在被另一个发送任务使用",
-      "title": "命令发送器",
+      "error_busy": "目标正在被另一个任务使用",
+      "title": "命令编写",
       "broadcast": "广播",
       "fallback_current": "未启用同步，将仅发往当前终端",
       "broadcast_active": "跟随广播目标同步中"
@@ -215,7 +215,8 @@
       "folded_exit_code": "退出码 {{code}}",
       "previous_command": "上一个命令",
       "next_command": "下一个命令",
-      "clear_screen": "清屏"
+      "clear_screen": "清屏",
+      "open_sftp": "打开 SFTP"
     },
     "modem": {
       "timeout": "等待对端响应超时。请启动对端的传输程序后重试。",

@@ -1146,7 +1146,7 @@ flowchart TB
 | `workspace/acp_workspace.rs` 与 `oxideterm-acp-*` 集成 | 协调 ACP agent 配置、session、模型选项和 ACP 主机工具桥接，并与原生供应商路径并列 | ACP session 有独立的 agent/session 生命周期，不应被当作普通供应商流 |
 | `workspace/terminal_context_actions.rs` | 构建选择、搜索、传输和命令路由等终端右键动作 | 终端动作使用统一应用菜单风格，同时仍通过明确 session API 分发 |
 | `workspace/quick_commands*` 与 `terminal_command_bar/*` | 存储快捷命令、命令行补全来源和发送器控件 | 重复终端动作可以变成可复用的桌面控件 |
-| `workspace/terminal_command_sender.rs` 与 `terminal_command_bar/sender.rs` | `TerminalCommandSenderEntity` 管理定时、重复、多目标终端输入、目标快照、取消和进度 | 任务不依赖根视图轮询，也不会创建 SSH 连接；Entity 仍由 `WorkspaceApp` 协调，并使用已经存在的终端目标 |
+| `workspace/terminal_command_composer.rs` 与 `terminal_command_bar/composer.rs` | `TerminalCommandComposerEntity` 管理定时、重复、多目标终端输入、目标快照、取消和进度 | 任务不依赖根视图轮询，也不会创建 SSH 连接；Entity 仍由 `WorkspaceApp` 协调，并使用已经存在的终端目标 |
 | `workspace/local_terminal_background.rs` 与 `workspace/root/background.rs` | 解析应用和终端背景图片渲染 | 背景图片属于视觉设置，不是终端缓冲区内容 |
 | `workspace/notification_center.rs` | 收集并渲染可操作的应用通知 | 后台失败和恢复动作不会阻塞终端输入，但仍然可见 |
 | `workspace/onboarding/*` | 渲染首次启动设置和设置状态 | 用户可以从主应用完成配置，而不是从 CLI 文档开始 |

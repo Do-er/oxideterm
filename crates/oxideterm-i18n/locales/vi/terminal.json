@@ -132,7 +132,8 @@
       "folded_exit_code": "Mã thoát {{code}}",
       "previous_command": "Lệnh trước",
       "next_command": "Lệnh tiếp theo",
-      "clear_screen": "Xóa màn hình"
+      "clear_screen": "Xóa màn hình",
+      "open_sftp": "Mở SFTP"
     },
     "modem": {
       "timeout": "Thiết bị bên kia không phản hồi kịp thời. Hãy khởi động chương trình truyền tệp trên thiết bị đó rồi thử lại.",
@@ -544,11 +545,11 @@
       "insert": "Chèn",
       "execute": "Thực thi"
     },
-    "sender": {
-      "task": "Trình gửi",
+    "composer": {
+      "task": "Tác vụ",
       "placeholder": "Nhập lệnh hoặc byte thập lục phân...",
-      "add_task": "Thêm tác vụ gửi",
-      "remove_task": "Xóa tác vụ gửi",
+      "add_task": "Thêm tác vụ",
+      "remove_task": "Xóa tác vụ",
       "text": "Văn bản",
       "hex": "Thập lục phân",
       "by_line": "Theo dòng",
@@ -572,8 +573,8 @@
       "error_empty": "Nhập nội dung cần gửi",
       "error_hex": "Dữ liệu thập lục phân không hợp lệ",
       "error_targets": "Không có terminal đích",
-      "error_busy": "Một đích đang được tác vụ gửi khác sử dụng",
-      "title": "Trình gửi lệnh",
+      "error_busy": "Một đích đang được tác vụ khác sử dụng",
+      "title": "Bộ soạn lệnh",
       "broadcast": "Phát sóng",
       "fallback_current": "Chưa bật đồng bộ, chỉ gửi đến terminal hiện tại",
       "broadcast_active": "Đang đồng bộ theo các đích phát sóng"

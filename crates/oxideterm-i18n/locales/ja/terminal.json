@@ -132,7 +132,8 @@
       "folded_exit_code": "終了コード {{code}}",
       "previous_command": "前のコマンド",
       "next_command": "次のコマンド",
-      "clear_screen": "画面をクリア"
+      "clear_screen": "画面をクリア",
+      "open_sftp": "SFTP を開く"
     },
     "modem": {
       "timeout": "相手側からの応答がタイムアウトしました。相手側の転送プログラムを起動してから再試行してください。",
@@ -544,11 +545,11 @@
       "insert": "挿入",
       "execute": "実行"
     },
-    "sender": {
-      "task": "送信",
+    "composer": {
+      "task": "タスク",
       "placeholder": "コマンドまたは16進バイトを入力...",
-      "add_task": "送信タスクを追加",
-      "remove_task": "送信タスクを削除",
+      "add_task": "タスクを追加",
+      "remove_task": "タスクを削除",
       "text": "テキスト",
       "hex": "16進",
       "by_line": "行単位",
@@ -572,8 +573,8 @@
       "error_empty": "送信内容を入力してください",
       "error_hex": "16進入力が無効です",
       "error_targets": "送信先ターミナルがありません",
-      "error_busy": "送信先は別の送信タスクで使用中です",
-      "title": "コマンド送信",
+      "error_busy": "送信先は別のタスクで使用中です",
+      "title": "コマンド作成",
       "broadcast": "ブロードキャスト",
       "fallback_current": "同期無効のため現在の端末にのみ送信",
       "broadcast_active": "ブロードキャスト同期中"
