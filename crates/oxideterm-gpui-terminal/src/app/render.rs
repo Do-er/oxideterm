@@ -508,6 +508,7 @@ impl Render for TerminalPane {
         .scroll_x_offset(self.horizontal_scroll_offset_px)
         .performance_metrics_enabled(performance_metrics_enabled)
         .command_mark_gutter_width(self.command_mark_gutter_width())
+        .scrollbar_dragging(self.scrollbar_drag.is_some() || self.horizontal_scrollbar_drag.is_some())
         .layout_cache(self.layout_cache.clone());
         let accepts_external_path_drop =
             cfg!(target_os = "macos") && self.session_kind() == TerminalSessionKind::LocalPty;
@@ -526,6 +527,9 @@ impl Render for TerminalPane {
             .text_size(self.metrics.font_size)
             .line_height(self.metrics.line_height)
             .track_focus(&self.focus_handle)
+            // Deeper than the workspace context so terminal-scoped chords can
+            // outrank workspace-wide bindings that reuse the same keys.
+            .key_context("Terminal")
             .can_drop(move |drag, _window, _cx| {
                 accepts_external_path_drop && drag.is::<ExternalPaths>()
             })
@@ -627,7 +631,35 @@ impl Render for TerminalPane {
                     .overflow_hidden()
                     .child(terminal_element)
                     .children(self.render_command_gutter_controls(cx))
-                    .children(self.render_fold_summaries(cx)),
+                    .children(self.render_fold_summaries(cx))
+                    .when(self.displayed_snapshot().scrollback_lines > 0, |this| {
+                        this.child(
+                            div()
+                                .id("terminal-scrollbar-track")
+                                .absolute()
+                                .top_0()
+                                .right_0()
+                                .bottom_0()
+                                .w(px(SCROLLBAR_RESERVED_WIDTH))
+                                .cursor(gpui::CursorStyle::Arrow),
+                        )
+                    })
+                    .when(
+                        self.horizontal_scroll_offset_px > px(0.0)
+                            || self.horizontal_scrollbar_drag.is_some(),
+                        |this| {
+                            this.child(
+                                div()
+                                    .id("terminal-horizontal-scrollbar-track")
+                                    .absolute()
+                                    .left_0()
+                                    .right(px(SCROLLBAR_RESERVED_WIDTH))
+                                    .bottom_0()
+                                    .h(px(SCROLLBAR_WIDTH))
+                                    .cursor(gpui::CursorStyle::Arrow),
+                            )
+                        },
+                    ),
             )
             .when(self.is_serial_transport(), |pane| {
                 pane.child(self.render_serial_control_bar(cx))
@@ -2068,11 +2100,6 @@ impl TerminalPane {
             .command_selection_labels
             .select_all
             .clone();
-        let select_all_shortcut = self
-            .preferences
-            .command_selection_labels
-            .select_all_shortcut
-            .clone();
         let send_to_ai_label = self.preferences.command_selection_labels.send_to_ai.clone();
         let fill_command_bar_label = self
             .preferences
@@ -2188,6 +2215,15 @@ impl TerminalPane {
                         ))
                     })
                     .child(self.render_terminal_context_menu_item(
+                        select_all_label,
+                        false,
+                        |this, _event, _window, cx| {
+                            this.dismiss_terminal_context_menu(cx);
+                            this.select_all(cx);
+                        },
+                        cx,
+                    ))
+                    .child(self.render_terminal_context_menu_item(
                         copy_label,
                         !menu.has_selection,
                         |this, _event, _window, cx| {
@@ -2213,16 +2249,6 @@ impl TerminalPane {
                         |this, _event, _window, cx| {
                             this.dismiss_terminal_context_menu(cx);
                             this.paste_from_clipboard(cx);
-                        },
-                        cx,
-                    ))
-                    .child(self.render_terminal_context_menu_item_with_shortcut(
-                        select_all_label,
-                        select_all_shortcut,
-                        false,
-                        |this, _event, _window, cx| {
-                            this.dismiss_terminal_context_menu(cx);
-                            this.select_all(cx);
                         },
                         cx,
                     ))

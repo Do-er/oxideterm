@@ -104,7 +104,7 @@
       "paste": "Pegar"
     },
     "kitty_file_transmission": {
-      "title": "¿Permitir recursos locales de Kitty en esta sesión?",
+      "title": "Permitir acceso local de Kitty",
       "description": "Los programas de este terminal, incluidos los remotos, podrán leer archivos locales y memoria compartida para mostrar imágenes. Autorice solo sesiones de confianza. El permiso caduca al cerrar o reconectar. Después, reintente la transferencia bloqueada.",
       "cancel": "Denegar",
       "allow": "Permitir en esta sesión",
@@ -123,8 +123,8 @@
       "fill_command_bar": "Rellenar barra de comandos",
       "insert_selection_into_command": "Insertar selección aquí",
       "replace_command_with_selection": "Reemplazar comando con selección",
-      "find": "Buscar...",
-      "manage_triggers": "Administrar activadores de esta sesión...",
+      "find": "Buscar",
+      "manage_triggers": "Administrar activadores",
       "select_command": "Seleccionar comando",
       "collapse_output": "Contraer salida",
       "expand_output": "Expandir salida",

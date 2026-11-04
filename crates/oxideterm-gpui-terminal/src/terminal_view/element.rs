@@ -93,6 +93,7 @@ pub(crate) struct TerminalElement {
     command_mark_gutter_width: f32,
     command_mark_decorations: bool,
     collapsed_commands: HashSet<String>,
+    scrollbar_dragging: bool,
 }
 
 #[derive(Clone)]
@@ -578,6 +579,7 @@ impl TerminalElement {
             ghost_text: None,
             layout_cache: None,
             performance_metrics_enabled: false,
+            scrollbar_dragging: false,
             viewport_rows,
             scrollbar_display_offset,
             scroll_y_offset: px(0.0),
@@ -688,6 +690,11 @@ impl TerminalElement {
 
     pub(crate) fn scrollbar_display_offset(mut self, display_offset_rows: f32) -> Self {
         self.scrollbar_display_offset = display_offset_rows;
+        self
+    }
+
+    pub(crate) fn scrollbar_dragging(mut self, dragging: bool) -> Self {
+        self.scrollbar_dragging = dragging;
         self
     }
 
@@ -2296,7 +2303,9 @@ impl Element for TerminalElement {
                 });
             }
         }
-        if self.hovered_link.is_some() {
+        if self.scrollbar_dragging {
+            window.set_window_cursor_style(CursorStyle::Arrow);
+        } else if self.hovered_link.is_some() {
             window.set_window_cursor_style(CursorStyle::PointingHand);
         }
 

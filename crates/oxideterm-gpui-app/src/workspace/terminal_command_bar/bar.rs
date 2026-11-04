@@ -411,24 +411,6 @@ impl WorkspaceApp {
                                     cx,
                                 ))
                             })
-                            .when_some(active_pane_id, |actions, pane_id| {
-                                // Capture the visible pane so the shortcut cannot retarget after a tab switch.
-                                actions.child(self.terminal_command_action_button(
-                                    LucideIcon::Activity,
-                                    rgb(theme.text_muted),
-                                    false,
-                                    None,
-                                    "terminal-command-session-triggers",
-                                    self.i18n.t("terminal.command_selection.manage_triggers"),
-                                    move |this, _event, window, cx| {
-                                        this.open_terminal_trigger_settings_for_pane(
-                                            pane_id, window, cx,
-                                        );
-                                        cx.stop_propagation();
-                                    },
-                                    cx,
-                                ))
-                            })
                             .child(select_anchor_probe(
                                 SelectAnchorId::TerminalHighlightRuleSet,
                                 self.terminal_command_action_button(

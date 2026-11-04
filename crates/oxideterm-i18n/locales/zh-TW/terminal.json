@@ -104,7 +104,7 @@
       "paste": "貼上"
     },
     "kitty_file_transmission": {
-      "title": "允許此工作階段存取 Kitty 本機資源？",
+      "title": "允許 Kitty 本機存取",
       "description": "此終端中的程式（包括遠端程式）將能讀取本機檔案和共用記憶體以顯示圖片。請僅授權信任的工作階段。權限在關閉或重新連線後失效；允許後請重試遭封鎖的傳輸。",
       "cancel": "拒絕",
       "allow": "僅此工作階段允許",
@@ -123,8 +123,8 @@
       "fill_command_bar": "填入命令欄",
       "insert_selection_into_command": "在此插入選取內容",
       "replace_command_with_selection": "用選取內容取代目前命令",
-      "find": "尋找...",
-      "manage_triggers": "管理此工作階段的觸發器...",
+      "find": "尋找",
+      "manage_triggers": "管理觸發器",
       "select_command": "選取命令",
       "collapse_output": "收合輸出",
       "expand_output": "展開輸出",

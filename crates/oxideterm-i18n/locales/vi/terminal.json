@@ -104,7 +104,7 @@
       "paste": "Dán"
     },
     "kitty_file_transmission": {
-      "title": "Cho phép tài nguyên cục bộ Kitty trong phiên này?",
+      "title": "Cho phép Kitty truy cập cục bộ",
       "description": "Các chương trình trong cửa sổ dòng lệnh này, kể cả chương trình từ xa, sẽ có thể đọc tệp cục bộ và bộ nhớ chia sẻ để hiển thị ảnh. Chỉ cho phép các phiên đáng tin cậy. Quyền hết hiệu lực khi đóng hoặc kết nối lại. Sau khi cho phép, hãy thử lại việc truyền bị chặn.",
       "cancel": "Từ chối",
       "allow": "Cho phép trong phiên này",
@@ -123,8 +123,8 @@
       "fill_command_bar": "Điền vào thanh lệnh",
       "insert_selection_into_command": "Chèn vùng chọn tại đây",
       "replace_command_with_selection": "Thay lệnh bằng vùng chọn",
-      "find": "Tìm...",
-      "manage_triggers": "Quản lý trình kích hoạt cho phiên này...",
+      "find": "Tìm",
+      "manage_triggers": "Quản lý trình kích hoạt",
       "select_command": "Chọn lệnh",
       "collapse_output": "Thu gọn đầu ra",
       "expand_output": "Mở rộng đầu ra",

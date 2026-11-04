@@ -104,7 +104,7 @@
       "paste": "Einfügen"
     },
     "kitty_file_transmission": {
-      "title": "Kitty-Zugriff auf lokale Ressourcen für diese Sitzung erlauben?",
+      "title": "Kitty-Zugriff lokal erlauben",
       "description": "Programme in diesem Terminal, auch auf entfernten Rechnern, können lokale Dateien und gemeinsamen Speicher für Bilder lesen. Erlauben Sie dies nur für vertrauenswürdige Sitzungen. Die Berechtigung endet beim Schließen oder erneuten Verbinden. Wiederholen Sie danach die blockierte Übertragung.",
       "cancel": "Ablehnen",
       "allow": "Für diese Sitzung erlauben",
@@ -123,8 +123,8 @@
       "fill_command_bar": "Befehlsleiste füllen",
       "insert_selection_into_command": "Auswahl hier einfügen",
       "replace_command_with_selection": "Befehl durch Auswahl ersetzen",
-      "find": "Suchen...",
-      "manage_triggers": "Auslöser für diese Sitzung verwalten...",
+      "find": "Suchen",
+      "manage_triggers": "Auslöser verwalten",
       "select_command": "Befehl auswählen",
       "collapse_output": "Ausgabe einklappen",
       "expand_output": "Ausgabe ausklappen",

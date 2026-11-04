@@ -104,7 +104,7 @@
       "paste": "ペースト"
     },
     "kitty_file_transmission": {
-      "title": "このセッションで Kitty のローカルリソースへのアクセスを許可しますか？",
+      "title": "Kitty のローカルアクセスを許可",
       "description": "この端末内のプログラムは、リモートのプログラムも含め、画像表示のためにローカルファイルと共有メモリを読み取れるようになります。信頼できるセッションのみ許可してください。閉じるか再接続すると権限は失効します。許可後、ブロックされた転送を再試行してください。",
       "cancel": "拒否",
       "allow": "このセッションで許可",
@@ -123,8 +123,8 @@
       "fill_command_bar": "コマンドバーに入力",
       "insert_selection_into_command": "選択範囲をここに挿入",
       "replace_command_with_selection": "選択範囲でコマンドを置換",
-      "find": "検索...",
-      "manage_triggers": "このセッションのトリガーを管理...",
+      "find": "検索",
+      "manage_triggers": "トリガーを管理",
       "select_command": "コマンドを選択",
       "collapse_output": "出力を折りたたむ",
       "expand_output": "出力を展開",

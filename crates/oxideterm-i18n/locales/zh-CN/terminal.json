@@ -187,7 +187,7 @@
       "paste": "粘贴"
     },
     "kitty_file_transmission": {
-      "title": "允许本会话访问 Kitty 本地资源？",
+      "title": "允许 Kitty 本地访问",
       "description": "此终端中的程序（包括远端程序）将能够读取本机文件和共享内存以显示图片。请仅授权可信会话。权限在关闭或重新连接后失效；允许后请重试被阻止的传输。",
       "cancel": "拒绝",
       "allow": "仅此会话允许",
@@ -206,8 +206,8 @@
       "fill_command_bar": "填入命令栏",
       "insert_selection_into_command": "在此插入选区",
       "replace_command_with_selection": "用选区替换当前命令",
-      "find": "查找...",
-      "manage_triggers": "管理此会话的触发器...",
+      "find": "查找",
+      "manage_triggers": "管理触发器",
       "select_command": "选择命令",
       "collapse_output": "收起输出",
       "expand_output": "展开输出",

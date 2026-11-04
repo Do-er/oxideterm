@@ -15,6 +15,9 @@ use crate::{
 };
 
 const CONTEXT: &str = "Workspace";
+// The terminal pane adds this context at a deeper node, so terminal-owned
+// chords outrank workspace-wide bindings that reuse the same keys.
+const TERMINAL_CONTEXT: &str = "Terminal";
 
 #[derive(Clone, Copy, Debug, Eq, PartialEq)]
 pub(crate) enum ActionScope {
@@ -1475,9 +1478,17 @@ pub(crate) fn runtime_rebind_key_bindings(
 
 fn push_action_binding(bindings: &mut Vec<KeyBinding>, action_id: &str, combo: &KeyCombo) {
     let keystroke = combo_to_gpui(combo);
+    // Select-all only acts on a terminal pane and shares Ctrl+Shift+A with the
+    // AI sidebar, so limit it to the pane's deeper context instead of letting
+    // either chord win globally.
+    let context = if action_id == "terminal.selectAll" {
+        TERMINAL_CONTEXT
+    } else {
+        CONTEXT
+    };
     macro_rules! push_binding {
         ($action:expr) => {
-            bindings.push(KeyBinding::new(&keystroke, $action, Some(CONTEXT)))
+            bindings.push(KeyBinding::new(&keystroke, $action, Some(context)))
         };
         ($action:expr, global) => {
             bindings.push(KeyBinding::new(&keystroke, $action, None))
