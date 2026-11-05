@@ -1421,6 +1421,12 @@ impl WorkspaceApp {
                     cx,
                 ))
             })
+            .when(self.terminal.read(cx).quick_commands.category_menu_open(), |root| {
+                root.child(self.workspace_context_menu_backdrop(
+                    self.render_quick_commands_category_menu(cx),
+                    cx,
+                ))
+            })
             .when_some(
                 self.render_detached_tab_return_handoff(window, cx),
                 |root, handoff| root.child(handoff),
@@ -1462,6 +1468,16 @@ impl WorkspaceApp {
                     // Quick command editing is independent from the compact
                     // command-bar launcher and must cover all workspace chrome.
                     root.child(self.render_quick_commands_manager_modal(cx))
+                },
+            )
+            .when_some(
+                self.terminal
+                    .read(cx)
+                    .quick_commands
+                    .pending_execution
+                    .clone(),
+                |root, execution| {
+                    root.child(self.render_quick_command_parameter_modal(&execution, cx))
                 },
             )
             .when(self.ai_text_editor_dialog.is_some(), |root| {

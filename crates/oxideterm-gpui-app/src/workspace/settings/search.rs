@@ -296,7 +296,6 @@ fn settings_search_specs() -> Vec<SettingsSearchEntrySpec> {
             3,
             "settings_view.terminal.quick_commands",
             &[
-                "settings_view.terminal.quick_commands_confirm",
                 "settings_view.terminal.quick_commands_toast",
                 "settings_view.terminal.command_specs",
             ],

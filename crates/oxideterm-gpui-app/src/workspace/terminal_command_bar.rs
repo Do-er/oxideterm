@@ -12,7 +12,8 @@ use oxideterm_gpui_ui::context_menu::{
 use oxideterm_gpui_ui::text_input::TextInputView;
 use oxideterm_gpui_ui::{
     CommandPanelOptions, MonospaceDatumOptions, MonospaceDatumTone, StatusPillOptions, StatusTone,
-    command_panel, monospace_datum, status_pill,
+    SurfaceKind, SurfaceOptions, SurfacePadding, command_panel, monospace_datum, semantic_surface,
+    status_pill,
 };
 use oxideterm_terminal_recording::format_recording_elapsed;
 

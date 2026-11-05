@@ -145,13 +145,8 @@ impl WorkspaceApp {
                                                 .read(cx)
                                                 .is_expanded();
                                             if expanding {
-                                                this.close_terminal_quick_commands_panel(cx);
                                                 this.close_terminal_command_overlays(cx);
                                                 this.ime_marked_text = None;
-                                                let qc_height = this.terminal.read(cx).quick_commands.panel.height();
-                                                this.terminal_command_composer.update(cx, |composer, _| {
-                                                    composer.set_panel_height(qc_height);
-                                                });
                                             }
                                             this.terminal_command_composer.update(
                                                 cx,

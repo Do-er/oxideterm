@@ -908,9 +908,9 @@ impl WorkspaceApp {
                         surface.child(self.render_terminal_recording_controls(recording_status, cx))
                     }),
             )
-            .child(self.render_terminal_quick_commands_panel(cx))
-            // The composer drawer renders above the fixed bottom bar.
+            // The composer drawer renders above the quick commands bar and fixed bottom bar.
             .child(self.render_terminal_command_composer_panel(window, cx))
+            .child(self.render_terminal_quick_commands_bar(cx))
             .child(self.render_terminal_command_bar(cx))
             .on_children_prepainted(move |bounds, window, _| {
                 // Only the terminal and dock share this budget; all other rows have already

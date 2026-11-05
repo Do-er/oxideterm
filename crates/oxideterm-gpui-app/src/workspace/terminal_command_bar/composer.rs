@@ -330,12 +330,12 @@ impl WorkspaceApp {
             (snapshot.completed_units as f32 / snapshot.total_units as f32) * 100.0
         };
         let running = snapshot.status == TerminalCommandComposerStatus::Running;
-        let status_tone = match snapshot.status {
-            TerminalCommandComposerStatus::Completed => StatusTone::Success,
-            TerminalCommandComposerStatus::Failed => StatusTone::Error,
-            TerminalCommandComposerStatus::Running => StatusTone::Accent,
-            TerminalCommandComposerStatus::Stopped => StatusTone::Warning,
-            TerminalCommandComposerStatus::Idle => StatusTone::Neutral,
+        let status_color = match snapshot.status {
+            TerminalCommandComposerStatus::Completed => rgb(self.tokens.ui.success),
+            TerminalCommandComposerStatus::Failed => rgb(self.tokens.ui.error),
+            TerminalCommandComposerStatus::Running => rgb(self.tokens.ui.accent),
+            TerminalCommandComposerStatus::Stopped => rgb(self.tokens.ui.warning),
+            TerminalCommandComposerStatus::Idle => rgb(self.tokens.ui.text_muted),
         };
 
         let left_controls = div()
@@ -376,56 +376,56 @@ impl WorkspaceApp {
                 cx,
             ))
             .when(snapshot.status != TerminalCommandComposerStatus::Idle, |left| {
-                let mut status_group = div()
-                    .flex_none()
-                    .flex()
-                    .items_center()
-                    .gap(px(10.0))
-                    .child(status_pill(
-                        &self.tokens,
-                        status_label,
-                        StatusPillOptions::new(status_tone).compact(),
-                    ));
+                // Run feedback is read-only, so it lives in one sunken text
+                // field instead of separate chips that look interactive.
+                let mut status_group = semantic_surface(
+                    &self.tokens,
+                    SurfaceOptions::new(SurfaceKind::InsetGroup)
+                        .padding(SurfacePadding::None)
+                        .has_background_image(self.window_background_preferences().is_some()),
+                )
+                .flex_none()
+                .h(px(20.0))
+                .px(px(7.0))
+                .flex()
+                .items_center()
+                .gap(px(8.0))
+                .child(
+                    div()
+                        .flex_none()
+                        .text_size(px(10.0))
+                        .font_weight(gpui::FontWeight::MEDIUM)
+                        .text_color(status_color)
+                        .child(status_label),
+                );
+                if snapshot.status != TerminalCommandComposerStatus::Failed {
+                    status_group = status_group
+                        .child(self.render_terminal_composer_text_counter(
+                            self.i18n.t("terminal.composer.sent"),
+                            snapshot.accepted_writes,
+                            MonospaceDatumTone::Primary,
+                        ))
+                        .child(self.render_terminal_composer_text_counter(
+                            self.i18n.t("terminal.composer.skipped"),
+                            snapshot.skipped_writes,
+                            if snapshot.skipped_writes > 0 {
+                                MonospaceDatumTone::Warning
+                            } else {
+                                MonospaceDatumTone::Muted
+                            },
+                        ));
+                }
                 status_group = status_group.when_some(failure_label, |group, detail| {
                     group.child(
                         div()
-                            .flex_none()
+                            .min_w(px(0.0))
                             .max_w(px(240.0))
                             .truncate()
-                            .text_size(px(11.0))
+                            .text_size(px(10.0))
                             .text_color(rgb(self.tokens.ui.text_muted))
                             .child(detail),
                     )
                 });
-                if snapshot.status != TerminalCommandComposerStatus::Failed {
-                    let total_label = if snapshot.repeat_count == 0 {
-                        "∞".to_string()
-                    } else {
-                        snapshot.total_units.to_string()
-                    };
-                    status_group = status_group
-                        .child(
-                            monospace_datum(
-                                &self.tokens,
-                                format!("{}/{}", snapshot.completed_units, total_label),
-                                Some(settings_mono_font_family(self.settings_store.settings())),
-                                MonospaceDatumOptions::new(MonospaceDatumTone::Muted).text_size(10.0),
-                            )
-                            .whitespace_nowrap(),
-                        )
-                        .child(self.render_terminal_composer_counter(
-                            LucideIcon::Check,
-                            rgb(self.tokens.ui.success),
-                            self.i18n.t("terminal.composer.accepted"),
-                            snapshot.accepted_writes,
-                        ))
-                        .child(self.render_terminal_composer_counter(
-                            LucideIcon::ArrowRight,
-                            rgb(self.tokens.ui.text_muted),
-                            self.i18n.t("terminal.composer.skipped"),
-                            snapshot.skipped_writes,
-                        ));
-                }
                 left.child(self.render_terminal_composer_control_divider())
                     .child(status_group)
             });
@@ -1116,21 +1116,19 @@ impl WorkspaceApp {
             .into_any_element()
     }
 
-    fn render_terminal_composer_counter(
+    fn render_terminal_composer_text_counter(
         &self,
-        icon: LucideIcon,
-        icon_color: Rgba,
         label: String,
         value: u64,
+        tone: MonospaceDatumTone,
     ) -> AnyElement {
-        // Counters pair a semantic icon with the localized label so accepted
-        // and skipped writes stay readable without one long datum string.
+        // Read-only counters stay plain text inside the sunken status field
+        // so they never read as separate interactive chips.
         div()
             .flex_none()
             .flex()
             .items_center()
             .gap(px(3.0))
-            .child(Self::render_lucide_icon(icon, 10.0, icon_color))
             .child(
                 div()
                     .text_size(px(10.0))
@@ -1142,9 +1140,7 @@ impl WorkspaceApp {
                     &self.tokens,
                     value.to_string(),
                     Some(settings_mono_font_family(self.settings_store.settings())),
-                    MonospaceDatumOptions::new(MonospaceDatumTone::Primary)
-                        .text_size(10.0)
-                        .strong(),
+                    MonospaceDatumOptions::new(tone).text_size(10.0).strong(),
                 )
                 .whitespace_nowrap(),
             )
@@ -1265,7 +1261,8 @@ impl WorkspaceApp {
                     } else {
                         base_step
                     };
-                    let delta_ms = if vertical < 0.0 { step } else { -step };
+                    // Positive wheel delta scrolls up, which should grow the interval.
+                    let delta_ms = if vertical > 0.0 { step } else { -step };
                     this.terminal_command_composer.update(cx, |composer, cx| {
                         composer.adjust_interval(document_id, delta_ms, cx);
                     });
@@ -1411,7 +1408,8 @@ impl WorkspaceApp {
                 let vertical = f32::from(event.delta.pixel_delta(px(16.0)).y);
                 if vertical.abs() > 0.5 {
                     let step = if event.modifiers.shift { 5 } else { 1 };
-                    let delta_step = if vertical < 0.0 { step } else { -step };
+                    // Positive wheel delta scrolls up, which should grow the repeat count.
+                    let delta_step = if vertical > 0.0 { step } else { -step };
                     this.terminal_command_composer.update(cx, |composer, cx| {
                         composer.adjust_repeat_count(document_id, delta_step, cx);
                     });

@@ -1175,6 +1175,14 @@ impl WorkspaceApp {
             .unwrap_or_else(|| self.i18n.t("terminal.broadcast.temporary_group"))
     }
 
+    pub(in crate::workspace) fn dismiss_terminal_quick_commands_category_menu(
+        &mut self,
+        cx: &mut Context<Self>,
+    ) -> bool {
+        self.terminal
+            .update(cx, |terminal, _cx| terminal.quick_commands.dismiss_category_menu())
+    }
+
     pub(in crate::workspace) fn dismiss_terminal_broadcast_menu(
         &mut self,
         cx: &mut Context<Self>,
@@ -2305,44 +2313,23 @@ impl WorkspaceApp {
         cx: &mut Context<Self>,
     ) {
         self.retain_live_terminal_broadcast_targets(cx);
-        let parameter_values = command
-            .parameters
-            .iter()
-            .filter_map(|parameter| {
-                parameter
-                    .default_value
-                    .clone()
-                    .map(|value| (parameter.name.clone(), Zeroizing::new(value)))
-            })
-            .collect::<std::collections::BTreeMap<_, _>>();
+        // Custom parameters require user input; open the dedicated parameter modal.
+        if !command.parameters.is_empty() {
+            self.terminal.update(cx, |terminal, _cx| {
+                terminal.quick_commands.request_execution(command.clone())
+            });
+            window.focus(&self.focus_handle, cx);
+            cx.notify();
+            return;
+        }
+
+        let parameter_values = std::collections::BTreeMap::new();
         let target_contexts = self.quick_command_target_contexts(cx);
         let contexts = target_contexts
             .iter()
             .map(|(_, context)| context.clone())
             .collect::<Vec<_>>();
         let prepared = prepare_quick_command(command, &contexts, &parameter_values);
-        let global_confirmation = self
-            .settings_store
-            .settings()
-            .terminal
-            .command_bar
-            .quick_commands_confirm_before_run;
-        let needs_dialog = !command.parameters.is_empty()
-            || command.command.contains("{{")
-            || global_confirmation
-            || prepared.as_ref().is_ok_and(|prepared| {
-                prepared.confirmation_required
-                    || prepared.targets.is_empty()
-                    || !prepared.unavailable_targets.is_empty()
-            });
-        if needs_dialog || prepared.is_err() {
-            self.prepare_terminal_quick_commands_panel(window, cx);
-            self.terminal.update(cx, |terminal, _cx| {
-                terminal.quick_commands.request_execution(command.clone())
-            });
-            cx.notify();
-            return;
-        }
         if let Ok(prepared) = prepared {
             self.execute_prepared_quick_command(prepared, &target_contexts, window, cx);
         }
@@ -2512,17 +2499,14 @@ impl WorkspaceApp {
         }
     }
 
-    pub(super) fn confirm_quick_command_execution(
+    pub(super) fn confirm_quick_command_parameter_input(
         &mut self,
         window: &mut Window,
         cx: &mut Context<Self>,
     ) {
         let Some(execution) = self
             .terminal
-            .read(cx)
-            .quick_commands
-            .pending_execution
-            .clone()
+            .update(cx, |terminal, _cx| terminal.quick_commands.pending_execution.take())
         else {
             return;
         };
@@ -2543,6 +2527,28 @@ impl WorkspaceApp {
         {
             self.execute_prepared_quick_command(prepared, &target_contexts, window, cx);
         }
+        self.focus_active_pane(window, cx);
+        cx.notify();
+    }
+
+    pub(super) fn confirm_quick_command_execution(
+        &mut self,
+        window: &mut Window,
+        cx: &mut Context<Self>,
+    ) {
+        self.confirm_quick_command_parameter_input(window, cx);
+    }
+
+    pub(super) fn cancel_quick_command_parameter_input(
+        &mut self,
+        window: &mut Window,
+        cx: &mut Context<Self>,
+    ) {
+        self.terminal.update(cx, |terminal, _cx| {
+            terminal.quick_commands.pending_execution = None;
+        });
+        self.focus_active_pane(window, cx);
+        cx.notify();
     }
 
     fn execute_prepared_quick_command(
@@ -2572,7 +2578,11 @@ impl WorkspaceApp {
             target_count,
             active_pane_id,
             |pane_id, command, source, parent_id| {
-                self.send_terminal_command_to_pane(pane_id, command, source, parent_id, cx)
+                if command.contains('\n') || command.contains('\r') {
+                    self.send_terminal_command_to_pane(pane_id, command, source, parent_id, cx)
+                } else {
+                    self.send_terminal_text_to_pane(pane_id, command, cx)
+                }
             },
         );
         if sent_count > 0 {
@@ -2961,6 +2971,18 @@ impl WorkspaceApp {
             return pane.update(cx, |pane, cx| {
                 pane.send_command_line_with_mark(command, mark_source, parent_id, cx)
             });
+        }
+        false
+    }
+
+    fn send_terminal_text_to_pane(
+        &self,
+        pane_id: PaneId,
+        text: &str,
+        cx: &mut Context<Self>,
+    ) -> bool {
+        if let Some(pane) = self.tab_host.read(cx).panes().get(&pane_id).cloned() {
+            return pane.update(cx, |pane, cx| pane.send_composer_text_chunk(text, cx));
         }
         false
     }

@@ -1055,6 +1055,9 @@ impl WorkspaceApp {
         if self.dismiss_terminal_broadcast_menu(cx) {
             changed = true;
         }
+        if self.dismiss_terminal_quick_commands_category_menu(cx) {
+            changed = true;
+        }
         if self.dismiss_terminal_recording_menu() {
             changed = true;
         }

@@ -13,11 +13,12 @@ use gpui::{
 use oxideterm_editor_core::utf16::replace_utf16;
 use oxideterm_gpui_editor::{EditorContextMenuLabels, EditorSettings, TextEditorView};
 use oxideterm_gpui_ui::{
-    ConfirmDialogVariant, ConfirmDialogView, StatusPillOptions, StatusTone,
+    ConfirmDialogVariant, ConfirmDialogView, SectionHeaderOptions, StatusPillOptions, StatusTone,
     button::{ButtonOptions, ButtonRadius, ButtonSize, ButtonVariant, ToolbarButtonOptions},
     confirm::confirm_dialog,
     modal::{dismissible_dialog_backdrop, overlay_content_boundary},
     scroll::ScrollableElement,
+    section_header,
     status_pill,
     text_input::{TextInputView, text_input_with_viewport},
 };
@@ -49,7 +50,7 @@ use super::{
 };
 use crate::assets::LucideIcon;
 
-fn quick_command_lucide_icon(icon: QuickCommandIcon) -> LucideIcon {
+pub(super) fn quick_command_lucide_icon(icon: QuickCommandIcon) -> LucideIcon {
     match icon {
         QuickCommandIcon::Server => LucideIcon::Server,
         QuickCommandIcon::Folder => LucideIcon::Folder,
@@ -387,21 +388,21 @@ fn quick_command_row_signature(command: &QuickCommand) -> u64 {
 
 #[derive(Clone)]
 pub(super) struct QuickCommandsRenderSnapshot {
-    categories: Vec<QuickCommandCategory>,
-    category_counts: HashMap<String, usize>,
-    active_category: String,
-    query: String,
-    focused_input: Option<QuickCommandInput>,
-    highlighted_command: Option<String>,
-    command_editor: Option<QuickCommandEditorDraft>,
-    category_editor: Option<QuickCommandCategoryDraft>,
-    pending_execution: Option<QuickCommandExecutionDraft>,
-    pending_category_delete: Option<QuickCommandCategoryDeletePrompt>,
-    last_persist_error: Option<String>,
-    visible_commands: Arc<Vec<QuickCommand>>,
-    pinned: bool,
-    managing: bool,
-    list_state: gpui::ListState,
+    pub(super) categories: Vec<QuickCommandCategory>,
+    pub(super) category_counts: HashMap<String, usize>,
+    pub(super) active_category: String,
+    pub(super) query: String,
+    pub(super) focused_input: Option<QuickCommandInput>,
+    pub(super) highlighted_command: Option<String>,
+    pub(super) command_editor: Option<QuickCommandEditorDraft>,
+    pub(super) category_editor: Option<QuickCommandCategoryDraft>,
+    pub(super) pending_execution: Option<QuickCommandExecutionDraft>,
+    pub(super) pending_category_delete: Option<QuickCommandCategoryDeletePrompt>,
+    pub(super) last_persist_error: Option<String>,
+    pub(super) visible_commands: Arc<Vec<QuickCommand>>,
+    pub(super) pinned: bool,
+    pub(super) managing: bool,
+    pub(super) list_state: gpui::ListState,
 }
 
 impl TerminalQuickCommandsState {
@@ -414,6 +415,14 @@ impl TerminalQuickCommandsState {
 
     pub(in crate::workspace) fn is_open(&self) -> bool {
         self.open
+    }
+
+    pub(in crate::workspace) fn category_menu_open(&self) -> bool {
+        self.category_menu_open
+    }
+
+    pub(in crate::workspace) fn dismiss_category_menu(&mut self) -> bool {
+        std::mem::take(&mut self.category_menu_open)
     }
 
     pub(in crate::workspace) fn manager_open(&self) -> bool {
@@ -839,6 +848,7 @@ impl TerminalQuickCommandsState {
             parameters: Vec::new(),
             protocols: Vec::new(),
             confirmation: QuickCommandConfirmationPolicy::Inherit,
+            syntax_help_expanded: false,
             created_at: now_ms(),
             sort_order: self
                 .store
@@ -878,6 +888,7 @@ impl TerminalQuickCommandsState {
                 .collect(),
             protocols: command.availability.protocols,
             confirmation: command.confirmation,
+            syntax_help_expanded: false,
             created_at: command.created_at,
             sort_order: command.sort_order,
         });
@@ -990,15 +1001,6 @@ impl TerminalQuickCommandsState {
             draft.protocols.remove(index);
         } else {
             draft.protocols.push(protocol);
-        }
-    }
-
-    fn toggle_command_confirmation(&mut self) {
-        if let Some(draft) = self.store.command_editor.as_mut() {
-            draft.confirmation = match draft.confirmation {
-                QuickCommandConfirmationPolicy::Inherit => QuickCommandConfirmationPolicy::Always,
-                QuickCommandConfirmationPolicy::Always => QuickCommandConfirmationPolicy::Inherit,
-            };
         }
     }
 
@@ -1431,6 +1433,140 @@ impl WorkspaceApp {
             .quick_commands
             .input_value(input)
             .map(str::to_string)
+    }
+
+    pub(in crate::workspace) fn render_quick_command_parameter_modal(
+        &self,
+        execution: &QuickCommandExecutionDraft,
+        cx: &mut Context<Self>,
+    ) -> AnyElement {
+        let theme = self.tokens.ui;
+        let mut fields = div().flex().flex_col().gap(px(10.0)).w_full();
+
+        for (index, parameter) in execution.command.parameters.iter().enumerate() {
+            let value = execution
+                .parameter_values
+                .get(index)
+                .cloned()
+                .unwrap_or_default();
+            let input = if parameter.kind == QuickCommandParameterKind::Secret {
+                self.render_quick_command_secret_input(
+                    QuickCommandInput::ParameterDefault(index),
+                    &value,
+                    self.terminal.read(cx).quick_commands.store.focused_input,
+                    parameter.label.clone(),
+                    cx,
+                )
+            } else {
+                self.render_quick_command_text_input(
+                    QuickCommandInput::ParameterDefault(index),
+                    value.to_string(),
+                    self.terminal.read(cx).quick_commands.store.focused_input,
+                    parameter.label.clone(),
+                    cx,
+                )
+            };
+            let mut field = div()
+                .flex()
+                .flex_col()
+                .gap(px(4.0))
+                .child(
+                    div()
+                        .text_size(px(self.tokens.metrics.ui_text_xs))
+                        .font_weight(gpui::FontWeight::MEDIUM)
+                        .text_color(rgb(theme.text_muted))
+                        .child(parameter.label.clone()),
+                )
+                .child(input);
+
+            if parameter.kind == QuickCommandParameterKind::Choice {
+                let mut choices = div().flex().items_center().gap(px(4.0)).flex_wrap();
+                for choice in &parameter.choices {
+                    let choice_for_click = choice.clone();
+                    let selected = choice == value.as_str();
+                    choices = choices.child(
+                        self.quick_command_text_button(
+                            choice.clone(),
+                            true,
+                            cx.listener(move |this, _event, _window, cx| {
+                                this.terminal.update(cx, |terminal, _cx| {
+                                    terminal.quick_commands.set_execution_parameter_value(
+                                        index,
+                                        choice_for_click.clone(),
+                                    )
+                                });
+                                cx.stop_propagation();
+                                cx.notify();
+                            }),
+                        )
+                        .border_color(if selected {
+                            rgb(theme.accent)
+                        } else {
+                            rgba((theme.border << 8) | 0x99)
+                        }),
+                    );
+                }
+                field = field.child(choices);
+            }
+            fields = fields.child(field);
+        }
+
+        let dialog = div()
+            .w(px(380.0))
+            .p(px(16.0))
+            .rounded(px(self.tokens.radii.lg))
+            .border_1()
+            .border_color(rgb(theme.border))
+            .bg(rgb(theme.bg_panel))
+            .shadow(oxideterm_gpui_ui::theme_overlay_shadow(&self.tokens))
+            .flex()
+            .flex_col()
+            .gap(px(12.0))
+            .on_mouse_down(MouseButton::Left, |_, _, cx| cx.stop_propagation())
+            .on_mouse_down(MouseButton::Right, |_, _, cx| cx.stop_propagation())
+            .on_key_down(cx.listener(|this, event: &KeyDownEvent, window, cx| {
+                if event.keystroke.key.as_str() == "enter" {
+                    this.confirm_quick_command_parameter_input(window, cx);
+                    cx.stop_propagation();
+                } else if event.keystroke.key.as_str() == "escape" {
+                    this.cancel_quick_command_parameter_input(window, cx);
+                    cx.stop_propagation();
+                }
+            }))
+            .child(
+                div()
+                    .flex()
+                    .items_center()
+                    .justify_between()
+                    .child(
+                        div()
+                            .text_size(px(self.tokens.metrics.ui_text_sm))
+                            .font_weight(gpui::FontWeight::SEMIBOLD)
+                            .text_color(rgb(theme.text))
+                            .child(execution.command.name.clone()),
+                    ),
+            )
+            .child(fields)
+            .child(
+                div()
+                    .flex()
+                    .items_center()
+                    .justify_end()
+                    .text_size(px(self.tokens.metrics.ui_text_xs))
+                    .text_color(rgb(theme.text_muted))
+                    .child(self.i18n.t("terminal.quick_commands.parameter_modal_hint")),
+            );
+
+        dismissible_dialog_backdrop()
+            .on_mouse_down(
+                MouseButton::Left,
+                cx.listener(|this, _event, window, cx| {
+                    this.cancel_quick_command_parameter_input(window, cx);
+                    cx.stop_propagation();
+                }),
+            )
+            .child(overlay_content_boundary(dialog))
+            .into_any_element()
     }
 
     pub(in crate::workspace) fn render_quick_commands_manager_modal(
@@ -2103,6 +2239,7 @@ impl WorkspaceApp {
             .into_any_element()
     }
 
+    #[allow(dead_code)]
     pub(super) fn render_quick_command_body(
         &self,
         snapshot: &QuickCommandsRenderSnapshot,
@@ -3160,7 +3297,6 @@ impl WorkspaceApp {
             );
         }
         let parameters = self.render_quick_command_parameter_editor(draft, snapshot, cx);
-        let confirmation_always = draft.confirmation == QuickCommandConfirmationPolicy::Always;
         let scroll = self.terminal.read(cx).quick_commands.editor_scroll.clone();
         let padding = if snapshot.managing { 16.0 } else { 8.0 };
 
@@ -3170,7 +3306,7 @@ impl WorkspaceApp {
             .flex_none()
             .flex()
             .flex_col()
-            .gap(px(8.0))
+            .gap(px(12.0))
             .p(px(padding))
             .when(snapshot.managing, |editor| {
                 editor.child(
@@ -3188,8 +3324,16 @@ impl WorkspaceApp {
             })
             .child(
                 div()
-                    .grid()
+                    .flex()
+                    .flex_col()
                     .gap(px(8.0))
+                    .child(section_header(
+                        &self.tokens,
+                        self.i18n.t("terminal.quick_commands.section_basic"),
+                        SectionHeaderOptions::new().compact(),
+                        None,
+                        None,
+                    ))
                     .child(self.render_quick_command_text_input(
                         QuickCommandInput::CommandName,
                         draft.name.clone(),
@@ -3210,15 +3354,75 @@ impl WorkspaceApp {
                             .text_color(rgb(theme.text_muted))
                             .child(self.i18n.t("terminal.quick_commands.template_hint")),
                     )
-                    .child(
-                        self.render_quick_command_text_input(
-                            QuickCommandInput::CommandDescription,
-                            draft.description.clone(),
-                            snapshot.focused_input,
-                            self.i18n
-                                .t("terminal.quick_commands.description_placeholder"),
-                            cx,
+                    .child(self.render_quick_command_text_input(
+                        QuickCommandInput::CommandDescription,
+                        draft.description.clone(),
+                        snapshot.focused_input,
+                        self.i18n.t("terminal.quick_commands.description_placeholder"),
+                        cx,
+                    ))
+                    .child(self.render_quick_command_syntax_header(draft.syntax_help_expanded, cx))
+                    .when(draft.syntax_help_expanded, |section| {
+                        section.child(self.render_quick_command_syntax_help(cx))
+                    }),
+            )
+            .child(
+                div()
+                    .flex()
+                    .flex_col()
+                    .gap(px(8.0))
+                    .child(section_header(
+                        &self.tokens,
+                        self.i18n.t("terminal.quick_commands.parameters"),
+                        SectionHeaderOptions::new().compact(),
+                        None,
+                        Some(
+                            self.quick_command_text_button(
+                                self.i18n.t("terminal.quick_commands.add_parameter"),
+                                true,
+                                cx.listener(|this, _event, _window, cx| {
+                                    this.terminal.update(cx, |terminal, _cx| {
+                                        terminal.quick_commands.add_command_parameter()
+                                    });
+                                    cx.stop_propagation();
+                                    cx.notify();
+                                }),
+                            )
+                            .into_any_element(),
                         ),
+                    ))
+                    .child(parameters),
+            )
+            .child(
+                div()
+                    .flex()
+                    .flex_col()
+                    .gap(px(8.0))
+                    .child(section_header(
+                        &self.tokens,
+                        self.i18n.t("terminal.quick_commands.section_availability"),
+                        SectionHeaderOptions::new().compact(),
+                        None,
+                        None,
+                    ))
+                    .child(
+                        div()
+                            .flex()
+                            .flex_col()
+                            .gap(px(5.0))
+                            .child(
+                                div()
+                                    .text_size(px(self.tokens.metrics.ui_text_xs))
+                                    .text_color(rgb(theme.text_muted))
+                                    .child(self.i18n.t("terminal.quick_commands.groups")),
+                            )
+                            .child(
+                                div()
+                                    .w_full()
+                                    .max_h(px(QUICK_COMMAND_CATEGORY_PICKER_MAX_HEIGHT))
+                                    .overflow_y_scrollbar()
+                                    .child(categories),
+                            ),
                     )
                     .child(
                         div()
@@ -3237,8 +3441,7 @@ impl WorkspaceApp {
                                     QuickCommandInput::CommandHostPattern,
                                     draft.host_patterns.clone(),
                                     snapshot.focused_input,
-                                    self.i18n
-                                        .t("terminal.quick_commands.host_pattern_placeholder"),
+                                    self.i18n.t("terminal.quick_commands.host_pattern_placeholder"),
                                     cx,
                                 ),
                             )
@@ -3248,13 +3451,6 @@ impl WorkspaceApp {
                                     .text_color(rgb(theme.text_muted))
                                     .child(self.i18n.t("terminal.quick_commands.match_hint")),
                             ),
-                    )
-                    .child(
-                        div()
-                            .w_full()
-                            .max_h(px(QUICK_COMMAND_CATEGORY_PICKER_MAX_HEIGHT))
-                            .overflow_y_scrollbar()
-                            .child(categories),
                     )
                     .child(
                         div()
@@ -3268,29 +3464,6 @@ impl WorkspaceApp {
                                     .child(self.i18n.t("terminal.quick_commands.protocols")),
                             )
                             .child(protocols),
-                    )
-                    .child(parameters)
-                    .child(
-                        self.quick_command_text_button(
-                            self.i18n.t(if confirmation_always {
-                                "terminal.quick_commands.confirmation_always"
-                            } else {
-                                "terminal.quick_commands.confirmation_inherit"
-                            }),
-                            true,
-                            cx.listener(|this, _event, _window, cx| {
-                                this.terminal.update(cx, |terminal, _cx| {
-                                    terminal.quick_commands.toggle_command_confirmation()
-                                });
-                                cx.stop_propagation();
-                                cx.notify();
-                            }),
-                        )
-                        .border_color(if confirmation_always {
-                            rgb(theme.warning)
-                        } else {
-                            rgba((theme.border << 8) | 0x99)
-                        }),
                     ),
             );
 
@@ -3439,34 +3612,199 @@ impl WorkspaceApp {
                     ),
             );
         }
+        rows.into_any_element()
+    }
+
+    fn render_quick_command_syntax_header(
+        &self,
+        expanded: bool,
+        cx: &mut Context<Self>,
+    ) -> gpui::Div {
+        let theme = self.tokens.ui;
         div()
+            .h(px(28.0))
+            .w_full()
+            .flex()
+            .items_center()
+            .gap(px(6.0))
+            .px(px(4.0))
+            .rounded(px(self.tokens.radii.sm))
+            .cursor_pointer()
+            .hover(|row| row.bg(rgba((theme.bg_hover << 8) | 0xb3)))
+            .child(self.render_animated_chevron(
+                "quick-command-syntax-chevron",
+                expanded,
+                13.0,
+                rgb(theme.text_muted),
+            ))
+            .child(
+                div()
+                    .text_size(px(self.tokens.metrics.ui_text_xs))
+                    .font_weight(gpui::FontWeight::MEDIUM)
+                    .text_color(rgb(theme.text_muted))
+                    .child(self.i18n.t("terminal.quick_commands.syntax_help_title")),
+            )
+            .on_mouse_down(
+                MouseButton::Left,
+                cx.listener(|this, _event, _window, cx| {
+                    this.terminal.update(cx, |terminal, _| {
+                        if let Some(draft) = terminal.quick_commands.store.command_editor.as_mut() {
+                            draft.syntax_help_expanded = !draft.syntax_help_expanded;
+                        }
+                    });
+                    cx.stop_propagation();
+                    cx.notify();
+                }),
+            )
+    }
+
+    fn render_quick_command_syntax_help(&self, cx: &mut Context<Self>) -> AnyElement {
+        let theme = self.tokens.ui;
+        let mut panel = div()
             .flex()
             .flex_col()
             .gap(px(6.0))
+            .p(px(10.0))
+            .rounded(px(self.tokens.radii.md))
+            .border_1()
+            .border_color(rgba((theme.border << 8) | 0x99))
+            .bg(rgba((theme.bg << 8) | 0x40))
             .child(
                 div()
-                    .flex()
-                    .items_center()
-                    .justify_between()
-                    .child(
-                        div()
-                            .text_size(px(self.tokens.metrics.ui_text_xs))
-                            .text_color(rgb(theme.text_muted))
-                            .child(self.i18n.t("terminal.quick_commands.parameters")),
-                    )
-                    .child(self.quick_command_text_button(
-                        self.i18n.t("terminal.quick_commands.add_parameter"),
-                        true,
-                        cx.listener(|this, _event, _window, cx| {
-                            this.terminal.update(cx, |terminal, _cx| {
-                                terminal.quick_commands.add_command_parameter()
-                            });
-                            cx.stop_propagation();
-                            cx.notify();
-                        }),
-                    )),
+                    .text_size(px(self.tokens.metrics.ui_text_xs))
+                    .text_color(rgb(theme.text_muted))
+                    .child(self.i18n.t("terminal.quick_commands.syntax_help_intro")),
             )
-            .child(rows)
+            .child(self.render_quick_command_syntax_group_title(
+                "terminal.quick_commands.syntax_help_custom",
+            ))
+            .child(self.render_quick_command_syntax_row(
+                "{{param.name}}",
+                "terminal.quick_commands.syntax_help_custom_desc",
+                true,
+                cx,
+            ))
+            .child(self.render_quick_command_syntax_group_title(
+                "terminal.quick_commands.syntax_help_context",
+            ));
+
+        for (token, description_key) in [
+            ("{{ctx.host}}", "terminal.quick_commands.syntax_help_host"),
+            (
+                "{{ctx.username}}",
+                "terminal.quick_commands.syntax_help_username",
+            ),
+            ("{{ctx.port}}", "terminal.quick_commands.syntax_help_port"),
+            ("{{ctx.cwd}}", "terminal.quick_commands.syntax_help_cwd"),
+            (
+                "{{ctx.connection}}",
+                "terminal.quick_commands.syntax_help_connection",
+            ),
+            ("{{ctx.group}}", "terminal.quick_commands.syntax_help_group"),
+            (
+                "{{ctx.selection}}",
+                "terminal.quick_commands.syntax_help_selection",
+            ),
+        ] {
+            panel = panel.child(self.render_quick_command_syntax_row(
+                token,
+                description_key,
+                true,
+                cx,
+            ));
+        }
+
+        panel
+            .child(
+                div()
+                    .h(px(1.0))
+                    .w_full()
+                    .my(px(2.0))
+                    .bg(rgba((theme.border << 8) | 0x66)),
+            )
+            .child(self.render_quick_command_syntax_row(
+                "|sh",
+                "terminal.quick_commands.syntax_help_shell",
+                false,
+                cx,
+            ))
+            .child(self.render_quick_command_syntax_row(
+                "\\{{",
+                "terminal.quick_commands.syntax_help_escape",
+                false,
+                cx,
+            ))
+            .into_any_element()
+    }
+
+    fn render_quick_command_syntax_group_title(&self, key: &'static str) -> AnyElement {
+        div()
+            .mt(px(2.0))
+            .text_size(px(self.tokens.metrics.ui_text_xs))
+            .font_weight(gpui::FontWeight::SEMIBOLD)
+            .text_color(rgb(self.tokens.ui.text))
+            .child(self.i18n.t(key))
+            .into_any_element()
+    }
+
+    fn render_quick_command_syntax_row(
+        &self,
+        token: &'static str,
+        description_key: &'static str,
+        insertable: bool,
+        cx: &mut Context<Self>,
+    ) -> AnyElement {
+        let theme = self.tokens.ui;
+        let mut chip = div()
+            .h(px(22.0))
+            .px(px(6.0))
+            .flex()
+            .items_center()
+            .rounded(px(self.tokens.radii.sm))
+            .border_1()
+            .border_color(if insertable {
+                rgba((theme.accent << 8) | 0x59)
+            } else {
+                rgba((theme.border << 8) | 0x99)
+            })
+            .bg(rgba((theme.bg << 8) | 0x80))
+            .font_family(settings_mono_font_family(self.settings_store.settings()))
+            .text_size(px(self.tokens.metrics.ui_text_xs))
+            .text_color(rgb(if insertable {
+                theme.accent
+            } else {
+                theme.text_muted
+            }))
+            .child(token.to_string());
+
+        if insertable {
+            chip = chip
+                .cursor_pointer()
+                .hover(|chip| chip.bg(rgba((theme.bg_hover << 8) | 0xb3)))
+                .on_mouse_down(
+                    MouseButton::Left,
+                    cx.listener(move |this, _event, _window, cx| {
+                        let editor = this.terminal.read(cx).quick_commands.command_input.clone();
+                        if let Some(editor) = editor {
+                            editor.update(cx, |editor, cx| editor.insert_text(token, cx));
+                        }
+                        cx.stop_propagation();
+                        cx.notify();
+                    }),
+                );
+        }
+
+        div()
+            .flex()
+            .items_center()
+            .gap(px(8.0))
+            .child(chip)
+            .child(
+                div()
+                    .text_size(px(self.tokens.metrics.ui_text_xs))
+                    .text_color(rgb(theme.text_muted))
+                    .child(self.i18n.t(description_key)),
+            )
             .into_any_element()
     }
 
@@ -4060,6 +4398,7 @@ mod terminal_command_bar_quick_command_tests {
             }],
             protocols: Vec::new(),
             confirmation: QuickCommandConfirmationPolicy::Inherit,
+            syntax_help_expanded: false,
             created_at: 1,
             sort_order: 0,
         };

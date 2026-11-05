@@ -76,6 +76,8 @@ pub(super) struct QuickCommandEditorDraft {
     pub parameters: Vec<QuickCommandParameterEditorDraft>,
     pub protocols: Vec<QuickCommandTargetProtocol>,
     pub confirmation: QuickCommandConfirmationPolicy,
+    // Transient disclosure state; reset with each new editor draft.
+    pub syntax_help_expanded: bool,
     pub created_at: u64,
     pub sort_order: i64,
 }
@@ -136,6 +138,8 @@ pub(in crate::workspace) struct TerminalQuickCommandsState {
     pub(super) command_input: Option<Entity<TextEditorView>>,
     pub(super) command_input_subscription: Option<Subscription>,
     pub(super) editor_scroll: ScrollHandle,
+    pub(super) buttons_scroll: ScrollHandle,
+    pub(super) category_menu_open: bool,
 }
 
 impl TerminalQuickCommandsState {
@@ -166,6 +170,8 @@ impl TerminalQuickCommandsState {
             command_input: None,
             command_input_subscription: None,
             editor_scroll: ScrollHandle::new(),
+            buttons_scroll: ScrollHandle::new(),
+            category_menu_open: false,
         }
     }
 

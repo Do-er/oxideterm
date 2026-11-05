@@ -1118,17 +1118,6 @@ impl WorkspaceApp {
                 "",
                 vec![
                     self.bool_row(
-                        "settings_view.terminal.quick_commands_confirm",
-                        "settings_view.terminal.quick_commands_confirm_hint",
-                        settings
-                            .terminal
-                            .command_bar
-                            .quick_commands_confirm_before_run,
-                        set_quick_commands_confirm,
-                        cx,
-                    ),
-                    self.card_separator(),
-                    self.bool_row(
                         "settings_view.terminal.quick_commands_toast",
                         "settings_view.terminal.quick_commands_toast_hint",
                         settings.terminal.command_bar.quick_commands_show_toast,

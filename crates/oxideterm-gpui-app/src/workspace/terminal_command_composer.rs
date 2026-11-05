@@ -1151,10 +1151,6 @@ impl TerminalCommandComposerEntity {
         }
     }
 
-    pub(super) fn set_panel_height(&mut self, height: f32) {
-        self.panel_height = height;
-    }
-
     pub(super) fn reset_height(&mut self, viewport_height: f32, cx: &mut Context<Self>) {
         let height =
             adjusted_composer_panel_height(TERMINAL_COMPOSER_DEFAULT_HEIGHT, 0.0, viewport_height);
