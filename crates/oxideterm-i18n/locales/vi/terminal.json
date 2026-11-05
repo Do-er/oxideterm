@@ -298,10 +298,6 @@
       "all_groups": "Tất cả nhóm",
       "search_groups": "Tìm nhóm…",
       "group_empty": "Không có lệnh khả dụng trong nhóm này",
-      "icon_color": "Màu biểu tượng",
-      "icon_color_hint": "#RRGGBB · để trống theo giao diện",
-      "icon_color_reset": "Dùng màu giao diện",
-      "icon_color_invalid": "Nhập màu thập lục phân gồm sáu chữ số, ví dụ #22d3ee.",
       "title": "Quick Commands",
       "open": "Quick Commands",
       "close": "Close Quick Commands",
@@ -356,11 +352,6 @@
       "reorder_groups": "Kéo tay cầm để sắp xếp lại các nhóm",
       "save_group": "Save group",
       "group_name_placeholder": "Group name",
-      "icon_terminal": "Terminal",
-      "icon_server": "Server",
-      "icon_folder": "Folder",
-      "icon_docker": "Docker",
-      "icon_zap": "Custom",
       "pin": "Giữ mở",
       "unpin": "Đóng sau khi chạy",
       "manage": "Quản lý",
@@ -408,7 +399,8 @@
       "error_invalid_choice": "Giá trị của {{parameter}} không nằm trong các lựa chọn.",
       "error_missing_context": "{{target}} không cung cấp giá trị ngữ cảnh {{field}}.",
       "unavailable_targets": "Đã bỏ qua đích không khả dụng: {{targets}}",
-      "parameter_modal_hint": "Enter để gửi · Esc để hủy"
+      "parameter_modal_hint": "Enter để gửi · Esc để hủy",
+      "category_icon": "Biểu tượng"
     },
     "cwd": {
       "search_directories": "Tìm tệp và thư mục...",

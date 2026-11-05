@@ -298,10 +298,6 @@
       "all_groups": "모든 그룹",
       "search_groups": "그룹 검색…",
       "group_empty": "이 그룹에 사용 가능한 명령이 없습니다",
-      "icon_color": "아이콘 색상",
-      "icon_color_hint": "#RRGGBB · 비워두면 테마 사용",
-      "icon_color_reset": "테마 색상 사용",
-      "icon_color_invalid": "#22d3ee와 같은 6자리 16진수 색상을 입력하세요.",
       "title": "Quick Commands",
       "open": "Quick Commands",
       "close": "Close Quick Commands",
@@ -356,11 +352,6 @@
       "reorder_groups": "핸들을 드래그하여 그룹 순서 변경",
       "save_group": "Save group",
       "group_name_placeholder": "Group name",
-      "icon_terminal": "Terminal",
-      "icon_server": "Server",
-      "icon_folder": "Folder",
-      "icon_docker": "Docker",
-      "icon_zap": "Custom",
       "pin": "계속 열어 두기",
       "unpin": "실행 후 닫기",
       "manage": "관리",
@@ -408,7 +399,8 @@
       "error_invalid_choice": "{{parameter}} 값이 선택 항목에 없습니다.",
       "error_missing_context": "{{target}}에 {{field}} 컨텍스트 값이 없습니다.",
       "unavailable_targets": "사용할 수 없는 대상 건너뜀: {{targets}}",
-      "parameter_modal_hint": "Enter 제출 · Esc 취소"
+      "parameter_modal_hint": "Enter 제출 · Esc 취소",
+      "category_icon": "아이콘"
     },
     "cwd": {
       "search_directories": "파일 및 디렉터리 검색...",

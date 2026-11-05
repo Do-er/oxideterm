@@ -298,10 +298,6 @@
       "all_groups": "Alle Gruppen",
       "search_groups": "Gruppen suchen…",
       "group_empty": "Keine verfügbaren Befehle in dieser Gruppe",
-      "icon_color": "Symbolfarbe",
-      "icon_color_hint": "#RRGGBB · leer für Designfarbe",
-      "icon_color_reset": "Designfarbe verwenden",
-      "icon_color_invalid": "Eine sechsstellige Hex-Farbe eingeben, z. B. #22d3ee.",
       "title": "Quick Commands",
       "open": "Quick Commands",
       "close": "Close Quick Commands",
@@ -356,11 +352,6 @@
       "reorder_groups": "Gruppen am Griff ziehen, um sie neu anzuordnen",
       "save_group": "Save group",
       "group_name_placeholder": "Group name",
-      "icon_terminal": "Terminal",
-      "icon_server": "Server",
-      "icon_folder": "Folder",
-      "icon_docker": "Docker",
-      "icon_zap": "Custom",
       "pin": "Offen halten",
       "unpin": "Nach Ausführen schließen",
       "manage": "Verwalten",
@@ -408,7 +399,8 @@
       "error_invalid_choice": "Der Wert für {{parameter}} ist keine zulässige Auswahl.",
       "error_missing_context": "{{target}} stellt den Kontextwert {{field}} nicht bereit.",
       "unavailable_targets": "Nicht verfügbare Ziele übersprungen: {{targets}}",
-      "parameter_modal_hint": "Eingabe zum Absenden · Esc zum Abbrechen"
+      "parameter_modal_hint": "Eingabe zum Absenden · Esc zum Abbrechen",
+      "category_icon": "Symbol"
     },
     "cwd": {
       "search_directories": "Dateien und Verzeichnisse suchen...",

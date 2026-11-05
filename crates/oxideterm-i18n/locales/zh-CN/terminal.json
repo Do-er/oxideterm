@@ -349,10 +349,6 @@
       "all_groups": "全部分组",
       "search_groups": "搜索分组…",
       "group_empty": "当前分组暂无可用命令",
-      "icon_color": "图标颜色",
-      "icon_color_hint": "#RRGGBB · 留空跟随主题",
-      "icon_color_reset": "跟随主题",
-      "icon_color_invalid": "请输入六位十六进制颜色，例如 #22d3ee。",
       "title": "快捷命令",
       "open": "快捷命令",
       "close": "关闭快捷命令",
@@ -407,11 +403,6 @@
       "reorder_groups": "拖动手柄调整分组顺序",
       "save_group": "保存组",
       "group_name_placeholder": "组名称",
-      "icon_terminal": "终端",
-      "icon_server": "服务器",
-      "icon_folder": "文件夹",
-      "icon_docker": "Docker",
-      "icon_zap": "自定义",
       "pin": "固定面板",
       "unpin": "执行后关闭",
       "manage": "管理",
@@ -459,7 +450,8 @@
       "error_invalid_choice": "参数 {{parameter}} 的值不在可选项中。",
       "error_missing_context": "目标 {{target}} 不提供 {{field}} 上下文值。",
       "unavailable_targets": "已跳过不可用目标：{{targets}}",
-      "parameter_modal_hint": "Enter 提交 · Esc 取消"
+      "parameter_modal_hint": "Enter 提交 · Esc 取消",
+      "category_icon": "图标"
     },
     "cwd": {
       "search_directories": "搜索文件和目录...",

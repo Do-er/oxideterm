@@ -298,10 +298,6 @@
       "all_groups": "Tutti i gruppi",
       "search_groups": "Cerca gruppi…",
       "group_empty": "Nessun comando disponibile in questo gruppo",
-      "icon_color": "Colore icona",
-      "icon_color_hint": "#RRGGBB · vuoto segue il tema",
-      "icon_color_reset": "Usa colore del tema",
-      "icon_color_invalid": "Inserisci un colore esadecimale di sei cifre, ad esempio #22d3ee.",
       "title": "Quick Commands",
       "open": "Quick Commands",
       "close": "Close Quick Commands",
@@ -356,11 +352,6 @@
       "reorder_groups": "Trascina la maniglia per riordinare i gruppi",
       "save_group": "Save group",
       "group_name_placeholder": "Group name",
-      "icon_terminal": "Terminal",
-      "icon_server": "Server",
-      "icon_folder": "Folder",
-      "icon_docker": "Docker",
-      "icon_zap": "Custom",
       "pin": "Mantieni aperto",
       "unpin": "Chiudi dopo l'esecuzione",
       "manage": "Gestisci",
@@ -408,7 +399,8 @@
       "error_invalid_choice": "Il valore di {{parameter}} non è tra le scelte disponibili.",
       "error_missing_context": "{{target}} non fornisce il valore di contesto {{field}}.",
       "unavailable_targets": "Destinazioni non disponibili ignorate: {{targets}}",
-      "parameter_modal_hint": "Invio per inviare · Esc per annullare"
+      "parameter_modal_hint": "Invio per inviare · Esc per annullare",
+      "category_icon": "Icona"
     },
     "cwd": {
       "search_directories": "Cerca file e directory...",

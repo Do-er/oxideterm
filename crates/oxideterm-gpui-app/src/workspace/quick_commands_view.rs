@@ -46,7 +46,6 @@ use super::{
     QuickCommandImportStrategy, QuickCommandInput, QuickCommandParameter,
     QuickCommandParameterEditorDraft, QuickCommandParameterKind, QuickCommandTargetProtocol,
     TerminalQuickCommandsState, default_quick_command_categories, now_ms,
-    quick_command_icon_source_id,
 };
 use crate::assets::LucideIcon;
 
@@ -54,15 +53,28 @@ pub(super) fn quick_command_lucide_icon(icon: QuickCommandIcon) -> LucideIcon {
     match icon {
         QuickCommandIcon::Server => LucideIcon::Server,
         QuickCommandIcon::Folder => LucideIcon::Folder,
-        QuickCommandIcon::Docker => LucideIcon::Server,
+        QuickCommandIcon::Docker => LucideIcon::Docker,
         QuickCommandIcon::Zap => LucideIcon::Zap,
-        QuickCommandIcon::Terminal => LucideIcon::Monitor,
+        QuickCommandIcon::Terminal => LucideIcon::Terminal,
+        QuickCommandIcon::Cpu => LucideIcon::Cpu,
+        QuickCommandIcon::Database => LucideIcon::HardDrive,
+        QuickCommandIcon::Cloud => LucideIcon::Cloud,
+        QuickCommandIcon::Code => LucideIcon::Code2,
+        QuickCommandIcon::Git => LucideIcon::GitFork,
+        QuickCommandIcon::Shield => LucideIcon::Shield,
+        QuickCommandIcon::Package => LucideIcon::Package,
+        QuickCommandIcon::Rocket => LucideIcon::Rocket,
+        QuickCommandIcon::Settings => LucideIcon::Settings,
+        QuickCommandIcon::Play => LucideIcon::Play,
+        QuickCommandIcon::Star => LucideIcon::Star,
+        QuickCommandIcon::Layers => LucideIcon::Layers,
+        QuickCommandIcon::Network => LucideIcon::Network,
     }
 }
 
-const QUICK_COMMANDS_MANAGER_WIDTH: f32 = 1120.0;
-const QUICK_COMMANDS_MANAGER_HEIGHT: f32 = 720.0;
-const QUICK_COMMANDS_MANAGER_COMMAND_LIST_WIDTH: f32 = 360.0;
+const QUICK_COMMANDS_MANAGER_WIDTH: f32 = 960.0;
+const QUICK_COMMANDS_MANAGER_HEIGHT: f32 = 620.0;
+const QUICK_COMMANDS_MANAGER_SIDEBAR_WIDTH: f32 = 300.0;
 const QUICK_COMMAND_CATEGORY_PICKER_MAX_HEIGHT: f32 = 72.0;
 
 #[derive(Clone)]
@@ -93,13 +105,6 @@ impl gpui::Render for QuickCommandCategoryDrag {
                 .child(self.name.clone()),
         )
     }
-}
-
-fn quick_command_icon_label_key(icon: QuickCommandIcon) -> String {
-    format!(
-        "terminal.quick_commands.icon_{}",
-        quick_command_icon_source_id(icon)
-    )
 }
 
 fn quick_command_editor_frame(
@@ -1657,10 +1662,7 @@ impl WorkspaceApp {
                     .min_h(px(0.0))
                     .flex()
                     .overflow_hidden()
-                    .border_t_1()
-                    .border_color(rgba((theme.border << 8) | 0x99))
-                    .child(self.render_quick_command_category_sidebar(&snapshot, cx))
-                    .child(self.render_quick_command_manager_list(&snapshot, cx))
+                    .child(self.render_quick_command_manager_master(&snapshot, cx))
                     .child(self.render_quick_command_manager_inspector(&snapshot, cx)),
             );
 
@@ -1880,22 +1882,56 @@ impl WorkspaceApp {
         .detach();
     }
 
-    fn render_quick_command_manager_list(
+    fn render_quick_command_manager_master(
         &self,
         snapshot: &QuickCommandsRenderSnapshot,
         cx: &mut Context<Self>,
     ) -> AnyElement {
         let theme = self.tokens.ui;
         div()
-            .w(px(QUICK_COMMANDS_MANAGER_COMMAND_LIST_WIDTH))
+            .w(px(QUICK_COMMANDS_MANAGER_SIDEBAR_WIDTH))
             .h_full()
             .flex_none()
             .min_w(px(0.0))
             .flex()
             .flex_col()
             .border_r_1()
-            .border_color(rgba((theme.border << 8) | 0x99))
-            .child(self.render_quick_command_toolbar(snapshot, cx))
+            .border_color(rgba((theme.border << 8) | 0x66))
+            .bg(rgba((theme.bg << 8) | 0x40))
+            .child(
+                div()
+                    .flex_none()
+                    .p(px(8.0))
+                    .border_b_1()
+                    .border_color(rgba((theme.border << 8) | 0x40))
+                    .flex()
+                    .items_center()
+                    .gap(px(6.0))
+                    .child(
+                        div()
+                            .flex_1()
+                            .min_w(px(0.0))
+                            .child(self.render_quick_command_text_input(
+                                QuickCommandInput::Search,
+                                snapshot.query.clone(),
+                                snapshot.focused_input,
+                                self.i18n.t("terminal.quick_commands.search_placeholder"),
+                                cx,
+                            )),
+                    )
+                    .child(self.quick_command_tooltip_icon_button(
+                        LucideIcon::Plus,
+                        "quick-commands-manager-add",
+                        self.i18n.t("terminal.quick_commands.add_command"),
+                        |this, _event, window, cx| {
+                            this.start_quick_command_create(cx);
+                            window.focus(&this.focus_handle, cx);
+                            cx.stop_propagation();
+                        },
+                        cx,
+                    )),
+            )
+            .child(self.render_quick_command_category_sidebar(snapshot, cx))
             .child(self.render_quick_command_rows(snapshot, cx))
             .into_any_element()
     }
@@ -1950,20 +1986,10 @@ impl WorkspaceApp {
     ) -> AnyElement {
         let theme = self.tokens.ui;
         let sidebar = div()
-            .w(px(if snapshot.managing { 220.0 } else { 160.0 }))
-            .h_full()
+            .w_full()
             .flex_none()
             .overflow_hidden()
-            .border_r_1()
-            .border_color(rgba((theme.border << 8) | 0x99))
-            .bg(
-                if !snapshot.managing && self.window_background_preferences().is_some() {
-                    // The dock owns the background; categories share its tint budget with controls.
-                    rgba(0x00000000)
-                } else {
-                    rgba((theme.bg << 8) | 0x73)
-                },
-            )
+            .bg(rgba(0x00000000))
             .p(px(8.0))
             .flex()
             .flex_col()
@@ -2218,8 +2244,8 @@ impl WorkspaceApp {
             })
             .child(
                 div()
-                    .flex_1()
-                    .min_h(px(0.0))
+                    .w_full()
+                    .max_h(px(180.0))
                     .overflow_y_scrollbar()
                     .child(category_list),
             )
@@ -2733,7 +2759,18 @@ impl WorkspaceApp {
         let tooltip_id = format!("quick-command-description-{}", command.id);
         let tooltip_id_for_hover = tooltip_id.clone();
         let keep_open_for_insert = true;
-        let highlighted = highlighted_command == Some(command.id.as_str());
+        let is_selected_in_manager = managing && {
+            let terminal = self.terminal.read(cx);
+            terminal
+                .quick_commands
+                .store
+                .command_editor
+                .as_ref()
+                .and_then(|draft| draft.id.as_deref())
+                == Some(command.id.as_str())
+        };
+        let highlighted = is_selected_in_manager
+            || highlighted_command == Some(command.id.as_str());
         let selection_group_id = crate::workspace::selectable_text::selectable_text_id(
             "quick-command-row",
             command.id.as_str(),
@@ -2747,10 +2784,18 @@ impl WorkspaceApp {
             .items_center()
             .gap(px(8.0))
             .text_color(rgb(theme.text_muted))
-            .bg(if highlighted {
+            .bg(if is_selected_in_manager {
+                rgba((theme.accent << 8) | 0x26)
+            } else if highlighted {
                 rgba((theme.bg_hover << 8) | 0xb3)
             } else {
                 rgba(0x00000000)
+            })
+            .when(is_selected_in_manager, |row| {
+                row.border_1().border_color(rgba((theme.accent << 8) | 0x66))
+            })
+            .when(!is_selected_in_manager, |row| {
+                row.border_1().border_color(rgba(0x00000000))
             })
             .hover(move |style| {
                 style
@@ -2894,14 +2939,16 @@ impl WorkspaceApp {
                             )),
                     )
             )
-            .child(self.quick_command_action_button(
-                LucideIcon::Play,
-                move |this, _event, window, cx| {
-                    this.run_quick_command_model(&command_for_run, window, cx);
-                    cx.stop_propagation();
-                },
-                cx,
-            ))
+            .when(!managing, |row| {
+                row.child(self.quick_command_action_button(
+                    LucideIcon::Play,
+                    move |this, _event, window, cx| {
+                        this.run_quick_command_model(&command_for_run, window, cx);
+                        cx.stop_propagation();
+                    },
+                    cx,
+                ))
+            })
             .when(managing, |row| {
                 row.child(self.quick_command_action_button(
                     LucideIcon::ArrowUp,
@@ -2956,24 +3003,34 @@ impl WorkspaceApp {
             return div().into_any_element();
         };
         let can_save = quick_command_category_draft_can_save(draft);
-        let parsed_color = oxideterm_quick_commands::parse_icon_color(&draft.icon_color);
-        let invalid_color = !draft.icon_color.trim().is_empty() && parsed_color.is_none();
-        let mut icon_options = div().flex().items_center().gap(px(4.0));
+        let mut icon_options = div().flex().flex_wrap().items_center().gap(px(6.0));
         for icon in [
             QuickCommandIcon::Terminal,
             QuickCommandIcon::Server,
             QuickCommandIcon::Folder,
             QuickCommandIcon::Docker,
             QuickCommandIcon::Zap,
+            QuickCommandIcon::Cpu,
+            QuickCommandIcon::Database,
+            QuickCommandIcon::Cloud,
+            QuickCommandIcon::Code,
+            QuickCommandIcon::Git,
+            QuickCommandIcon::Shield,
+            QuickCommandIcon::Package,
+            QuickCommandIcon::Rocket,
+            QuickCommandIcon::Settings,
+            QuickCommandIcon::Play,
+            QuickCommandIcon::Star,
+            QuickCommandIcon::Layers,
+            QuickCommandIcon::Network,
         ] {
             let active = draft.icon == icon;
             icon_options = icon_options.child(
                 div()
-                    .h(px(30.0))
-                    .px(px(8.0))
+                    .size(px(28.0))
                     .flex()
                     .items_center()
-                    .gap(px(4.0))
+                    .justify_center()
                     .rounded(px(self.tokens.radii.md))
                     .border_1()
                     .border_color(if active {
@@ -2982,9 +3039,14 @@ impl WorkspaceApp {
                         rgba((theme.border << 8) | 0x80)
                     })
                     .bg(if active {
-                        rgba((theme.accent << 8) | 0x1a)
+                        rgba((theme.accent << 8) | 0x22)
                     } else {
                         rgba(0x00000000)
+                    })
+                    .hover(|style| {
+                        style
+                            .bg(rgba((theme.bg_hover << 8) | 0xcc))
+                            .border_color(rgb(theme.accent))
                     })
                     .cursor_pointer()
                     .text_color(if active {
@@ -3004,26 +3066,12 @@ impl WorkspaceApp {
                     )
                     .child(Self::render_lucide_icon(
                         quick_command_lucide_icon(icon),
-                        13.0,
-                        parsed_color.map(rgb).unwrap_or_else(|| {
-                            if active {
-                                rgb(theme.accent)
-                            } else {
-                                rgb(theme.text_muted)
-                            }
-                        }),
-                    ))
-                    .child(self.render_display_text_with_role(
-                        SelectableTextRole::NonSelectable,
-                        "quick-command-icon-option",
-                        quick_command_icon_source_id(icon),
-                        self.i18n.t(&quick_command_icon_label_key(icon)),
+                        14.0,
                         if active {
-                            theme.accent
+                            rgb(theme.accent)
                         } else {
-                            theme.text_muted
+                            rgb(theme.text_muted)
                         },
-                        cx,
                     )),
             );
         }
@@ -3070,61 +3118,12 @@ impl WorkspaceApp {
                             cx,
                         ),
                     )
-                    .child(icon_options)
                     .child(
                         div()
                             .text_size(px(self.tokens.metrics.ui_text_sm))
-                            .child(self.i18n.t("terminal.quick_commands.icon_color")),
+                            .child(self.i18n.t("terminal.quick_commands.category_icon")),
                     )
-                    .child(
-                        div()
-                            .flex()
-                            .items_center()
-                            .gap(px(8.0))
-                            .child(
-                                div()
-                                    .size(px(28.0))
-                                    .flex_none()
-                                    .rounded(px(self.tokens.radii.md))
-                                    .border_1()
-                                    .border_color(rgb(theme.border))
-                                    .bg(rgb(parsed_color.unwrap_or(theme.text_muted))),
-                            )
-                            .child(div().flex_1().min_w_0().child(
-                                self.render_quick_command_text_input(
-                                    QuickCommandInput::CategoryColor,
-                                    draft.icon_color.clone(),
-                                    snapshot.focused_input,
-                                    self.i18n.t("terminal.quick_commands.icon_color_hint"),
-                                    cx,
-                                ),
-                            ))
-                            .child(self.quick_command_text_button(
-                                self.i18n.t("terminal.quick_commands.icon_color_reset"),
-                                !draft.icon_color.is_empty(),
-                                cx.listener(|this, _, _, cx| {
-                                    this.clear_ime_selection();
-                                    this.ime_marked_text = None;
-                                    this.terminal.update(cx, |terminal, _| {
-                                        if let Some(draft) =
-                                            terminal.quick_commands.store.category_editor.as_mut()
-                                        {
-                                            draft.icon_color.clear();
-                                        }
-                                    });
-                                    cx.stop_propagation();
-                                    cx.notify();
-                                }),
-                            )),
-                    )
-                    .when(invalid_color, |column| {
-                        column.child(
-                            div()
-                                .text_size(px(self.tokens.metrics.ui_text_sm))
-                                .text_color(rgb(theme.error))
-                                .child(self.i18n.t("terminal.quick_commands.icon_color_invalid")),
-                        )
-                    }),
+                    .child(icon_options),
             )
             .child(self.render_quick_editor_buttons(
                 can_save,

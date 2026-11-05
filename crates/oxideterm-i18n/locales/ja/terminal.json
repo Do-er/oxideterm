@@ -298,10 +298,6 @@
       "all_groups": "すべてのグループ",
       "search_groups": "グループを検索…",
       "group_empty": "このグループに利用可能なコマンドはありません",
-      "icon_color": "アイコンの色",
-      "icon_color_hint": "#RRGGBB · 空欄でテーマに従う",
-      "icon_color_reset": "テーマの色を使用",
-      "icon_color_invalid": "#22d3ee など、6 桁の 16 進数の色を入力してください。",
       "title": "Quick Commands",
       "open": "Quick Commands",
       "close": "Close Quick Commands",
@@ -356,11 +352,6 @@
       "reorder_groups": "ハンドルをドラッグしてグループを並べ替え",
       "save_group": "Save group",
       "group_name_placeholder": "Group name",
-      "icon_terminal": "Terminal",
-      "icon_server": "Server",
-      "icon_folder": "Folder",
-      "icon_docker": "Docker",
-      "icon_zap": "Custom",
       "pin": "開いたままにする",
       "unpin": "実行後に閉じる",
       "manage": "管理",
@@ -408,7 +399,8 @@
       "error_invalid_choice": "{{parameter}} の値が選択肢にありません。",
       "error_missing_context": "{{target}} には {{field}} コンテキスト値がありません。",
       "unavailable_targets": "利用できない対象をスキップしました: {{targets}}",
-      "parameter_modal_hint": "Enterで送信 · Escでキャンセル"
+      "parameter_modal_hint": "Enterで送信 · Escでキャンセル",
+      "category_icon": "アイコン"
     },
     "cwd": {
       "search_directories": "ファイルとディレクトリを検索...",

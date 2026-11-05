@@ -13,6 +13,19 @@ pub enum QuickCommandIcon {
     Folder,
     Docker,
     Zap,
+    Cpu,
+    Database,
+    Cloud,
+    Code,
+    Git,
+    Shield,
+    Package,
+    Rocket,
+    Settings,
+    Play,
+    Star,
+    Layers,
+    Network,
 }
 
 #[derive(Clone, Debug, Eq, PartialEq, Serialize, Deserialize)]

@@ -96,16 +96,6 @@ pub(super) struct QuickCommandCategoryDeletePrompt {
     pub name: String,
 }
 
-fn quick_command_icon_source_id(icon: QuickCommandIcon) -> &'static str {
-    match icon {
-        QuickCommandIcon::Terminal => "terminal",
-        QuickCommandIcon::Server => "server",
-        QuickCommandIcon::Folder => "folder",
-        QuickCommandIcon::Docker => "docker",
-        QuickCommandIcon::Zap => "zap",
-    }
-}
-
 #[derive(Clone)]
 pub(super) struct QuickCommandsState {
     settings_path: PathBuf,

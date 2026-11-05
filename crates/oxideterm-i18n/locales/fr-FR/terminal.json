@@ -298,10 +298,6 @@
       "all_groups": "Tous les groupes",
       "search_groups": "Rechercher un groupe…",
       "group_empty": "Aucune commande disponible dans ce groupe",
-      "icon_color": "Couleur de l’icône",
-      "icon_color_hint": "#RRGGBB · vide pour le thème",
-      "icon_color_reset": "Utiliser le thème",
-      "icon_color_invalid": "Saisissez une couleur hexadécimale à six chiffres, par exemple #22d3ee.",
       "title": "Quick Commands",
       "open": "Quick Commands",
       "close": "Close Quick Commands",
@@ -356,11 +352,6 @@
       "reorder_groups": "Faites glisser la poignée pour réorganiser les groupes",
       "save_group": "Save group",
       "group_name_placeholder": "Group name",
-      "icon_terminal": "Terminal",
-      "icon_server": "Server",
-      "icon_folder": "Folder",
-      "icon_docker": "Docker",
-      "icon_zap": "Custom",
       "pin": "Garder ouvert",
       "unpin": "Fermer après exécution",
       "manage": "Gérer",
@@ -408,7 +399,8 @@
       "error_invalid_choice": "La valeur de {{parameter}} ne fait pas partie des choix.",
       "error_missing_context": "{{target}} ne fournit pas la valeur de contexte {{field}}.",
       "unavailable_targets": "Cibles indisponibles ignorées : {{targets}}",
-      "parameter_modal_hint": "Entrée pour envoyer · Échap pour annuler"
+      "parameter_modal_hint": "Entrée pour envoyer · Échap pour annuler",
+      "category_icon": "Icône"
     },
     "cwd": {
       "search_directories": "Rechercher des fichiers et dossiers...",

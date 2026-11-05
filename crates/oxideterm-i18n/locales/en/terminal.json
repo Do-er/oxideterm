@@ -349,10 +349,6 @@
       "all_groups": "All groups",
       "search_groups": "Search groups…",
       "group_empty": "No available commands in this group",
-      "icon_color": "Icon color",
-      "icon_color_hint": "#RRGGBB · empty follows theme",
-      "icon_color_reset": "Use theme color",
-      "icon_color_invalid": "Enter a six-digit hexadecimal color, such as #22d3ee.",
       "title": "Quick Commands",
       "open": "Quick Commands",
       "close": "Close Quick Commands",
@@ -407,11 +403,6 @@
       "reorder_groups": "Drag the handle to reorder groups",
       "save_group": "Save group",
       "group_name_placeholder": "Group name",
-      "icon_terminal": "Terminal",
-      "icon_server": "Server",
-      "icon_folder": "Folder",
-      "icon_docker": "Docker",
-      "icon_zap": "Custom",
       "pin": "Keep open",
       "unpin": "Close after run",
       "manage": "Manage",
@@ -459,7 +450,8 @@
       "error_invalid_choice": "The value for {{parameter}} is not one of its choices.",
       "error_missing_context": "{{target}} does not provide the {{field}} context value.",
       "unavailable_targets": "Skipped unavailable targets: {{targets}}",
-      "parameter_modal_hint": "Enter to submit · Esc to cancel"
+      "parameter_modal_hint": "Enter to submit · Esc to cancel",
+      "category_icon": "Icon"
     },
     "cwd": {
       "search_directories": "Search files and directories...",
