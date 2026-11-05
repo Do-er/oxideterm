@@ -130,7 +130,7 @@ impl WorkspaceApp {
                 }
             }
             WorkspaceDestination::Page { page } => match page {
-                WorkspacePage::Sessions => self.open_session_manager_tab(window, cx),
+                WorkspacePage::Sessions => self.open_session_manager_drawer(cx),
                 WorkspacePage::Files => self.open_file_manager_tab(window, cx),
                 WorkspacePage::Plugins => self.open_plugin_manager_tab(window, cx),
                 WorkspacePage::CloudSync => self.open_cloud_sync_tab(window, cx),

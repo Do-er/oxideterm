@@ -1,6 +1,6 @@
 {
   "sessionManager": {
-    "title": "会话管理器",
+    "title": "会话管理",
     "toolbar": {
       "search_placeholder": "搜索连接...",
       "new_connection": "新建连接"

@@ -11,6 +11,7 @@ use oxideterm_quick_commands::{
     PreparedQuickCommand, QuickCommand, QuickCommandContextValues, QuickCommandRisk,
     QuickCommandTargetContext, QuickCommandTargetProtocol,
     classify_command_risk as classify_quick_command_risk, prepare_quick_command,
+    split_quick_command_lines,
 };
 use oxideterm_terminal::TerminalSessionKind;
 use zeroize::Zeroizing;
@@ -1456,7 +1457,9 @@ impl WorkspaceApp {
 
         let quick_commands_focused = {
             let quick_commands = &self.terminal.read(cx).quick_commands;
-            quick_commands.is_open() && quick_commands.focused_input().is_some()
+            quick_commands.is_open()
+                && quick_commands.focused_input().is_some()
+                && !self.quick_command_text_editor_focused(window, cx)
         };
         if quick_commands_focused {
             self.handle_quick_commands_key(event, window, cx);
@@ -2531,14 +2534,6 @@ impl WorkspaceApp {
         cx.notify();
     }
 
-    pub(super) fn confirm_quick_command_execution(
-        &mut self,
-        window: &mut Window,
-        cx: &mut Context<Self>,
-    ) {
-        self.confirm_quick_command_parameter_input(window, cx);
-    }
-
     pub(super) fn cancel_quick_command_parameter_input(
         &mut self,
         window: &mut Window,
@@ -2562,33 +2557,114 @@ impl WorkspaceApp {
         // Expansion is target-specific, so broadcast delivery cannot reuse the
         // old single-string path without losing per-pane context semantics.
         let active_pane_id = self.active_pane_id(cx);
+        let line_delay_ms = prepared.line_delay_ms;
+        let command_id = prepared.command_id.clone();
         let focus_command = prepared
             .targets
             .first()
             .map(|target| target.command.clone());
-        let targets = prepared.targets.into_iter().filter_map(|target| {
-            target_contexts
+        let targets: Vec<(PaneId, Zeroizing<String>)> = prepared
+            .targets
+            .into_iter()
+            .filter_map(|target| {
+                target_contexts
+                    .iter()
+                    .find(|(_, context)| context.target_id == target.target_id)
+                    .map(|(pane_id, _)| (*pane_id, target.command))
+            })
+            .collect();
+
+        let target_lines: Vec<(PaneId, Vec<String>)> = targets
+            .iter()
+            .map(|(pane_id, command)| {
+                (*pane_id, split_quick_command_lines(command))
+            })
+            .collect();
+        let max_lines = target_lines
+            .iter()
+            .map(|(_, lines)| lines.len())
+            .max()
+            .unwrap_or(0);
+
+        let sent_count = if max_lines <= 1 || line_delay_ms == 0 {
+            dispatch_quick_command_batch(
+                &command_id,
+                targets,
+                target_count,
+                active_pane_id,
+                |pane_id, command, source, parent_id| {
+                    self.send_terminal_quick_command_to_pane(pane_id, command, source, parent_id, cx)
+                },
+            )
+        } else {
+            let first_step_targets = target_lines
                 .iter()
-                .find(|(_, context)| context.target_id == target.target_id)
-                .map(|(pane_id, _)| (*pane_id, target.command))
-        });
-        let sent_count = dispatch_quick_command_batch(
-            &prepared.command_id,
-            targets,
-            target_count,
-            active_pane_id,
-            |pane_id, command, source, parent_id| {
-                if command.contains('\n') || command.contains('\r') {
-                    self.send_terminal_command_to_pane(pane_id, command, source, parent_id, cx)
-                } else {
-                    self.send_terminal_text_to_pane(pane_id, command, cx)
+                .filter_map(|(pane_id, lines)| {
+                    lines.first().map(|line| (*pane_id, Zeroizing::new(line.clone())))
+                })
+                .collect::<Vec<_>>();
+            let initial_sent = dispatch_quick_command_batch(
+                &command_id,
+                first_step_targets,
+                target_count,
+                active_pane_id,
+                |pane_id, command, source, parent_id| {
+                    self.send_terminal_quick_command_to_pane(pane_id, command, source, parent_id, cx)
+                },
+            );
+
+            let delay = std::time::Duration::from_millis(line_delay_ms);
+            let deferred_targets = target_lines;
+            let task = cx.spawn(async move |this, cx| {
+                for step in 1..max_lines {
+                    gpui::Timer::after(delay).await;
+                    let should_continue = this
+                        .update(cx, |this, cx| {
+                            let mut any_sent = false;
+                            for (pane_id, lines) in &deferred_targets {
+                                if let Some(line) = lines.get(step) {
+                                    let source = if Some(*pane_id) == active_pane_id {
+                                        TerminalCommandMarkDetectionSource::QuickCommand
+                                    } else {
+                                        TerminalCommandMarkDetectionSource::Broadcast
+                                    };
+                                    if this.send_terminal_quick_command_to_pane(
+                                        *pane_id,
+                                        line,
+                                        source,
+                                        None,
+                                        cx,
+                                    ) {
+                                        any_sent = true;
+                                    }
+                                }
+                            }
+                            any_sent
+                        })
+                        .unwrap_or(false);
+                    if !should_continue {
+                        break;
+                    }
                 }
-            },
-        );
+                let _ = this.update(cx, |this, cx| {
+                    this.terminal.update(cx, |terminal, _cx| {
+                        terminal.quick_commands.execution_task = None;
+                    });
+                    cx.notify();
+                });
+            });
+            self.terminal.update(cx, |terminal, _cx| {
+                terminal.quick_commands.execution_task = Some(task);
+            });
+            initial_sent
+        };
         if sent_count > 0 {
             if focus_command
                 .as_deref()
-                .is_some_and(|command| self.terminal_command_should_handoff_focus(command))
+                .is_some_and(|command| {
+                    !command.ends_with('\n') && !command.ends_with('\r')
+                        || self.terminal_command_should_handoff_focus(command)
+                })
             {
                 self.focus_active_pane(window, cx);
             }
@@ -2959,7 +3035,7 @@ impl WorkspaceApp {
         .detach();
     }
 
-    fn send_terminal_command_to_pane(
+    fn send_terminal_quick_command_to_pane(
         &self,
         pane_id: PaneId,
         command: &str,
@@ -2969,20 +3045,8 @@ impl WorkspaceApp {
     ) -> bool {
         if let Some(pane) = self.tab_host.read(cx).panes().get(&pane_id).cloned() {
             return pane.update(cx, |pane, cx| {
-                pane.send_command_line_with_mark(command, mark_source, parent_id, cx)
+                pane.send_quick_command_with_mark(command, mark_source, parent_id, cx)
             });
-        }
-        false
-    }
-
-    fn send_terminal_text_to_pane(
-        &self,
-        pane_id: PaneId,
-        text: &str,
-        cx: &mut Context<Self>,
-    ) -> bool {
-        if let Some(pane) = self.tab_host.read(cx).panes().get(&pane_id).cloned() {
-            return pane.update(cx, |pane, cx| pane.send_composer_text_chunk(text, cx));
         }
         false
     }

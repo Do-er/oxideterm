@@ -84,7 +84,6 @@
       "activity": "Activity",
       "event_log": "Audit",
       "notifications": "Notifications & Audit",
-      "saved_connections": "Saved Connections",
       "forwarding": "Port Forwarding",
       "ports": "Ports",
       "schedules": "Schedules",

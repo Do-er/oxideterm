@@ -3631,7 +3631,7 @@ impl WorkspaceApp {
                     .with_optional_target(target)
             }
             "connection_manager" => {
-                self.open_session_manager_tab(window, cx);
+                self.open_session_manager_drawer(cx);
                 snapshot
                     .ok(
                         "Opened connection_manager.",

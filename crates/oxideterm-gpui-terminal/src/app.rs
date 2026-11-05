@@ -2990,7 +2990,9 @@ impl TerminalPane {
             return false;
         }
         let mut input = Zeroizing::new(command.replace("\r\n", "\r").replace('\n', "\r"));
-        input.push('\r');
+        if !input.ends_with('\r') {
+            input.push('\r');
+        }
         if !self.send_text(&input, cx) {
             return false;
         }
@@ -3037,6 +3039,72 @@ impl TerminalPane {
             return true;
         }
         let command_id = self.begin_command_mark_with_parent(command, source, parent_id, cx);
+        if command_id.is_none() {
+            let mut audit = self.terminal.lock().audit_context();
+            if let (Some(context), Some(parent_id)) = (&mut audit, parent_id) {
+                context.parent_id = Some(parent_id.to_string());
+            }
+            self.command_fact_ledger.set_audit_context(audit);
+        }
+        self.command_fact_ledger.record_dispatch(
+            command_id.as_deref(),
+            parent_id,
+            audit_source,
+            true,
+        );
+        true
+    }
+
+    pub fn send_quick_command_with_mark(
+        &mut self,
+        command: &str,
+        source: TerminalCommandMarkDetectionSource,
+        parent_id: Option<&str>,
+        cx: &mut Context<Self>,
+    ) -> bool {
+        if command.is_empty() {
+            return false;
+        }
+        let audit_source = match source {
+            TerminalCommandMarkDetectionSource::QuickCommand => {
+                oxideterm_audit::AuditSource::QuickCommand
+            }
+            TerminalCommandMarkDetectionSource::Broadcast => {
+                oxideterm_audit::AuditSource::Broadcast
+            }
+            TerminalCommandMarkDetectionSource::CommandBar => {
+                oxideterm_audit::AuditSource::CommandBar
+            }
+            TerminalCommandMarkDetectionSource::Ai => oxideterm_audit::AuditSource::Ai,
+            _ => oxideterm_audit::AuditSource::User,
+        };
+        // Normalize newline sequences to \r without pushing an unrequested trailing return.
+        // Single lines or trailing lines without newlines remain in the prompt; lines with newlines execute.
+        let input = Zeroizing::new(command.replace("\r\n", "\r").replace('\n', "\r"));
+        let secret_reply = self.input_answers_privilege_prompt(input.as_bytes());
+        if !self.send_text(&input, cx) {
+            self.command_fact_ledger
+                .set_audit_context(self.terminal.lock().audit_context());
+            self.command_fact_ledger
+                .record_dispatch(None, parent_id, audit_source, false);
+            return false;
+        }
+        if self.observe_privilege_input("quick-command", input.as_bytes(), Instant::now(), cx)
+            != PrivilegeInputObservation::SecretEntry
+        {
+            self.observe_autosuggest_input_bytes(input.as_bytes(), cx);
+        } else {
+            self.input_tracker.reset();
+            self.autosuggest_prompt_active = false;
+        }
+        if secret_reply {
+            return true;
+        }
+        let command_id = if input.ends_with('\r') {
+            self.begin_command_mark_with_parent(command, source, parent_id, cx)
+        } else {
+            None
+        };
         if command_id.is_none() {
             let mut audit = self.terminal.lock().audit_context();
             if let (Some(context), Some(parent_id)) = (&mut audit, parent_id) {

@@ -53,7 +53,6 @@ fn tab_kind_icon(
         TabKind::Sftp => LucideIcon::FolderInput,
         TabKind::Ide => LucideIcon::Code2,
         TabKind::Forwards => LucideIcon::ArrowLeftRight,
-        TabKind::SessionManager => LucideIcon::LayoutList,
         TabKind::PluginManager => LucideIcon::Puzzle,
         TabKind::Plugin { plugin_id, tab_id } => workspace
             .plugin_entity
@@ -1321,15 +1320,15 @@ impl WorkspaceApp {
                     .cursor_pointer()
                     .hover(move |row| row.text_color(rgb(theme.accent_hover)))
                     .child(Self::render_lucide_icon(
-                        LucideIcon::LayoutList,
+                        LucideIcon::GraphStar,
                         15.0,
                         rgb(theme.accent),
                     ))
                     .child(self.i18n.t("layout.empty.open_session_manager"))
                     .on_mouse_down(
                         MouseButton::Left,
-                        cx.listener(|this, _event, window, cx| {
-                            this.open_session_manager_tab(window, cx);
+                        cx.listener(|this, _event, _window, cx| {
+                            this.open_session_manager_drawer(cx);
                             cx.stop_propagation();
                         }),
                     ),
@@ -1445,7 +1444,7 @@ impl WorkspaceApp {
                         cx,
                     ))
                     .child(self.render_welcome_tool_button(
-                        LucideIcon::LayoutList,
+                        LucideIcon::GraphStar,
                         "layout.empty.open_session_manager",
                         "layout.empty.open_session_manager_hint",
                         WelcomeToolAction::SessionManager,
@@ -1513,7 +1512,7 @@ impl WorkspaceApp {
                             this.open_connection_importers_settings(window, cx)
                         }
                         WelcomeToolAction::SessionManager => {
-                            this.open_session_manager_tab(window, cx)
+                            this.open_session_manager_drawer(cx)
                         }
                         WelcomeToolAction::CloudSync => this.open_cloud_sync_tab(window, cx),
                     }

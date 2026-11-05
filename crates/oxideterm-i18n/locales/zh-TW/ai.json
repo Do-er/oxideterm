@@ -449,7 +449,7 @@
       },
       "surfaces": {
         "settings": "設定",
-        "connection_manager": "會話管理器",
+        "connection_manager": "會話管理",
         "connection_pool": "連線池",
         "connection_monitor": "連線監控",
         "sftp": "SFTP",

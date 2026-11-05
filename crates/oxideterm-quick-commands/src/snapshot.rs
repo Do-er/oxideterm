@@ -71,6 +71,7 @@ fn migrate_v1(snapshot: QuickCommandsSnapshotV1) -> QuickCommandsSnapshot {
                 host_patterns: command.host_pattern.into_iter().collect(),
             },
             confirmation: QuickCommandConfirmationPolicy::Inherit,
+            line_delay_ms: crate::DEFAULT_QUICK_COMMAND_LINE_DELAY_MS,
             sort_order: migration_sort_order(index),
             created_at: command.created_at,
             updated_at: command.updated_at,

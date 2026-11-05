@@ -1888,7 +1888,6 @@ mod tests {
             TabKind::Knowledge,
             TabKind::CloudSync,
             TabKind::NotificationCenter,
-            TabKind::SessionManager,
             TabKind::FileManager,
             TabKind::Graphics,
             TabKind::Runtime,

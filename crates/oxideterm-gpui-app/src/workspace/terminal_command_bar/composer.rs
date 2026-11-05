@@ -344,6 +344,7 @@ impl WorkspaceApp {
             .items_center()
             .gap(px(4.0))
             .child(self.terminal_composer_run_button(document_id, running, cx))
+            .child(self.terminal_composer_save_button(document_id, cx))
             .child(self.terminal_command_capsule_button(
                 LucideIcon::Plus,
                 rgb(self.tokens.ui.text_muted),
@@ -1514,6 +1515,60 @@ impl WorkspaceApp {
                 }),
             )
             .into_any_element()
+    }
+
+    fn terminal_composer_save_button(
+        &self,
+        document_id: TerminalCommandComposerId,
+        cx: &mut Context<Self>,
+    ) -> AnyElement {
+        let theme = self.tokens.ui;
+        let label = self.i18n.t("terminal.quick_commands.save");
+        div()
+            .h(px(24.0))
+            .w(px(52.0))
+            .flex_none()
+            .flex()
+            .items_center()
+            .justify_center()
+            .rounded(px(self.tokens.radii.sm))
+            .border_1()
+            .border_color(rgba((theme.border << 8) | 0x80))
+            .bg(rgba((theme.bg << 8) | 0x60))
+            .text_size(px(self.tokens.metrics.ui_text_xs))
+            .font_weight(gpui::FontWeight::MEDIUM)
+            .text_color(rgb(theme.text))
+            .cursor_pointer()
+            .hover(move |button| button.bg(rgba((theme.bg_hover << 8) | 0x80)))
+            .child(div().min_w_0().truncate().child(label))
+            .id("terminal-composer-save-button")
+            .on_mouse_down(
+                MouseButton::Left,
+                cx.listener(move |this, _event, window, cx| {
+                    this.save_composer_document_to_quick_command(document_id, window, cx);
+                    cx.stop_propagation();
+                }),
+            )
+            .into_any_element()
+    }
+
+    pub(in crate::workspace) fn save_composer_document_to_quick_command(
+        &mut self,
+        document_id: TerminalCommandComposerId,
+        window: &mut Window,
+        cx: &mut Context<Self>,
+    ) {
+        let text = self
+            .terminal_command_composer
+            .read(cx)
+            .document_snapshots()
+            .into_iter()
+            .find(|doc| doc.id == document_id)
+            .map(|doc| doc.editor.read(cx).buffer().text())
+            .unwrap_or_default();
+
+        self.start_quick_command_create_with_content(text, cx);
+        window.focus(&self.focus_handle, cx);
     }
 
     fn terminal_command_composer_status_label(

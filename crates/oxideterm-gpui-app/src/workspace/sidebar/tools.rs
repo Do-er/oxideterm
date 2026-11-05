@@ -311,7 +311,7 @@ impl WorkspaceApp {
         let button = oxideterm_gpui_ui::button::icon_button(
             &self.tokens,
             Self::render_lucide_icon(
-                LucideIcon::Link2,
+                LucideIcon::Zap,
                 self.tokens.metrics.activity_icon_glyph_size,
                 rgb(if active {
                     self.tokens.ui.accent
@@ -359,7 +359,7 @@ impl WorkspaceApp {
         let button = oxideterm_gpui_ui::button::icon_button(
             &self.tokens,
             Self::render_lucide_icon(
-                LucideIcon::Server,
+                LucideIcon::GraphStar,
                 self.tokens.metrics.activity_icon_glyph_size,
                 rgb(if active {
                     self.tokens.ui.accent

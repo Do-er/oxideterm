@@ -886,22 +886,6 @@ impl WorkspaceApp {
                     None
                 }
             }
-            TabKind::SessionManager => {
-                let session_manager = self.session_manager.read(cx);
-                if session_manager.delete_confirm.is_some() {
-                    Some(ActiveTabWindowModalSnapshot {
-                        kind: ActiveTabWindowModalKind::SessionManagerDelete,
-                        phase: visible,
-                    })
-                } else if session_manager.show_group_manager {
-                    Some(ActiveTabWindowModalSnapshot {
-                        kind: ActiveTabWindowModalKind::SessionManagerGroupManager,
-                        phase: visible,
-                    })
-                } else {
-                    None
-                }
-            }
             TabKind::Forwards => {
                 let _scope = self.enter_forwarding_page(active_tab.id, cx);
                 let forwarding = self.forwarding.read(cx);
@@ -1203,6 +1187,15 @@ impl WorkspaceApp {
                             self.confirm_quick_command_category_delete(cx);
                         }
                         _ => {}
+                    }
+                } else if self
+                    .terminal
+                    .read(cx)
+                    .quick_commands
+                    .manager_popovers_open()
+                {
+                    if event.keystroke.key.as_str() == "escape" {
+                        self.close_quick_commands_manager_popovers(cx);
                     }
                 } else if self
                     .terminal

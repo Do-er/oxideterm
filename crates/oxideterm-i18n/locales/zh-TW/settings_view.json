@@ -1068,7 +1068,7 @@
         "title": "從 SSH Config 匯入",
         "description": "掃描主機的設定檔：{{path}}",
         "auto_load": "自動顯示 SSH 設定主機",
-        "auto_load_hint": "無需匯入，直接在命令面板和工作階段管理器中顯示目前 SSH 設定檔中的主機。",
+        "auto_load_hint": "無需匯入，直接在命令面板和工作階段管理中顯示目前 SSH 設定檔中的主機。",
         "auto_sync": "自動同步 SSH 設定主機",
         "auto_sync_hint": "設定變更時匯入新主機，並更新先前由 SSH 設定匯入的連線。手動連線不會被覆寫。",
         "allow_proxy_command": "允許直接執行 ProxyCommand 程式",

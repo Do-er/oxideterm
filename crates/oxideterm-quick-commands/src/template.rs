@@ -48,6 +48,7 @@ pub struct PreparedQuickCommand {
     pub targets: Vec<PreparedQuickCommandTarget>,
     pub unavailable_targets: Vec<String>,
     pub confirmation_required: bool,
+    pub line_delay_ms: u64,
 }
 
 #[derive(Clone, Eq, PartialEq)]
@@ -146,6 +147,7 @@ pub fn prepare_quick_command(
         targets: prepared_targets,
         unavailable_targets,
         confirmation_required,
+        line_delay_ms: command.line_delay_ms,
     })
 }
 
@@ -420,6 +422,45 @@ fn context_value(context: &QuickCommandContextValues, field: &str) -> Option<Zer
     }
 }
 
+/// Splits command text into line chunks while preserving the line ending for each line.
+///
+/// Example:
+/// "cd foo\nls\ncat bar" -> ["cd foo\n", "ls\n", "cat bar"]
+/// "cat bar" -> ["cat bar"]
+pub fn split_quick_command_lines(text: &str) -> Vec<String> {
+    if text.is_empty() {
+        return Vec::new();
+    }
+    let mut lines = Vec::new();
+    let mut start = 0;
+    let bytes = text.as_bytes();
+    let len = bytes.len();
+    let mut i = 0;
+    while i < len {
+        if bytes[i] == b'\r' {
+            if i + 1 < len && bytes[i + 1] == b'\n' {
+                lines.push(text[start..=i + 1].to_string());
+                i += 2;
+                start = i;
+            } else {
+                lines.push(text[start..=i].to_string());
+                i += 1;
+                start = i;
+            }
+        } else if bytes[i] == b'\n' {
+            lines.push(text[start..=i].to_string());
+            i += 1;
+            start = i;
+        } else {
+            i += 1;
+        }
+    }
+    if start < len {
+        lines.push(text[start..len].to_string());
+    }
+    lines
+}
+
 #[cfg(test)]
 mod tests {
     use super::*;
@@ -441,6 +482,7 @@ mod tests {
             }],
             availability: QuickCommandAvailability::default(),
             confirmation: QuickCommandConfirmationPolicy::Inherit,
+            line_delay_ms: crate::DEFAULT_QUICK_COMMAND_LINE_DELAY_MS,
             sort_order: 0,
             created_at: 0,
             updated_at: 0,
@@ -519,6 +561,7 @@ mod tests {
                     .collect(),
                 availability: QuickCommandAvailability::default(),
                 confirmation: QuickCommandConfirmationPolicy::Inherit,
+                line_delay_ms: crate::DEFAULT_QUICK_COMMAND_LINE_DELAY_MS,
                 sort_order: 0,
                 created_at: 1,
                 updated_at: 1,
@@ -556,6 +599,7 @@ mod tests {
             }],
             availability: QuickCommandAvailability::default(),
             confirmation: QuickCommandConfirmationPolicy::Inherit,
+            line_delay_ms: crate::DEFAULT_QUICK_COMMAND_LINE_DELAY_MS,
             sort_order: 0,
             created_at: 1,
             updated_at: 1,
@@ -635,6 +679,7 @@ mod tests {
                 ..QuickCommandAvailability::default()
             },
             confirmation: QuickCommandConfirmationPolicy::Inherit,
+            line_delay_ms: crate::DEFAULT_QUICK_COMMAND_LINE_DELAY_MS,
             sort_order: 0,
             created_at: 1,
             updated_at: 1,
@@ -682,6 +727,7 @@ mod tests {
                 ..QuickCommandAvailability::default()
             },
             confirmation: QuickCommandConfirmationPolicy::Inherit,
+            line_delay_ms: crate::DEFAULT_QUICK_COMMAND_LINE_DELAY_MS,
             sort_order: 0,
             created_at: 1,
             updated_at: 1,
@@ -794,6 +840,7 @@ mod tests {
             }],
             availability: QuickCommandAvailability::default(),
             confirmation: QuickCommandConfirmationPolicy::Inherit,
+            line_delay_ms: crate::DEFAULT_QUICK_COMMAND_LINE_DELAY_MS,
             sort_order: 0,
             created_at: 1,
             updated_at: 1,

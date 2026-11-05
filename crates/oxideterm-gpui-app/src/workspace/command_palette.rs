@@ -562,8 +562,8 @@ impl WorkspaceApp {
                     self.open_context_sidebar_panel(ContextSidebarPanel::Sessions, cx);
                 }
             }
-            PaletteAction::OpenSavedConnections => self.open_session_manager_tab(window, cx),
-            PaletteAction::OpenSessionManager => self.open_session_manager_tab(window, cx),
+            PaletteAction::OpenSavedConnections => self.open_session_manager_drawer(cx),
+            PaletteAction::OpenSessionManager => self.open_session_manager_drawer(cx),
             PaletteAction::OpenRuntime(section) => {
                 self.open_connection_runtime_tab(section, window, cx)
             }
@@ -1235,7 +1235,6 @@ impl WorkspaceApp {
                     TabKind::SshTerminal => self.i18n.t("command_palette.session_ssh_terminal"),
                     TabKind::MoshTerminal => self.i18n.t("terminal.typeMosh"),
                     TabKind::Settings => self.i18n.t("settings_view.title"),
-                    TabKind::SessionManager => self.i18n.t("sidebar.panels.saved_connections"),
                     TabKind::Runtime => self.i18n.t("sidebar.panels.runtime"),
                     TabKind::ConnectionPool => self.i18n.t("sidebar.panels.runtime_overview"),
                     TabKind::Topology => self.i18n.t("topology.title"),
@@ -2653,7 +2652,6 @@ fn tab_kind_icon(kind: &TabKind) -> LucideIcon {
         TabKind::Knowledge => LucideIcon::BookOpen,
         TabKind::RemoteDesktop => LucideIcon::Monitor,
         TabKind::Settings => LucideIcon::Settings,
-        TabKind::SessionManager => LucideIcon::LayoutList,
     }
 }
 
@@ -2877,14 +2875,14 @@ fn command_palette_specs() -> Vec<CommandSpec> {
         CommandSpec {
             id: "cmd:sidebar_sessions",
             label_key: "command_palette.cmd_sidebar_sessions".into(),
-            icon: LucideIcon::Link2,
+            icon: LucideIcon::Zap,
             shortcut_action: None,
             action: PaletteAction::OpenSessions,
         },
         CommandSpec {
             id: "cmd:sidebar_saved",
             label_key: "command_palette.cmd_sidebar_saved".into(),
-            icon: LucideIcon::Server,
+            icon: LucideIcon::GraphStar,
             shortcut_action: None,
             action: PaletteAction::OpenSavedConnections,
         },

@@ -1,6 +1,6 @@
 {
   "sessionManager": {
-    "title": "工作階段管理器",
+    "title": "工作階段管理",
     "toolbar": {
       "search_placeholder": "搜尋連線...",
       "new_connection": "新建連線"

@@ -310,6 +310,7 @@ fn quick_command(id: &str, name: &str, command: &str) -> QuickCommand {
         parameters: Vec::new(),
         availability: oxideterm_quick_commands::QuickCommandAvailability::default(),
         confirmation: oxideterm_quick_commands::QuickCommandConfirmationPolicy::Inherit,
+        line_delay_ms: oxideterm_quick_commands::DEFAULT_QUICK_COMMAND_LINE_DELAY_MS,
         sort_order: 0,
         created_at: 1,
         updated_at: 1,

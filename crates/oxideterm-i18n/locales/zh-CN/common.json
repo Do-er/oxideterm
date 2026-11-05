@@ -108,7 +108,7 @@
       "get_started": "开始与管理",
       "import_connections": "导入连接",
       "import_connections_hint": "导入 SSH 配置和受支持应用的数据",
-      "open_session_manager": "会话管理器",
+      "open_session_manager": "会话管理",
       "open_session_manager_hint": "浏览、编辑和导入已保存连接",
       "cloud_sync_hint": "将加密的工作区数据备份到本地或自建服务"
     },

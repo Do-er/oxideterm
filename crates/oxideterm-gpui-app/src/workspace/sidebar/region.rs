@@ -105,12 +105,12 @@ impl WorkspaceApp {
             ContextSidebarPanel::Sessions => (
                 self.i18n.t("sidebar.panels.sessions"),
                 "sessions".to_string(),
-                LucideIcon::Link2,
+                LucideIcon::Zap,
             ),
             ContextSidebarPanel::Connections => (
                 self.i18n.t("sidebar.panels.session_manager"),
                 "connections".to_string(),
-                LucideIcon::Server,
+                LucideIcon::GraphStar,
             ),
             ContextSidebarPanel::Assistant => (
                 self.i18n.t("sidebar.panels.ai"),
@@ -939,7 +939,7 @@ impl WorkspaceApp {
                     .items_center()
                     .justify_center()
                     .child(div().mb_3().child(Self::render_lucide_icon(
-                        LucideIcon::Server,
+                        LucideIcon::Zap,
                         self.tokens.metrics.empty_sidebar_icon_size,
                         rgba((theme.text_muted << 8) | 0x4d),
                     )))

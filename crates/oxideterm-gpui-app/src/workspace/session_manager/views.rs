@@ -868,7 +868,7 @@ impl WorkspaceApp {
             })
             .text_color(rgb(theme.text_muted))
             .child(Self::render_lucide_icon(
-                LucideIcon::Server,
+                LucideIcon::GraphStar,
                 48.0,
                 rgba((theme.text_muted << 8) | 0x66),
             ))
@@ -1568,7 +1568,7 @@ impl WorkspaceApp {
             .border_b_1()
             .border_color(self.workspace_chrome_divider())
             .px_2()
-            .py_1()
+            .py_3()
             .pl(px(depth as f32 * 14.0 + 8.0))
             .flex()
             .items_center()
@@ -1608,15 +1608,6 @@ impl WorkspaceApp {
                     cx.stop_propagation();
                 }),
             )
-            .child(self.render_animated_chevron(
-                (
-                    gpui::SharedString::from(format!("session-group-chevron-{group}")),
-                    expanded as usize,
-                ),
-                expanded,
-                16.0,
-                rgb(theme.text_muted),
-            ))
             .child(Self::render_lucide_icon(
                 if expanded {
                     LucideIcon::FolderOpen
@@ -1624,7 +1615,7 @@ impl WorkspaceApp {
                     LucideIcon::Folder
                 },
                 16.0,
-                rgb(theme.warning),
+                rgb(theme.accent),
             ))
             .child(
                 div()
@@ -1683,7 +1674,7 @@ impl WorkspaceApp {
             .border_b_1()
             .border_color(self.workspace_chrome_divider())
             .px_2()
-            .py_1()
+            .py(px(1.0))
             .pl(px(depth as f32 * 14.0 + 8.0))
             .flex()
             .items_center()
@@ -1696,12 +1687,15 @@ impl WorkspaceApp {
             })
             .when(is_selected, |row| {
                 row.child(
+                    // A short rounded indicator shares the folder and title accent
+                    // so the selected node reads as part of one accent language.
                     div()
                         .absolute()
                         .left_0()
-                        .top_0()
-                        .bottom_0()
+                        .top(px(5.0))
+                        .bottom(px(5.0))
                         .w(px(2.0))
+                        .rounded(px(1.0))
                         .bg(rgb(theme.accent)),
                 )
             })
@@ -1781,7 +1775,7 @@ impl WorkspaceApp {
             .when(_allow_drag && depth > 0, |row| {
                 row.child(div().w(px(16.0)).flex_none())
             })
-            .child(self.render_session_manager_row_icon(item, cx))
+            .child(self.render_session_manager_row_icon(item, is_selected, cx))
             .child(
                 div()
                     .min_w(px(0.0))
@@ -1789,7 +1783,7 @@ impl WorkspaceApp {
                     .child(
                         div()
                             .truncate()
-                            .text_size(px(MANAGER_ROW_TEXT_SIZE))
+                            .text_size(px(MANAGER_ITEM_TITLE_TEXT_SIZE))
                             .font_weight(gpui::FontWeight::MEDIUM)
                             .text_color(rgb(if is_selected {
                                 theme.accent
@@ -1801,7 +1795,7 @@ impl WorkspaceApp {
                     .child(
                         div()
                             .truncate()
-                            .text_size(px(MANAGER_ROW_META_TEXT_SIZE))
+                            .text_size(px(MANAGER_ITEM_SUBTITLE_TEXT_SIZE))
                             .text_color(rgb(theme.text_muted))
                             .child(subtitle),
                     ),
@@ -1811,6 +1805,7 @@ impl WorkspaceApp {
     pub(super) fn render_session_manager_row_icon(
         &self,
         item: &SessionManagerDisplayItem,
+        selected: bool,
         cx: &App,
     ) -> Div {
         let theme = self.tokens.ui;
@@ -1824,6 +1819,12 @@ impl WorkspaceApp {
             }
             _ => item.icon(),
         };
+        // Selected rows keep the badge, title, and leading glyph on one accent.
+        let color = if selected {
+            rgb(theme.accent)
+        } else {
+            rgb(theme.text_muted)
+        };
 
         div()
             .size(px(20.0))
@@ -1832,55 +1833,7 @@ impl WorkspaceApp {
             .flex()
             .items_center()
             .justify_center()
-            .child(icon.render(16.0, rgb(theme.text_muted), cx))
-    }
-
-    #[allow(dead_code)]
-    pub(super) fn render_session_manager_item_icon(
-        &self,
-        item: &SessionManagerDisplayItem,
-        text: u32,
-        cx: &App,
-    ) -> Div {
-        let (default_background, default_foreground) = match item {
-            SessionManagerDisplayItem::Connection(_)
-            | SessionManagerDisplayItem::Tunnel(_)
-            | SessionManagerDisplayItem::RemoteDesktop(_) => (0x0ea5e933, 0x7dd3fc),
-            SessionManagerDisplayItem::SshConfig(_) => (0x8b5cf633, 0xc4b5fd),
-            SessionManagerDisplayItem::Plugin(_) => (0x8b5cf633, 0xc4b5fd),
-            SessionManagerDisplayItem::Serial(_) => (0xf59e0b33, 0xfcd34d),
-            SessionManagerDisplayItem::LocalTerminal(_) => (0xf59e0b33, 0xfcd34d),
-            SessionManagerDisplayItem::Telnet(_) => (0x22c55e33, 0x86efac),
-            SessionManagerDisplayItem::Ftp(_) => (0x22c55e33, 0x86efac),
-            SessionManagerDisplayItem::Mosh(_) => (0x3b82f633, 0x93c5fd),
-            SessionManagerDisplayItem::StandaloneSftp(_) => (0x14b8a633, 0x5eead4),
-        };
-        let configured_foreground = item.icon_color().and_then(parse_hex_color);
-        // Older assets used one accent for both layers; keep that appearance
-        // until an explicit background is selected.
-        let bg = item
-            .icon_background_color()
-            .and_then(parse_hex_color)
-            .map(rgb)
-            .or_else(|| configured_foreground.map(|color| rgba((color << 8) | 0x33)))
-            .unwrap_or_else(|| rgba(default_background));
-        let fg = configured_foreground
-            .map(rgb)
-            .unwrap_or_else(|| rgb(default_foreground));
-        div()
-            .w(px(MANAGER_ROW_ICON_SIZE))
-            .h(px(MANAGER_ROW_ICON_SIZE))
-            .flex_none()
-            .rounded(px(self.tokens.radii.lg))
-            .flex()
-            .items_center()
-            .justify_center()
-            .bg(bg)
-            .child(item.icon().render(20.0, fg, cx))
-            .when(
-                matches!(item, SessionManagerDisplayItem::Connection(_)),
-                |icon| icon.border_1().border_color(rgba((text << 8) | 0x1a)),
-            )
+            .child(icon.render(16.0, color, cx))
     }
 
     pub(super) fn render_session_manager_display_item_actions(

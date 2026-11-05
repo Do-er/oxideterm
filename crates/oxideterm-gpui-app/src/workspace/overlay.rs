@@ -2238,12 +2238,6 @@ mod tests {
                 workspace
                     .tokens
                     .apply_motion(oxideterm_theme::UiMotionProfile::Off);
-                assert!(
-                    workspace
-                        .tabs(cx)
-                        .iter()
-                        .all(|tab| tab.kind != TabKind::SessionManager)
-                );
                 workspace
                     .connection_store
                     .upsert_local_terminal_profile(
@@ -2269,11 +2263,11 @@ mod tests {
                     cx,
                 );
                 assert!(!workspace.command_palette.read(cx).is_open());
-                assert!(
-                    workspace
-                        .tabs(cx)
-                        .iter()
-                        .all(|tab| tab.kind != TabKind::SessionManager)
+                // A failed saved local profile must surface the error in place
+                // instead of switching the drawer to the session manager.
+                assert_ne!(
+                    workspace.active_context_sidebar_panel,
+                    ContextSidebarPanel::Connections
                 );
             });
         });

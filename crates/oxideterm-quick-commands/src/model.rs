@@ -109,6 +109,12 @@ pub enum QuickCommandConfirmationPolicy {
     Always,
 }
 
+pub const DEFAULT_QUICK_COMMAND_LINE_DELAY_MS: u64 = 1000;
+
+pub const fn default_quick_command_line_delay_ms() -> u64 {
+    DEFAULT_QUICK_COMMAND_LINE_DELAY_MS
+}
+
 #[derive(Clone, Eq, PartialEq, Serialize, Deserialize)]
 #[serde(rename_all = "camelCase")]
 pub struct QuickCommand {
@@ -126,6 +132,8 @@ pub struct QuickCommand {
     pub availability: QuickCommandAvailability,
     #[serde(default)]
     pub confirmation: QuickCommandConfirmationPolicy,
+    #[serde(default = "default_quick_command_line_delay_ms")]
+    pub line_delay_ms: u64,
     pub sort_order: i64,
     pub created_at: u64,
     pub updated_at: u64,

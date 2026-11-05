@@ -103,7 +103,6 @@ impl WorkspaceApp {
                     modals.push(modal);
                 }
             }
-            TabKind::SessionManager => {}
             TabKind::Forwards => {
                 let _scope = self.enter_forwarding_page(tab_id, cx);
                 let Some(node_id) = self.forwarding.read(cx).node_for_tab(tab_id) else {
@@ -158,21 +157,6 @@ impl WorkspaceApp {
             // confirmations are never clipped by the narrow sidebar region.
             modals.push(self.render_sftp_dialog(dialog, false, cx));
         }
-        // The session manager can be docked in the right sidebar drawer while a
-        // different tab stays active, so its dialogs are collected window-wide.
-        let (show_group_manager, show_delete_confirm) = {
-            let session_manager = self.session_manager.read(cx);
-            (
-                session_manager.show_group_manager,
-                session_manager.delete_confirm.is_some(),
-            )
-        };
-        if show_group_manager {
-            modals.push(self.render_group_manager_dialog(window, cx));
-        }
-        if show_delete_confirm {
-            modals.push(self.render_session_manager_delete_confirm(cx));
-        }
         modals
     }
 }
@@ -226,7 +210,6 @@ impl WorkspaceApp {
                 !matches!(
                     kind,
                     TabKind::Settings
-                        | TabKind::SessionManager
                         | TabKind::FileManager
                         | TabKind::Graphics
                         | TabKind::Runtime
@@ -281,7 +264,6 @@ impl WorkspaceApp {
                 (TabKind::Sftp, _) => self.render_sftp_surface(window, cx),
                 (TabKind::Ide, _) => self.render_ide_surface(cx),
                 (TabKind::Forwards, _) => self.render_forwards_surface(window, cx),
-                (TabKind::SessionManager, _) => self.render_session_manager_surface(window, cx),
                 (TabKind::PluginManager, _) => self.render_plugin_manager_surface(cx),
                 (TabKind::Plugin { plugin_id, tab_id }, _) => {
                     let plugin_id = plugin_id.clone();
@@ -325,6 +307,20 @@ impl WorkspaceApp {
             .as_ref()
             .map(|(tab_id, kind, _)| self.render_tab_window_modals(*tab_id, kind, window, cx))
             .unwrap_or_default();
+        // The session manager is drawer-owned, so its dialogs must render at the
+        // window root and stay visible even when the welcome page has no tab.
+        let show_group_manager = self.session_manager.read(cx).show_group_manager;
+        let show_delete_confirm = self.session_manager.read(cx).delete_confirm.is_some();
+        let session_manager_group_manager = if show_group_manager {
+            Some(self.render_group_manager_dialog(window, cx))
+        } else {
+            None
+        };
+        let session_manager_delete_confirm = if show_delete_confirm {
+            Some(self.render_session_manager_delete_confirm(cx))
+        } else {
+            None
+        };
         // Settings and Knowledge share one root-mounted select portal. Keeping it
         // above tab-owned modals lets both surfaces use the same anchored control.
         let settings_select_overlay = self.render_settings_select_overlay(window, cx);
@@ -607,7 +603,22 @@ impl WorkspaceApp {
                     cx.stop_propagation();
                 } else if {
                     let quick_commands = &this.terminal.read(cx).quick_commands;
-                    quick_commands.is_open() && quick_commands.focused_input().is_some()
+                    quick_commands.execution_pending()
+                } {
+                    if event.keystroke.key.as_str() == "escape" {
+                        this.cancel_quick_command_parameter_input(window, cx);
+                        window.prevent_default();
+                        cx.stop_propagation();
+                    } else if event.keystroke.key.as_str() == "enter" {
+                        this.confirm_quick_command_parameter_input(window, cx);
+                        window.prevent_default();
+                        cx.stop_propagation();
+                    }
+                } else if {
+                    let quick_commands = &this.terminal.read(cx).quick_commands;
+                    quick_commands.is_open()
+                        && quick_commands.focused_input().is_some()
+                        && !this.quick_command_text_editor_focused(window, cx)
                 } {
                     this.handle_quick_commands_key(event, window, cx);
                     window.prevent_default();
@@ -1501,6 +1512,8 @@ impl WorkspaceApp {
                     root.child(self.render_oxide_export_dialog(cx))
                 },
             )
+            .when_some(session_manager_group_manager, |root, dialog| root.child(dialog))
+            .when_some(session_manager_delete_confirm, |root, dialog| root.child(dialog))
             .when(self.command_palette.read(cx).is_open(), |root| {
                 root.child(self.render_command_palette(window, cx))
             })

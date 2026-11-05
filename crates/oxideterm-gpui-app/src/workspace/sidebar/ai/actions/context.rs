@@ -604,7 +604,6 @@ pub(in crate::workspace) fn ai_tab_kind_label(kind: &TabKind) -> &'static str {
         TabKind::Forwards => "forwards",
         TabKind::Settings => "settings",
         TabKind::FileManager => "file_manager",
-        TabKind::SessionManager => "session_manager",
         TabKind::Runtime => "runtime",
         TabKind::ConnectionPool => "runtime",
         TabKind::Topology => "topology",

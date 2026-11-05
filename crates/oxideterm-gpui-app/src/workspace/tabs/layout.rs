@@ -257,7 +257,7 @@ mod tests {
                 workspace.tab_host.update(cx, |host, _| {
                     host.insert_and_select_main_tab(Tab {
                         id: TabId(101),
-                        kind: TabKind::SessionManager,
+                        kind: TabKind::Settings,
                         title: "设置".into(),
                         title_source: TabTitleSource::Static,
                         root_pane: None,
@@ -282,7 +282,7 @@ mod tests {
                     for (id, title) in [(102, "家里的主机"), (103, "IDE · Work")] {
                         host.insert_and_select_main_tab(Tab {
                             id: TabId(id),
-                            kind: TabKind::SessionManager,
+                            kind: TabKind::Settings,
                             title: title.into(),
                             title_source: TabTitleSource::Static,
                             root_pane: None,
@@ -369,7 +369,7 @@ mod tests {
                 workspace.tab_host.update(cx, |host, _| {
                     host.insert_and_select_main_tab(Tab {
                         id: TabId(104),
-                        kind: TabKind::SessionManager,
+                        kind: TabKind::Settings,
                         title: "完整的长标题 · Wide WWW iii / ".repeat(12),
                         title_source: TabTitleSource::Static,
                         root_pane: None,

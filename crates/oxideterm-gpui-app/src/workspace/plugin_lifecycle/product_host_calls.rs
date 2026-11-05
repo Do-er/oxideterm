@@ -256,6 +256,7 @@ impl WorkspaceApp {
                             host_patterns,
                             match_field: None,
                             confirmation,
+                            line_delay_ms: None,
                         });
                 });
             }

@@ -23,10 +23,11 @@ pub use editing::{
     visible_quick_commands, visible_quick_commands_for_management,
 };
 pub use model::{
-    QUICK_COMMANDS_SCHEMA_VERSION, QuickCommand, QuickCommandAvailability, QuickCommandCategory,
-    QuickCommandConfirmationPolicy, QuickCommandIcon, QuickCommandImportResult,
-    QuickCommandImportStrategy, QuickCommandMatchField, QuickCommandParameter,
-    QuickCommandParameterKind, QuickCommandTargetProtocol, QuickCommandsSnapshot, parse_icon_color,
+    DEFAULT_QUICK_COMMAND_LINE_DELAY_MS, QUICK_COMMANDS_SCHEMA_VERSION, QuickCommand,
+    QuickCommandAvailability, QuickCommandCategory, QuickCommandConfirmationPolicy,
+    QuickCommandIcon, QuickCommandImportResult, QuickCommandImportStrategy, QuickCommandMatchField,
+    QuickCommandParameter, QuickCommandParameterKind, QuickCommandTargetProtocol,
+    QuickCommandsSnapshot, default_quick_command_line_delay_ms, parse_icon_color,
 };
 pub use risk::{QuickCommandRisk, classify_command_risk};
 pub use snapshot::{decode_snapshot_json, encode_snapshot_json};
@@ -42,5 +43,5 @@ pub use template::{
     PreparedQuickCommandTarget, QuickCommandContextValues, QuickCommandTargetContext,
     QuickCommandTemplateError, prepare_quick_command, quick_command_can_run_non_interactively,
     quick_command_has_runtime_substitutions, quick_command_target_match_fields,
-    validate_quick_command_template,
+    split_quick_command_lines, validate_quick_command_template,
 };

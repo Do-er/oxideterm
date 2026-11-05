@@ -60,25 +60,6 @@ impl WorkspaceApp {
             }))
     }
 
-    pub(super) fn quick_command_mini_button(
-        &self,
-        icon: LucideIcon,
-        listener: impl Fn(&mut Self, &MouseDownEvent, &mut Window, &mut Context<Self>) + 'static,
-        cx: &mut Context<Self>,
-    ) -> gpui::Div {
-        self.workspace_icon_action_button(
-            icon,
-            12.0,
-            rgb(self.tokens.ui.text_muted),
-            IconButtonOptions {
-                hover_background: Some(rgb(self.tokens.ui.bg_hover)),
-                ..IconButtonOptions::opaque_toolbar(18.0, ButtonRadius::Sm)
-            },
-            listener,
-            cx,
-        )
-    }
-
     pub(super) fn quick_command_action_button(
         &self,
         icon: LucideIcon,

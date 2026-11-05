@@ -24,6 +24,7 @@ pub struct QuickCommandDraft {
     pub host_patterns: Option<Vec<String>>,
     pub match_field: Option<QuickCommandMatchField>,
     pub confirmation: Option<QuickCommandConfirmationPolicy>,
+    pub line_delay_ms: Option<u64>,
 }
 
 #[derive(Clone, Debug, Eq, PartialEq)]
@@ -124,13 +125,20 @@ pub fn upsert_quick_command(
     let existing_confirmation = existing
         .map(|command| command.confirmation)
         .unwrap_or_default();
+    let existing_line_delay_ms = existing
+        .map(|command| command.line_delay_ms)
+        .unwrap_or(crate::DEFAULT_QUICK_COMMAND_LINE_DELAY_MS);
     let existing_sort_order = existing
         .map(|command| command.sort_order)
         .unwrap_or_else(|| next_command_sort_order(commands));
     let command = QuickCommand {
         id: draft.id.unwrap_or_else(new_quick_command_id),
         name: draft.name.trim().to_string(),
-        command: draft.command.trim().to_string(),
+        command: draft
+            .command
+            .trim_start()
+            .trim_end_matches([' ', '\t'])
+            .to_string(),
         category: draft.category.map_or(existing_category, |category| {
             if categories.iter().any(|item| item.id == category) {
                 category
@@ -160,6 +168,7 @@ pub fn upsert_quick_command(
                 }),
         },
         confirmation: draft.confirmation.unwrap_or(existing_confirmation),
+        line_delay_ms: draft.line_delay_ms.unwrap_or(existing_line_delay_ms),
         sort_order: existing_sort_order,
         created_at: existing_created_at.unwrap_or(now),
         updated_at: now,
@@ -371,6 +380,7 @@ mod tests {
             parameters: Vec::new(),
             availability: QuickCommandAvailability::default(),
             confirmation: QuickCommandConfirmationPolicy::Inherit,
+            line_delay_ms: crate::DEFAULT_QUICK_COMMAND_LINE_DELAY_MS,
             sort_order: 0,
             created_at: 7,
             updated_at: 7,
@@ -389,6 +399,7 @@ mod tests {
                 host_patterns: Some(vec![" *.example.com ".to_string()]),
                 match_field: None,
                 confirmation: None,
+                line_delay_ms: None,
             },
             11,
         ));
@@ -420,6 +431,7 @@ mod tests {
                 match_field: QuickCommandMatchField::ConnectionName,
             },
             confirmation: QuickCommandConfirmationPolicy::Always,
+            line_delay_ms: crate::DEFAULT_QUICK_COMMAND_LINE_DELAY_MS,
             sort_order: 0,
             created_at: 7,
             updated_at: 7,
@@ -439,6 +451,7 @@ mod tests {
                 host_patterns: None,
                 match_field: None,
                 confirmation: None,
+                line_delay_ms: None,
             },
             11,
         ));

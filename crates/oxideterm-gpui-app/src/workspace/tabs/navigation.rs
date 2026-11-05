@@ -277,9 +277,6 @@ impl WorkspaceApp {
                     self.expanded_ssh_nodes.insert(node_id.clone());
                 }
             }
-            Some(TabKind::SessionManager) => {
-                self.active_surface = ActiveSurface::Terminal;
-            }
             Some(TabKind::Runtime) => {
                 self.active_surface = ActiveSurface::Terminal;
             }

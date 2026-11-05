@@ -7,7 +7,7 @@ pub(super) use oxideterm_quick_commands::{
 };
 use std::{cell::RefCell, collections::HashMap, path::Path, path::PathBuf};
 
-use gpui::{Entity, ListAlignment, ListState, ScrollHandle, Subscription, px};
+use gpui::{Entity, ListAlignment, ListState, ScrollHandle, Subscription, Task, px};
 use oxideterm_gpui_editor::TextEditorView;
 use oxideterm_gpui_ui::text_input::TextInputViewport;
 use zeroize::Zeroizing;
@@ -26,6 +26,7 @@ pub(super) enum QuickCommandInput {
     Search,
     CommandName,
     CommandText,
+    CommandLineDelay,
     CommandDescription,
     CommandHostPattern,
     ParameterName(usize),
@@ -42,10 +43,11 @@ impl QuickCommandInput {
             Self::Search => 1,
             Self::CommandName => 2,
             Self::CommandText => 3,
-            Self::CommandDescription => 4,
-            Self::CommandHostPattern => 5,
-            Self::CategoryName => 6,
-            Self::CategoryColor => 7,
+            Self::CommandLineDelay => 4,
+            Self::CommandDescription => 5,
+            Self::CommandHostPattern => 6,
+            Self::CategoryName => 7,
+            Self::CategoryColor => 8,
             Self::ParameterName(index) => 100 + index as u64 * 4,
             Self::ParameterLabel(index) => 101 + index as u64 * 4,
             Self::ParameterDefault(index) => 102 + index as u64 * 4,
@@ -76,6 +78,7 @@ pub(super) struct QuickCommandEditorDraft {
     pub parameters: Vec<QuickCommandParameterEditorDraft>,
     pub protocols: Vec<QuickCommandTargetProtocol>,
     pub confirmation: QuickCommandConfirmationPolicy,
+    pub line_delay_ms: String,
     // Transient disclosure state; reset with each new editor draft.
     pub syntax_help_expanded: bool,
     pub created_at: u64,
@@ -130,9 +133,16 @@ pub(in crate::workspace) struct TerminalQuickCommandsState {
     pub(super) editor_scroll: ScrollHandle,
     pub(super) buttons_scroll: ScrollHandle,
     pub(super) category_menu_open: bool,
+    pub(super) manager_icon_picker_open: bool,
+    pub(super) manager_category_dropdown_open: bool,
+    pub(super) editor_category_menu_open: bool,
+    pub(super) execution_task: Option<Task<()>>,
 }
 
 impl TerminalQuickCommandsState {
+    pub(in crate::workspace) fn manager_popovers_open(&self) -> bool {
+        self.manager_icon_picker_open || self.manager_category_dropdown_open
+    }
     pub(in crate::workspace) fn load(settings_path: &Path) -> Self {
         Self {
             store: QuickCommandsState::load(settings_path),
@@ -162,6 +172,10 @@ impl TerminalQuickCommandsState {
             editor_scroll: ScrollHandle::new(),
             buttons_scroll: ScrollHandle::new(),
             category_menu_open: false,
+            manager_icon_picker_open: false,
+            manager_category_dropdown_open: false,
+            editor_category_menu_open: false,
+            execution_task: None,
         }
     }
 

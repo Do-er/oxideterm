@@ -140,6 +140,7 @@ fn create(args: QuickCommandCreateArgs) -> CliResult<i32> {
             match_field: Default::default(),
         },
         confirmation: core_confirmation(args.confirmation),
+        line_delay_ms: oxideterm_quick_commands::DEFAULT_QUICK_COMMAND_LINE_DELAY_MS,
         sort_order: snapshot
             .commands
             .iter()

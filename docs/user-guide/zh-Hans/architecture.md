@@ -1217,7 +1217,7 @@ flowchart TB
 | 区域 | Native 所有者 | 说明 |
 |---|---|---|
 | 设置 | `oxideterm-settings`, `oxideterm-settings-model`, `oxideterm-gpui-settings-view` | 设置通过共享模型加载和保存，再由 GPUI 页面渲染 |
-| 保存连接 | `oxideterm-connections`, 会话管理器模块 | 连接记录是持久对象；活跃节点是运行时对象 |
+| 保存连接 | `oxideterm-connections`, 会话管理模块 | 连接记录是持久对象；活跃节点是运行时对象 |
 | 转发 | `oxideterm-forwarding`, 应用转发模块 | 规则是配置；监听器是运行时状态 |
 | 提权凭据 | 设置提权页面、终端提权提示、凭据感知存储 | 作用域和提示匹配器是配置；secret 值留在普通设置之外 |
 | 终端 modem 传输 | `oxideterm-modem-transfer`, `oxideterm-gpui-terminal` modem worker | 协议状态属于终端运行时；文件选择和进度属于 UI |
@@ -1670,7 +1670,7 @@ stateDiagram-v2
 
 | 用户概念 | 运行时所有者 | 持久化所有者 | 凭据所有者 | 应用关闭后保留 | 重连后保留 | 用户恢复方式 |
 |---|---|---|---|---|---|---|
-| 保存连接 | 会话管理器 / 连接存储 | 连接记录 | Keychain 或凭据感知存储 | 是 | 是 | 编辑、删除、导入、导出 |
+| 保存连接 | 会话管理 / 连接存储 | 连接记录 | Keychain 或凭据感知存储 | 是 | 是 | 编辑、删除、导入、导出 |
 | SSH 节点 | SSH 路由器 / 注册表 | 在线句柄不持久化 | SSH 认证层 | 否 | 不保留同一个 socket | 重连或重新打开 |
 | 终端会话 | 终端面板 / 运行时 | 通常只保留历史或设置 | 默认无 | 通常否 | 只有后端节点恢复并重建通道时才可能恢复 | 重新打开终端 |
 | 终端图像 placement | 终端图像状态 | 无 | 无 | 否 | screen-buffer 切换时清理 | 由应用输出重新渲染 |

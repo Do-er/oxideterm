@@ -53,6 +53,7 @@ pub enum SelectAnchorId {
     PluginMarketplaceSort,
     NativePluginControl(u64),
     ActiveSessionSort,
+    QuickCommandEditorCategory,
     AuditCategory,
     AuditSeverity,
     AuditSource,

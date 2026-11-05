@@ -193,7 +193,7 @@ impl WorkspaceApp {
                                     }),
                             )
                             .child(self.terminal_command_action_button(
-                                LucideIcon::Zap,
+                                LucideIcon::Send,
                                 if quick_commands_open {
                                     rgb(theme.accent)
                                 } else {

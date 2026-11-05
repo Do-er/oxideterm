@@ -403,43 +403,11 @@ impl WorkspaceApp {
         }
     }
 
-    pub(in crate::workspace) fn open_session_manager_tab(
-        &mut self,
-        window: &mut Window,
-        cx: &mut Context<Self>,
-    ) {
+    pub(in crate::workspace) fn open_session_manager_drawer(&mut self, cx: &mut Context<Self>) {
+        // The session manager is a drawer surface now; every entry point must
+        // reveal that panel instead of creating a second center-tab copy.
         self.refresh_session_manager_ssh_config_hosts(cx);
-        let tab_id = if let Some(tab) = self
-            .tabs(cx)
-            .iter()
-            .find(|tab| tab.kind == TabKind::SessionManager)
-        {
-            tab.id
-        } else {
-            let tab_id = self.alloc_tab_id(cx);
-            self.insert_tab(
-                Tab {
-                    id: tab_id,
-                    kind: TabKind::SessionManager,
-                    title: self.i18n.t("sessionManager.title"),
-                    title_source: TabTitleSource::I18nKey("sessionManager.title"),
-                    root_pane: None,
-                    active_pane_id: None,
-                },
-                cx,
-            );
-            tab_id
-        };
-        if self.focus_detached_tab_window(tab_id, cx) {
-            return;
-        }
-        self.set_main_window_active_tab(Some(tab_id), cx);
-        self.active_surface = ActiveSurface::Terminal;
-        self.needs_active_pane_focus = false;
-        window.focus(&self.focus_handle, cx);
-        self.reveal_active_tab(window, cx);
-        self.persist_sidebar_settings(cx);
-        cx.notify();
+        self.open_context_sidebar_panel(ContextSidebarPanel::Connections, cx);
     }
 
     pub(in crate::workspace) fn refresh_session_manager_ssh_config_hosts(

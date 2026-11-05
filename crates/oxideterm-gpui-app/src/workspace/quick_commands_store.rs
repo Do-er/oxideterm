@@ -81,7 +81,11 @@ impl QuickCommandsState {
         let command = QuickCommand {
             id: draft.id.unwrap_or_else(new_quick_command_id),
             name: draft.name.trim().to_string(),
-            command: draft.command.trim().to_string(),
+            command: draft
+                .command
+                .trim_start()
+                .trim_end_matches([' ', '\t'])
+                .to_string(),
             category: if self
                 .categories
                 .iter()
@@ -116,6 +120,11 @@ impl QuickCommandsState {
                 host_patterns: split_host_patterns(&draft.host_patterns),
             },
             confirmation: draft.confirmation,
+            line_delay_ms: draft
+                .line_delay_ms
+                .trim()
+                .parse::<u64>()
+                .unwrap_or(oxideterm_quick_commands::DEFAULT_QUICK_COMMAND_LINE_DELAY_MS),
             sort_order: draft.sort_order,
             created_at: draft.created_at,
             updated_at,
@@ -648,6 +657,7 @@ mod quick_command_tests {
                 parameters: Vec::new(),
                 availability: oxideterm_quick_commands::QuickCommandAvailability::default(),
                 confirmation: oxideterm_quick_commands::QuickCommandConfirmationPolicy::Inherit,
+                line_delay_ms: oxideterm_quick_commands::DEFAULT_QUICK_COMMAND_LINE_DELAY_MS,
                 sort_order: 0,
                 created_at: 1,
                 updated_at: 1,
@@ -688,6 +698,7 @@ mod quick_command_tests {
             parameters: Vec::new(),
             availability: oxideterm_quick_commands::QuickCommandAvailability::default(),
             confirmation: oxideterm_quick_commands::QuickCommandConfirmationPolicy::Inherit,
+            line_delay_ms: oxideterm_quick_commands::DEFAULT_QUICK_COMMAND_LINE_DELAY_MS,
             sort_order: 0,
             created_at: 1,
             updated_at: 1,

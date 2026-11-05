@@ -1656,7 +1656,6 @@ impl WorkspaceApp {
             }
             (TabKind::Topology, _) => self.render_topology_surface(cx),
             (TabKind::NotificationCenter, _) => self.render_notification_center_surface(cx),
-            (TabKind::SessionManager, _) => self.render_session_manager_surface(window, cx),
             (TabKind::PluginManager, _) => self.render_plugin_manager_surface(cx),
             (TabKind::Plugin { plugin_id, tab_id }, _) => {
                 self.render_native_plugin_tab_surface(plugin_id, tab_id, cx)

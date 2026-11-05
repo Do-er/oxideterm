@@ -28,7 +28,7 @@ SSH · Mosh · Telnet · 序列埠 · RDP/VNC · SFTP · 連接埠轉送 · 內�
 ## 快速上手
 
 1. **安裝 OxideTerm。** 從[最新發布頁面](https://github.com/AnalyseDeCircuit/oxideterm/releases/latest)下載安裝套件；各平台的說明見下方[安裝](#install)一節。
-2. **新增伺服器。** 開啟工作階段管理器，新增 SSH 連線，或從 `~/.ssh/config` 匯入主機。
+2. **新增伺服器。** 開啟工作階段管理，新增 SSH 連線，或從 `~/.ssh/config` 匯入主機。
 3. **連線伺服器。** 開啟終端。主機金鑰會與 `~/.ssh/known_hosts` 中的記錄核對。
 4. **使用工作區中的其他功能。** 在同一節點上開啟 SFTP、連接埠轉送或內建編輯器。預設情況下，它們共用一個 SSH 連線。
 5. **可選：啟用 AI。** 在設定中新增你自己的 OpenAI、Anthropic、Gemini、Ollama 或相容 OpenAI 的服務端點，即可啟用 OxideSens。

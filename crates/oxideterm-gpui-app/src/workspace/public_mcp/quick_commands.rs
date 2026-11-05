@@ -211,6 +211,7 @@ impl WorkspaceApp {
                         QuickCommandConfirmationPolicy::Always
                     }
                 }),
+                line_delay_ms: None,
             },
             new_revision,
         );

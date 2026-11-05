@@ -39,7 +39,6 @@ pub enum TabKind {
     Sftp,
     Ide,
     Forwards,
-    SessionManager,
     PluginManager,
     Plugin { plugin_id: String, tab_id: String },
     CloudSync,
