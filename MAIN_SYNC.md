@@ -1,7 +1,7 @@
 # main → dev 同步台账
 
 - 基线：`b4e5c653`（dev 从 main 分叉前最后一个 main 提交）
-- 已同步水位：`c9c25ae62`（2026-11-02，#56 为止）。范围内 56 个提交全部处置完毕，#51 确认不采纳。#57–#79 中除 #57、#76、#79 外均已处置，水位暂不推进
+- 已同步水位：`617d889ac`（2026-11-06，#79 为止）。范围内 79 个提交全部处置完毕；#51、#76 按领域决策确认不采纳，#79 为上游发布提交不吸收
 - 清单覆盖至：`617d889ac`（2026-11-06，main 当前最新）
 - 统计时间：2026-11-06
 - 合并提交不计入清单：`995e4ac01..617d889ac` 范围内共 2 个合并提交（`2772315c1` PR #749、`16773b33a` PR #750），均为纯自动合并（两父重建 tree 与合并 tree 一致）。`5c186c012..c9c25ae62` 范围内无合并提交。再上一批 46 条范围内共 10 个 PR / 分支合并提交，其中 9 个为纯自动合并；`3a000e01b`（PR #731）含 2 行手工解决，为 `export-ble`、`ble-local-echo` 两个复选框补上控件身份参数
@@ -50,11 +50,9 @@ dev 自合并基点 `f2593f3bd` 起改动 270 个文件，集中在 `gpui-app`(1
 
 ## 提交清单
 
-共 79 个提交。#1–#56 全部已处置，#57–#79 中 20 个已处置、3 个待处理。只追加，不删行。
+共 79 个提交，全部已处置。只追加，不删行。
 
-`未处理` 的 3 条及依赖：#57 历史建议、#76 BLE、#79 2.3.1 发布。
-
-`处置` 取值及本表分布：`直接继承` 4、`cherry-pick 合入` 52、`手工移植` 11、`不同步` 9、`未处理` 3。
+`处置` 取值及本表分布：`直接继承` 4、`cherry-pick 合入` 53、`手工移植` 11、`不同步` 11。
 
 | # | main 提交 | 内容 | 领域 | 状态 | 处置 | 说明 | dev 侧提交 |
 | --- | --- | --- | --- | --- | --- | --- | --- |
@@ -114,7 +112,7 @@ dev 自合并基点 `f2593f3bd` 起改动 270 个文件，集中在 `gpui-app`(1
 | 54 | `538fea5de` | 采样字段裁剪与输出上限恢复：仅取被消费的 Docker / 系统 / 服务 / journal 字段，超限样本读到结束标记 | 协议 / 依赖底层 | ✅ | cherry-pick 合入 | 零冲突。`connection-monitor/{docker,profiler,log,gpu/sampler}` 改为按字段选择解析，`oxideterm-ssh/{monitor,transport}` 处理输出上限与 Windows 引号，新增 `transport/command/tests.rs`；11 个语言包的 `sidebar.docker.{incomplete,output_limit}` 同步补齐 | `30e142042` |
 | 55 | `995e4ac01` | AMD / Intel GPU 遥测按需选择字段 | 协议 / 依赖底层 | ✅ | cherry-pick 合入 | 零冲突，3 个文件。`gpu/provider/{amd,intel,mod}.rs` 收敛采样字段与解析分支，与 dev 的 GPU provider 布局一致 | `363643614` |
 | 56 | `c9c25ae62` | 命令面板纳入全部已保存连接类型，与会话管理器共用库存与打开路径 | 应用层 UI | ✅ | 手工移植 | 3 个文件。移植 `saved_session_manager_items` 共享库存、`PaletteAction::OpenSavedProfile` 分发与全类型前缀/图标匹配，dev 侧差异：无 BLE 分支（`Ble` 变体与 `ble-profile` 前缀删除）、`open_session_manager_target(target, window, cx)` 无 sftp 覆盖参数、`SessionManagerDisplayItem::name()` 保持 `Cow<'_, str>` 返回类型、本地终端行沿用 `local_profile_display_name` 派生的 shell 标签（面板标签与搜索文本同会话管理器一致）。测试 `all_saved_connection_types_are_searchable_with_distinct_open_targets` 一并移植并去掉 BLE 夹具 | `7751dca5f` |
-| 57 | `16513a74f` | 历史建议恢复屏幕输入，历史导航键允许覆盖 | 终端 UI | ⬜ | 未处理 | 冲突 `gpui-terminal/src/app.rs` 为真实分叉：dev 的 `TerminalInputTracker`（`app_command_marks.rs`）只有 `value`/`cursor_index`/`untracked`，无 `recovered_from_screen`、`screen_recovery_allowed`、`recovered_input_edited`；`app.rs` 无 `can_sync_working_directory`，`TerminalShortcut` 无 `SuggestPrevious`/`SuggestNext`。上游改动围绕其「从屏幕恢复输入」模型，dev 侧无对应宿主，按终端 UI 领域倾向不同步；如只需「历史导航键可覆盖」，应作为 dev 独立需求另立 | — |
+| 57 | `16513a74f` | 历史建议恢复屏幕输入，历史导航键允许覆盖 | 终端 UI | ✅ | cherry-pick 合入 | 唯一冲突 `gpui-terminal/src/app.rs` 的 `can_sync_working_directory`：dev 已无该方法（`git grep` 零命中），取 dev 侧删除上游新增的整段。其余随本提交一并落地：`TerminalInputTracker` 新增 `screen_recovery_allowed`/`recovered_from_screen`/`recovered_input_edited`、`recover()`、`history_arrow_sequence()`，`tracked_state()` 改为排除屏幕恢复态；`app.rs` 新增 `autosuggest_input_start`、`recover_terminal_autosuggest_input()`，重写 `fill_terminal_autosuggest_command()`（未跟踪即拒绝，恢复态先用 `terminal_prompt_input` 复核当前提示行）；`interactions.rs` 新增 `terminal_prompt_input()` 与 `handle_terminal_autosuggest_action`，按键改经 `TerminalKeybindings` 全局解析；`TerminalAutosuggestLabels::selection_shortcut` 由 `root/init.rs` 按 `terminal.suggestPrevious`/`terminal.suggestNext` 的有效组合生成，未绑定时回退 `settings_view.keybindings.unbound`；11 个 `settings_view.json` 补两条动作文案 | `5dbf5923a` |
 | 58 | `bbff798ee` | macOS 隐藏与最小化快捷键 | 应用层 UI（窗口平台） | ✅ | cherry-pick 合入 | 零冲突。`platform.rs` 在 dev 与合并基点逐字节一致，`gpui` 已提供 `hide()`、`hide_other_apps()`、`minimize_window()`。`platform.rs` 新增 `Hide`/`HideOthers`/`Minimize`/`MinimizeAll` 动作与 App/Window 菜单项，`keybindings.rs` 以 `!KeybindingRecording` 上下文注册 cmd-h/cmd-alt-h/cmd-m/cmd-alt-m，录音期间自动让位 | `e413c2c00` |
 | 59 | `99fec8b27` | Docker CLI 20.10 之前的状态解析兼容 | 协议 / 依赖底层 | ✅ | cherry-pick 合入 | 零冲突，单文件。`ps` 模板去掉 `.State`，改从 `inspect` 已有样本取 `State.Status`，新增 `docker_state_from_status` 在 inspect 不可用时按状态文本推导 | `6575a8e46` |
 | 60 | `af468f4c2` | SFTP 界面字号随应用 UI 缩放 | 应用层 UI | ✅ | 手工移植 | `layout.rs` 的 `SftpUiMetrics`/`sftp_ui_metrics()` 与 `sftp.rs` 的 `sftp_file_list_virtual_spec(row_height)`、`SftpWorkspaceEntity::file_row_height` 直接摘取；其余文件按 dev 现存渲染路径逐处替换，`ui.size()` 在默认 `ui_text_xs == SFTP_TEXT_XS` 时折叠为原值。`sftp/tree.rs` 为 modify/delete，dev 无该文件（#12 判不同步），跳过；`file_list.rs` 的树模式行渲染与 `simulate_mouse_down` 键盘分派测试 dev 未采用，仅保留面板行与拖拽测试的字号覆盖 | `3c2d8933a` |
@@ -133,7 +131,7 @@ dev 自合并基点 `f2593f3bd` 起改动 270 个文件，集中在 `gpui-app`(1
 | 73 | `e915656ef` | Host Tools 支持本地机器 | 协议 / 依赖底层 | ✅ | cherry-pick 合入 | 零冲突。`env_remove` 由本提交自身引入 `tty::Options`，dev 无需预先具备。新增 `connection_monitor/exec.rs`、`HostCommandTarget::{Ssh,Local}`、`oxide-local-host` 连接 ID；`remove_env` 贯通 `LocalPtyConfig` → `LocalTerminalInstance` → `pane_tree` 分屏继承 | `c3c0bfc78` |
 | 74 | `168833b72` | 端口转发批量启动选中隧道 | 应用层 UI | ✅ | 手工移植 | 冲突 `session_manager/tree.rs` 取 dev 侧：会话管理器在 dev 已是侧栏抽屉，工具栏只剩搜索与折叠，上游的选中项操作岛不存在。改由 `session_manager/views.rs` 的批量右键菜单挂出「启动所选隧道」，并按其可见性把 `MANAGER_ROW_ACTION_MENU_BATCH_HEIGHT` 加上一行 `context_menu_item_height_estimate`。`ssh_tunnels.rs` 按同主机分组、共享连接、串行排队与失败清理整体摘取；`tree.rs` 涉及的上游 modal 授权续跑改由 `tunnel_start_groups` 承接 | `6361176b3` |
 | 75 | `34f2200c5` | SFTP 本地修改时间悬停显示完整时间 | 应用层 UI | ✅ | cherry-pick 合入 | 零冲突，3 个文件。`format_modified` 改为返回 `Option<DateTime<Local>>` 的 `local_modified_time`，列表单元只显示日期，悬停经 `oxideterm_gpui_ui::tooltip::tooltip_view` 显示到秒 | `42cd2df88` |
-| 76 | `ee557d5c3` | BLE 已保存配置重连不匹配离线设备的 BlueZ 缓存 | 平台集成（BLE） | ⬜ | 未处理 | 修改 `terminal/src/session/ble.rs`，该文件在 dev 不存在。按既有 BLE 领域决策倾向不同步 | — |
+| 76 | `ee557d5c3` | BLE 已保存配置重连不匹配离线设备的 BlueZ 缓存 | 平台集成（BLE） | ✅ | 不同步 | 单文件改动落在 `crates/oxideterm-terminal/src/session/ble.rs`，dev 的 `session/` 下无该文件，`oxideterm-ble` crate 与 `bluez` 符号在整个 dev 仓库均零命中（`git grep -ln "bluez\|BlueZ"`）。按领域决策「平台集成（BLE）→ 不同步」，无替代实现可落位 | — |
 | 77 | `c592ab934` | Host Tools 同时管理 Zellij 与 Herdr 会话 | 协议 / 依赖底层 | ✅ | cherry-pick 合入 | 预览冲突仅在 `connection_monitor/entity.rs` 的 `host_command_target` 附近；按 #73 → #77 顺序应用后自动合并。新增多路复用 provider 抽象（tmux/Zellij/Herdr） | `37639553b` |
 | 78 | `b22ee38c3` | Host 命令目标保持与本地进程生命周期收敛 | 协议 / 依赖底层 | ✅ | cherry-pick 合入 | 依赖 #73、#77，顺序应用后自动合并。新增 `connection_monitor/exec/windows.rs`（Job Object 进程树终止），`Cargo.toml` 增 `libc` 与 Windows 特性 | `b781dd2d0` |
-| 79 | `617d889ac` | 发布 OxideTerm 2.3.1 | 文档 | ⬜ | 未处理 | 同 #51：`Cargo.toml`/`Cargo.lock` 改回 2.3.1 与 dev 的 3.0.0 冲突，changelog 描述 dev 不会发布的内容，倾向不同步 | — |
+| 79 | `617d889ac` | 发布 OxideTerm 2.3.1 | 文档 | ✅ | 不同步 | 同 #51：`Cargo.toml` 工作区版本由 3.0.0 改回 2.3.1，`Cargo.lock` 随之下调，与 dev 的 3.0.0 直接冲突；`stable-changelog.md` 记录的是 2.3.1 发布内容，其中 BLE 后端等条目在 dev 根本不存在。dev 的下一个版本由自己的 `bump_version.py` 决定，不吸收上游发布提交 | — |
