@@ -1236,7 +1236,7 @@ impl WorkspaceApp {
                     let Some(item) = items.get(index) else {
                         return div().into_any_element();
                     };
-                    this.render_session_manager_display_item_row(item, 0, has_background, false, cx)
+                    this.render_session_manager_display_item_row(item, 0, has_background, cx)
                         .into_any_element()
                 })
             },
@@ -1521,7 +1521,6 @@ impl WorkspaceApp {
                         item,
                         *depth,
                         has_background,
-                        true,
                         cx,
                     )
                     .drag_over::<SessionManagerDrag>(move |row, _drag, _window, _cx| {
@@ -1568,8 +1567,8 @@ impl WorkspaceApp {
             .border_b_1()
             .border_color(self.workspace_chrome_divider())
             .px_2()
-            .py_3()
-            .pl(px(depth as f32 * 14.0 + 8.0))
+            .py(px(4.0))
+            .pl(px(depth as f32 * MANAGER_TREE_INDENT + 8.0))
             .flex()
             .items_center()
             .gap(px(self.tokens.spacing.two))
@@ -1608,15 +1607,23 @@ impl WorkspaceApp {
                     cx.stop_propagation();
                 }),
             )
-            .child(Self::render_lucide_icon(
-                if expanded {
-                    LucideIcon::FolderOpen
-                } else {
-                    LucideIcon::Folder
-                },
-                16.0,
-                rgb(theme.accent),
-            ))
+            .child(
+                div()
+                    .size(px(16.0))
+                    .flex_none()
+                    .flex()
+                    .items_center()
+                    .justify_center()
+                    .child(Self::render_lucide_icon(
+                        if expanded {
+                            LucideIcon::FolderOpen
+                        } else {
+                            LucideIcon::Folder
+                        },
+                        16.0,
+                        rgb(theme.accent),
+                    )),
+            )
             .child(
                 div()
                     .flex_1()
@@ -1644,7 +1651,6 @@ impl WorkspaceApp {
         item: &SessionManagerDisplayItem,
         depth: usize,
         has_background: bool,
-        _allow_drag: bool,
         cx: &mut Context<Self>,
     ) -> Div {
         let theme = self.tokens.ui;
@@ -1668,38 +1674,78 @@ impl WorkspaceApp {
                 .selected_items
                 .contains(target)
         });
+        let capsule_id = format!("session-capsule-{}", item.id());
+        let capsule_bg = if is_selected {
+            rgba((theme.accent << 8) | 0x24)
+        } else {
+            theme_input_bg(theme.bg, has_background)
+        };
+        let capsule_border = if is_selected {
+            rgba((theme.accent << 8) | 0x88)
+        } else {
+            theme_border(theme.border, has_background)
+        };
+        let title_color = if is_selected {
+            theme.accent
+        } else {
+            theme.text
+        };
+
+        let mut capsule = div()
+            .id(capsule_id)
+            .flex()
+            .items_center()
+            .gap(px(6.0))
+            .h(px(26.0))
+            .px(px(8.0))
+            .rounded(px(self.tokens.radii.md))
+            .border_1()
+            .border_color(capsule_border)
+            .bg(capsule_bg)
+            .hover(|c| {
+                if is_selected {
+                    c.bg(rgba((theme.accent << 8) | 0x33))
+                } else {
+                    c.bg(theme_row_hover_bg(theme.bg_hover, has_background))
+                        .border_color(rgba((theme.accent << 8) | 0x66))
+                }
+            })
+            .cursor(gpui::CursorStyle::PointingHand)
+            .child(self.render_session_manager_row_icon(item, is_selected, cx))
+            .child(
+                div()
+                    .truncate()
+                    .max_w(px(280.0))
+                    .text_size(px(MANAGER_ITEM_TITLE_TEXT_SIZE))
+                    .font_weight(gpui::FontWeight::MEDIUM)
+                    .text_color(rgb(title_color))
+                    .child(item.name().to_string()),
+            );
+
+        if !subtitle.trim().is_empty() {
+            let tokens = self.tokens.clone();
+            let tip_text = subtitle.clone();
+            capsule = capsule
+                .tooltip(move |_window, cx| {
+                    oxideterm_gpui_ui::tooltip::tooltip_view(
+                        tokens.clone(),
+                        tip_text.clone(),
+                        None,
+                        cx,
+                    )
+                })
+                .tooltip_show_delay(std::time::Duration::from_millis(300));
+        }
+
         div()
             .w_full()
             .min_w(px(0.0))
-            .border_b_1()
-            .border_color(self.workspace_chrome_divider())
             .px_2()
-            .py(px(1.0))
-            .pl(px(depth as f32 * 14.0 + 8.0))
+            .py(px(3.0))
+            .pl(px(depth as f32 * MANAGER_TREE_INDENT + 8.0))
             .flex()
             .items_center()
-            .gap(px(self.tokens.spacing.two))
             .relative()
-            .bg(if is_selected {
-                rgba((theme.accent << 8) | 0x24)
-            } else {
-                theme_secondary_bg(theme.bg_secondary, has_background)
-            })
-            .when(is_selected, |row| {
-                row.child(
-                    // A short rounded indicator shares the folder and title accent
-                    // so the selected node reads as part of one accent language.
-                    div()
-                        .absolute()
-                        .left_0()
-                        .top(px(5.0))
-                        .bottom(px(5.0))
-                        .w(px(2.0))
-                        .rounded(px(1.0))
-                        .bg(rgb(theme.accent)),
-                )
-            })
-            .hover(|row| row.bg(theme_row_hover_bg(theme.bg_hover, has_background)))
             .on_mouse_down(
                 MouseButton::Left,
                 cx.listener(move |this, event: &MouseDownEvent, window, cx| {
@@ -1772,34 +1818,7 @@ impl WorkspaceApp {
                     cx.stop_propagation();
                 }),
             )
-            .when(_allow_drag && depth > 0, |row| {
-                row.child(div().w(px(16.0)).flex_none())
-            })
-            .child(self.render_session_manager_row_icon(item, is_selected, cx))
-            .child(
-                div()
-                    .min_w(px(0.0))
-                    .flex_1()
-                    .child(
-                        div()
-                            .truncate()
-                            .text_size(px(MANAGER_ITEM_TITLE_TEXT_SIZE))
-                            .font_weight(gpui::FontWeight::MEDIUM)
-                            .text_color(rgb(if is_selected {
-                                theme.accent
-                            } else {
-                                theme.text
-                            }))
-                            .child(item.name().to_string()),
-                    )
-                    .child(
-                        div()
-                            .truncate()
-                            .text_size(px(MANAGER_ITEM_SUBTITLE_TEXT_SIZE))
-                            .text_color(rgb(theme.text_muted))
-                            .child(subtitle),
-                    ),
-            )
+            .child(capsule)
     }
 
     pub(super) fn render_session_manager_row_icon(
@@ -1827,13 +1846,12 @@ impl WorkspaceApp {
         };
 
         div()
-            .size(px(20.0))
+            .size(px(16.0))
             .flex_none()
-            .rounded(px(self.tokens.radii.sm))
             .flex()
             .items_center()
             .justify_center()
-            .child(icon.render(16.0, color, cx))
+            .child(icon.render(14.0, color, cx))
     }
 
     pub(super) fn render_session_manager_display_item_actions(

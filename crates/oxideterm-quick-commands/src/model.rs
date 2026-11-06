@@ -6,26 +6,51 @@ use serde::{Deserialize, Serialize};
 pub const QUICK_COMMANDS_SCHEMA_VERSION: u32 = 2;
 
 #[derive(Clone, Copy, Debug, Eq, PartialEq, Hash, Serialize, Deserialize)]
-#[serde(rename_all = "snake_case")]
+#[serde(rename_all = "kebab-case")]
 pub enum QuickCommandIcon {
-    Terminal,
-    Server,
-    Folder,
     Docker,
     Zap,
+    // v2.2.6 persisted `server`; keep those files loadable after the icon set
+    // replaced the old server/terminal/folder trio.
+    #[serde(alias = "server")]
     Cpu,
-    Database,
     Cloud,
-    Code,
     Git,
     Shield,
+    #[serde(alias = "folder")]
     Package,
     Rocket,
     Settings,
-    Play,
-    Star,
-    Layers,
+    #[serde(alias = "terminal")]
     Network,
+    #[serde(alias = "sun_dim")]
+    SunDim,
+    Cat,
+    #[serde(alias = "face_slightly_smiling_plus")]
+    FaceSlightlySmilingPlus,
+    #[serde(alias = "ice_cream_cone")]
+    IceCreamCone,
+    #[serde(alias = "cloud_hail")]
+    CloudHail,
+    Radar,
+    Leaf,
+    Apple,
+    Webhook,
+    #[serde(alias = "circle_pile")]
+    CirclePile,
+    Palette,
+    Sprout,
+    #[serde(alias = "piggy_bank")]
+    PiggyBank,
+    #[serde(alias = "cloud_sun")]
+    CloudSun,
+    #[serde(alias = "moon_star")]
+    MoonStar,
+    Snowflake,
+    #[serde(alias = "paw_print")]
+    PawPrint,
+    #[serde(alias = "loader_pinwheel")]
+    LoaderPinwheel,
 }
 
 #[derive(Clone, Debug, Eq, PartialEq, Serialize, Deserialize)]

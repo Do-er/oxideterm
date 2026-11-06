@@ -8,8 +8,9 @@ use super::{
 };
 use oxideterm_quick_commands::{
     QuickCommandDraft, delete_quick_command, delete_quick_command_category,
-    ensure_active_quick_command_category, new_quick_command_id, upsert_quick_command,
-    upsert_quick_command_category, visible_quick_commands, visible_quick_commands_for_management,
+    delete_quick_command_category_with_commands, ensure_active_quick_command_category,
+    new_quick_command_id, upsert_quick_command, upsert_quick_command_category,
+    visible_quick_commands, visible_quick_commands_for_management,
 };
 
 impl QuickCommandsState {
@@ -47,8 +48,11 @@ impl QuickCommandsState {
         visible_quick_commands(&self.commands, &self.active_category, &self.query, target)
     }
 
-    pub(super) fn visible_commands_for_management(&self) -> Vec<QuickCommand> {
-        visible_quick_commands_for_management(&self.commands, &self.active_category, &self.query)
+    pub(super) fn visible_commands_for_manager(
+        &self,
+        category_filter: Option<&str>,
+    ) -> Vec<QuickCommand> {
+        visible_quick_commands_for_management(&self.commands, category_filter, &self.query)
     }
 
     pub(in crate::workspace) fn upsert_command(&mut self, draft: QuickCommandDraft) {
@@ -168,44 +172,65 @@ impl QuickCommandsState {
         }
     }
 
-    pub(in crate::workspace) fn move_command(&mut self, id: &str, offset: isize) -> bool {
-        if offset == 0 {
+    pub(in crate::workspace) fn move_command_to(&mut self, source_id: &str, target_id: &str) -> bool {
+        if source_id == target_id {
             return false;
         }
-        let Some(category) = self
+        let Some(source) = self
             .commands
             .iter()
-            .find(|command| command.id == id)
-            .map(|command| command.category.clone())
+            .find(|command| command.id == source_id)
+            .cloned()
         else {
             return false;
         };
-        let mut category_indices = self
+        let Some(target) = self
             .commands
             .iter()
-            .enumerate()
-            .filter(|(_, command)| command.category == category)
-            .map(|(index, _)| index)
+            .find(|command| command.id == target_id)
+            .cloned()
+        else {
+            return false;
+        };
+        if source.category != target.category {
+            return false;
+        }
+        // Rebuild this category's display order with the source inserted before
+        // the target, then normalize sort keys so drag reorder persists cleanly.
+        let category = source.category.clone();
+        let mut ordered = self
+            .commands
+            .iter()
+            .filter(|command| command.category == category)
+            .cloned()
             .collect::<Vec<_>>();
-        category_indices.sort_by_key(|index| self.commands[*index].sort_order);
-        let Some(current_position) = category_indices
-            .iter()
-            .position(|index| self.commands[*index].id == id)
-        else {
+        ordered.sort_by_key(|command| command.sort_order);
+        let Some(source_pos) = ordered.iter().position(|command| command.id == source_id) else {
             return false;
         };
-        let target_position = current_position.saturating_add_signed(offset);
-        if target_position >= category_indices.len() || target_position == current_position {
+        let Some(target_pos) = ordered.iter().position(|command| command.id == target_id) else {
+            return false;
+        };
+        if source_pos == target_pos {
             return false;
         }
-        category_indices.swap(current_position, target_position);
-
+        let moved = ordered.remove(source_pos);
+        let insert_at = ordered
+            .iter()
+            .position(|command| command.id == target_id)
+            .expect("target command exists");
+        ordered.insert(insert_at, moved);
         let updated_at = now_ms();
+        for (index, command) in ordered.iter_mut().enumerate() {
+            command.sort_order = index as i64;
+            command.updated_at = updated_at;
+        }
         let mut commands = self.commands.clone();
-        // Normalize only this category so duplicate imported sort keys cannot block a move.
-        for (sort_order, index) in category_indices.into_iter().enumerate() {
-            commands[index].sort_order = sort_order as i64;
-            commands[index].updated_at = updated_at;
+        for command in commands.iter_mut().filter(|command| command.category == category) {
+            if let Some(updated) = ordered.iter().find(|candidate| candidate.id == command.id) {
+                command.sort_order = updated.sort_order;
+                command.updated_at = updated.updated_at;
+            }
         }
         commands.sort_by_key(|command| command.sort_order);
         let snapshot = QuickCommandsSnapshot {
@@ -217,13 +242,6 @@ impl QuickCommandsState {
         match oxideterm_quick_commands::save_snapshot(&self.settings_path, &snapshot) {
             Ok(()) => {
                 self.commands = commands;
-                if let Some(editor) = self.command_editor.as_mut()
-                    && let Some(editor_id) = editor.id.as_deref()
-                    && let Some(command) =
-                        self.commands.iter().find(|command| command.id == editor_id)
-                {
-                    editor.sort_order = command.sort_order;
-                }
                 self.last_persist_error = None;
                 true
             }
@@ -259,6 +277,33 @@ impl QuickCommandsState {
         let mut categories = self.categories.clone();
         let mut commands = self.commands.clone();
         if !delete_quick_command_category(&mut categories, &mut commands, id) {
+            return false;
+        }
+        let snapshot = QuickCommandsSnapshot {
+            version: QUICK_COMMANDS_SCHEMA_VERSION,
+            categories,
+            commands,
+            updated_at: now_ms(),
+        };
+        match oxideterm_quick_commands::save_snapshot(&self.settings_path, &snapshot) {
+            Ok(()) => {
+                self.categories = snapshot.categories;
+                self.commands = snapshot.commands;
+                self.ensure_active_category();
+                self.last_persist_error = None;
+                true
+            }
+            Err(error) => {
+                self.last_persist_error = Some(error);
+                false
+            }
+        }
+    }
+
+    pub(super) fn delete_category_with_commands(&mut self, id: &str) -> bool {
+        let mut categories = self.categories.clone();
+        let mut commands = self.commands.clone();
+        if !delete_quick_command_category_with_commands(&mut categories, &mut commands, id) {
             return false;
         }
         let snapshot = QuickCommandsSnapshot {
@@ -463,8 +508,9 @@ mod quick_command_tests {
             .collect::<Vec<_>>();
         assert!(category_commands.len() >= 2);
         let moved_id = category_commands[1].clone();
+        let target_id = category_commands[0].clone();
 
-        assert!(state.move_command(&moved_id, -1));
+        assert!(state.move_command_to(&moved_id, &target_id));
         let reloaded = QuickCommandsState::load(&settings_path);
         let reloaded_order = reloaded
             .commands
@@ -644,7 +690,7 @@ mod quick_command_tests {
             categories: vec![QuickCommandCategory {
                 id: "files".to_string(),
                 name: "Files".to_string(),
-                icon: QuickCommandIcon::Folder,
+                icon: QuickCommandIcon::Zap,
                 icon_color: None,
                 sort_order: 0,
             }],

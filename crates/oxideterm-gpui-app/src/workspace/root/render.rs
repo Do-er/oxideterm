@@ -1439,6 +1439,15 @@ impl WorkspaceApp {
                 ))
             })
             .when_some(
+                self.terminal.read(cx).quick_commands.button_context_menu(),
+                |root, menu| {
+                    root.child(self.workspace_context_menu_backdrop(
+                        self.render_quick_commands_button_context_menu(&menu, window, cx),
+                        cx,
+                    ))
+                },
+            )
+            .when_some(
                 self.render_detached_tab_return_handoff(window, cx),
                 |root, handoff| root.child(handoff),
             )
@@ -1758,6 +1767,29 @@ impl WorkspaceApp {
                 label: label.into(),
                 x,
                 y,
+                force_delay: false,
+            },
+            cx,
+        );
+    }
+
+    /// Queues a tooltip that always waits the full delay instead of inheriting
+    /// the warm-switch fast path from a tooltip that was just visible.
+    pub(in crate::workspace) fn queue_workspace_tooltip_delayed(
+        &mut self,
+        id: impl Into<String>,
+        label: impl Into<String>,
+        x: f32,
+        y: f32,
+        cx: &mut Context<Self>,
+    ) {
+        self.apply_workspace_overlay_intent(
+            WorkspaceOverlayIntent::QueueTooltip {
+                id: id.into(),
+                label: label.into(),
+                x,
+                y,
+                force_delay: true,
             },
             cx,
         );

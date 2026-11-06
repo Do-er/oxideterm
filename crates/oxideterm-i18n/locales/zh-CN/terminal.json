@@ -383,8 +383,14 @@
       "toast_executed": "快捷命令已发送",
       "add_group": "新增组",
       "delete_group": "删除组",
-      "delete_group_description": "删除此分组前，“{{name}}”中的快捷命令将移至“{{destination}}”。",
-      "group_name_placeholder": "组名称",
+      "delete_group_description": "“{{name}}”中的所有命令移至“{{destination}}”还是删除？",
+      "commands": "命令",
+      "add_group_short": "分组",
+      "all_categories": "全部",
+      "search": "搜索",
+      "move_commands": "移动",
+      "delete": "删除",
+      "group_name_placeholder": "组名",
       "manage": "管理",
       "import": "导入快捷命令",
       "export": "导出快捷命令",
@@ -416,7 +422,8 @@
       "risk_medium": "中",
       "risk_dynamic": "动态",
       "category_icon": "图标",
-      "line_delay_label": "行间延迟 (ms)"
+      "line_delay_label": "行间延迟 (ms)",
+      "edit": "编辑"
     },
     "cwd": {
       "search_directories": "搜索文件和目录...",

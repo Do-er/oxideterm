@@ -56,6 +56,13 @@ impl QuickCommandInput {
     }
 }
 
+#[derive(Clone, Copy, Debug, Default, Eq, PartialEq)]
+pub(in crate::workspace) enum QuickCommandManagerMode {
+    Group,
+    #[default]
+    Command,
+}
+
 #[derive(Clone)]
 pub(super) struct QuickCommandParameterEditorDraft {
     pub name: String,
@@ -116,6 +123,13 @@ pub(super) struct QuickCommandsState {
     pub last_persist_error: Option<String>,
 }
 
+#[derive(Clone, PartialEq)]
+pub(in crate::workspace) struct QuickCommandButtonContextMenu {
+    pub(in crate::workspace) command: QuickCommand,
+    pub(in crate::workspace) x: f32,
+    pub(in crate::workspace) y: f32,
+}
+
 /// Owns the quick-command store and its complete terminal-surface lifecycle.
 pub(in crate::workspace) struct TerminalQuickCommandsState {
     pub(super) store: QuickCommandsState,
@@ -133,16 +147,30 @@ pub(in crate::workspace) struct TerminalQuickCommandsState {
     pub(super) editor_scroll: ScrollHandle,
     pub(super) buttons_scroll: ScrollHandle,
     pub(super) category_menu_open: bool,
-    pub(super) manager_icon_picker_open: bool,
+    pub(super) button_context_menu: Option<QuickCommandButtonContextMenu>,
     pub(super) manager_category_dropdown_open: bool,
     pub(super) editor_category_menu_open: bool,
+    pub(super) manager_mode: QuickCommandManagerMode,
+    pub(super) manager_command_category_filter: Option<String>,
+    pub(super) manager_search_open: bool,
     pub(super) execution_task: Option<Task<()>>,
 }
 
 impl TerminalQuickCommandsState {
     pub(in crate::workspace) fn manager_popovers_open(&self) -> bool {
-        self.manager_icon_picker_open || self.manager_category_dropdown_open
+        self.manager_category_dropdown_open
     }
+
+    pub(in crate::workspace) fn button_context_menu(
+        &self,
+    ) -> Option<QuickCommandButtonContextMenu> {
+        self.button_context_menu.clone()
+    }
+
+    pub(in crate::workspace) fn dismiss_button_context_menu(&mut self) -> bool {
+        self.button_context_menu.take().is_some()
+    }
+
     pub(in crate::workspace) fn load(settings_path: &Path) -> Self {
         Self {
             store: QuickCommandsState::load(settings_path),
@@ -172,9 +200,12 @@ impl TerminalQuickCommandsState {
             editor_scroll: ScrollHandle::new(),
             buttons_scroll: ScrollHandle::new(),
             category_menu_open: false,
-            manager_icon_picker_open: false,
+            button_context_menu: None,
             manager_category_dropdown_open: false,
             editor_category_menu_open: false,
+            manager_mode: QuickCommandManagerMode::default(),
+            manager_command_category_filter: None,
+            manager_search_open: false,
             execution_task: None,
         }
     }

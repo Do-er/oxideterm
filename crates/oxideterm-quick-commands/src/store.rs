@@ -300,6 +300,15 @@ fn apply_snapshot_json_inner(
         .flatten()
         .unwrap_or_else(default_snapshot);
     let merge = merge_snapshot(&current, incoming, strategy);
+    if merge.imported == 0 {
+        // Nothing changed, so avoid rewriting the file and bumping its updatedAt.
+        // This keeps an identical export->import round-trip a true no-op.
+        return QuickCommandImportResult {
+            imported: 0,
+            skipped: merge.skipped,
+            errors: Vec::new(),
+        };
+    }
     if let Err(error) = save_snapshot_to_path(&path, &merge.snapshot) {
         return QuickCommandImportResult {
             imported: 0,
@@ -446,14 +455,41 @@ fn merge_snapshot(
     let mut category_remap = HashMap::new();
 
     for incoming_category in incoming.categories {
+        // Match the same stored container by id first. An id collision means the
+        // incoming group is the same record as a local group, so Rename/Skip must
+        // reuse the local container instead of creating an "(Imported)" duplicate.
+        // Name collisions are only checked afterwards for genuinely different ids.
+        let same_id = categories
+            .iter()
+            .find(|category| category.id == incoming_category.id)
+            .cloned();
+        if let Some(conflict) = same_id {
+            category_remap.insert(incoming_category.id.clone(), conflict.id.clone());
+            match strategy {
+                QuickCommandImportStrategy::Replace | QuickCommandImportStrategy::Merge => {
+                    for category in &mut categories {
+                        if category.id == conflict.id {
+                            category.name = incoming_category.name.clone();
+                            category.icon = incoming_category.icon;
+                            category.icon_color = incoming_category.icon_color.clone();
+                            category.sort_order = incoming_category.sort_order;
+                        }
+                    }
+                    imported += 1;
+                }
+                QuickCommandImportStrategy::Rename | QuickCommandImportStrategy::Skip => {
+                    skipped += 1;
+                }
+            }
+            continue;
+        }
         let conflict = categories
             .iter()
             .find(|category| {
-                category.id == incoming_category.id
-                    || category
-                        .name
-                        .trim()
-                        .eq_ignore_ascii_case(incoming_category.name.trim())
+                category
+                    .name
+                    .trim()
+                    .eq_ignore_ascii_case(incoming_category.name.trim())
             })
             .cloned();
         match (conflict, strategy) {
@@ -521,15 +557,20 @@ fn merge_snapshot(
         }
         let conflict = commands
             .iter()
-            .find(|command| {
-                command.id == incoming_command.id
-                    || (command.category == incoming_command.category
-                        && command
-                            .name
-                            .trim()
-                            .eq_ignore_ascii_case(incoming_command.name.trim()))
-            })
-            .cloned();
+            .find(|command| command.id == incoming_command.id)
+            .cloned()
+            .or_else(|| {
+                commands
+                    .iter()
+                    .find(|command| {
+                        command.category == incoming_command.category
+                            && command
+                                .name
+                                .trim()
+                                .eq_ignore_ascii_case(incoming_command.name.trim())
+                    })
+                    .cloned()
+            });
         match (conflict, strategy) {
             (None, _) => {
                 commands.push(incoming_command);
@@ -708,7 +749,7 @@ fn sanitize_command(
     Ok(QuickCommand {
         id: bounded_required(command.id, "command.id", MAX_ID_LEN)?,
         name: bounded_required(command.name, "command.name", MAX_NAME_LEN)?,
-        command: bounded_required(command.command, "command.command", MAX_COMMAND_LEN)?,
+        command: bounded_command_body(command.command, MAX_COMMAND_LEN)?,
         category: if category_ids.contains(&category) {
             category
         } else {
@@ -827,6 +868,23 @@ fn bounded_required(value: String, field: &str, max_len: usize) -> Result<String
     Ok(trimmed)
 }
 
+fn bounded_command_body(value: String, max_len: usize) -> Result<String, String> {
+    // A body's newlines carry execution semantics: each line is one send and a
+    // trailing newline is the Enter that actually runs the final line. Unlike
+    // names and ids it must not be trimmed of `\n` or `\r`, so mirror the
+    // editor normalization (strip leading whitespace and trailing spaces/tabs).
+    let normalized = value.trim_start().trim_end_matches([' ', '\t']).to_string();
+    if normalized.is_empty() {
+        return Err("Quick Commands field command.command cannot be empty".to_string());
+    }
+    if normalized.len() > max_len {
+        return Err(format!(
+            "Quick Commands field command.command exceeds limit {max_len}"
+        ));
+    }
+    Ok(normalized)
+}
+
 fn bounded_optional(
     value: Option<String>,
     field: &str,
@@ -844,9 +902,9 @@ fn bounded_optional(
 
 pub fn default_quick_command_categories() -> Vec<QuickCommandCategory> {
     [
-        ("system", "System", QuickCommandIcon::Server),
-        ("network", "Network", QuickCommandIcon::Terminal),
-        ("files", "Files", QuickCommandIcon::Folder),
+        ("system", "System", QuickCommandIcon::Cpu),
+        ("network", "Network", QuickCommandIcon::Network),
+        ("files", "Files", QuickCommandIcon::Package),
         ("docker", "Docker", QuickCommandIcon::Docker),
         ("custom", "Custom", QuickCommandIcon::Zap),
     ]
@@ -1060,19 +1118,19 @@ mod tests {
             version: QUICK_COMMANDS_SCHEMA_VERSION,
             categories: vec![QuickCommandCategory {
                 icon_color: Some("#112233".into()),
-                ..quick_category("ops", "Ops", QuickCommandIcon::Server, 0)
+                ..quick_category("ops", "Ops", QuickCommandIcon::Zap, 0)
             }],
             commands: Vec::new(),
             updated_at: 1,
         };
-        let incoming = r##"{"version":2,"collections":[{"id":"ops","name":"Ops","icon":"server","iconColor":"#22D3EE","sortOrder":0}],"commands":[],"updatedAt":2}"##;
+        let incoming = r##"{"version":2,"collections":[{"id":"ops","name":"Ops","icon":"zap","iconColor":"#22D3EE","sortOrder":0}],"commands":[],"updatedAt":2}"##;
         for (strategy, expected) in [
             (QuickCommandImportStrategy::Merge, vec!["#22d3ee"]),
             (QuickCommandImportStrategy::Replace, vec!["#22d3ee"]),
             (QuickCommandImportStrategy::Skip, vec!["#112233"]),
             (
                 QuickCommandImportStrategy::Rename,
-                vec!["#112233", "#22d3ee"],
+                vec!["#112233"],
             ),
         ] {
             save_snapshot(&settings_path, &current).unwrap();
@@ -1090,6 +1148,27 @@ mod tests {
                 expected
             );
         }
+        // A different id with the same name is a real conflict under Rename: it is
+        // imported as a new group and keeps its own icon color.
+        save_snapshot(&settings_path, &current).unwrap();
+        let renamed_incoming = incoming.replace("\"id\":\"ops\"", "\"id\":\"ops-imported\"");
+        let result = apply_snapshot_json(
+            &settings_path,
+            &renamed_incoming,
+            QuickCommandImportStrategy::Rename,
+        );
+        assert!(result.errors.is_empty(), "{:?}", result.errors);
+        let exported = export_snapshot_json(&settings_path).unwrap();
+        let value: serde_json::Value = serde_json::from_str(&exported).unwrap();
+        assert_eq!(
+            value["collections"]
+                .as_array()
+                .unwrap()
+                .iter()
+                .map(|c| c["iconColor"].as_str().unwrap())
+                .collect::<Vec<_>>(),
+            vec!["#112233", "#22d3ee"]
+        );
         save_snapshot(&settings_path, &current).unwrap();
         let invalid = incoming.replace("#22D3EE", "#12345678");
         let result = apply_snapshot_json(
@@ -1145,6 +1224,45 @@ mod tests {
     }
 
     #[test]
+    fn rename_import_of_own_export_is_idempotent() {
+        let settings_path = temp_settings_path("rename-idempotent");
+        let mut category = quick_category("qcg-1-0", "Ops", QuickCommandIcon::Zap, 0);
+        category.icon_color = Some("#22d3ee".to_string());
+        let mut first = quick_command("qc-1-0", "Check", "uptime", "qcg-1-0", "Uptime");
+        first.sort_order = 0;
+        let mut second = quick_command("qc-1-1", "Check", "free -h", "qcg-1-0", "Memory");
+        second.sort_order = 0;
+        let snapshot = QuickCommandsSnapshot {
+            version: QUICK_COMMANDS_SCHEMA_VERSION,
+            categories: vec![category],
+            commands: vec![first, second],
+            updated_at: 1,
+        };
+        save_snapshot(&settings_path, &snapshot).unwrap();
+        let exported_before = export_snapshot_json(&settings_path).unwrap();
+
+        let result = apply_snapshot_json(
+            &settings_path,
+            &exported_before,
+            QuickCommandImportStrategy::Rename,
+        );
+
+        assert!(result.errors.is_empty(), "{:?}", result.errors);
+        assert_eq!(result.imported, 0);
+        assert_eq!(export_snapshot_json(&settings_path).unwrap(), exported_before);
+        let loaded = load_snapshot(&settings_path).unwrap();
+        assert_eq!(loaded.categories, snapshot.categories);
+        // QuickCommand intentionally has no Debug implementation because command
+        // bodies must not reach debug or panic output, so compare without it.
+        assert!(
+            loaded.commands == snapshot.commands,
+            "rename import must not alter stored commands"
+        );
+
+        fs::remove_dir_all(settings_path.parent().unwrap()).unwrap();
+    }
+
+    #[test]
     fn change_summary_counts_edits_without_command_body() {
         let previous = QuickCommandsSnapshot {
             version: QUICK_COMMANDS_SCHEMA_VERSION,
@@ -1170,6 +1288,42 @@ mod tests {
             "commands_created=0,commands_edited=1,commands_deleted=0,categories_created=0,categories_edited=0,categories_deleted=0"
         );
         assert!(!summary.contains("token-for-test"));
+    }
+
+    #[test]
+    fn command_body_trailing_newline_survives_import_and_export() {
+        let settings_path = temp_settings_path("body-newline");
+        let body = "mkdir -p /mnt/leo/\ncd /mnt/leo/\n";
+        let incoming = QuickCommandsSnapshot {
+            version: QUICK_COMMANDS_SCHEMA_VERSION,
+            categories: vec![quick_category("ops", "Ops", QuickCommandIcon::Zap, 0)],
+            commands: vec![quick_command("ops-mkdir", "Mkdir", body, "ops", "Make dirs")],
+            updated_at: 1,
+        };
+        let json = serde_json::to_string(&incoming).unwrap();
+
+        let result = apply_snapshot_json(&settings_path, &json, QuickCommandImportStrategy::Merge);
+        assert!(result.errors.is_empty(), "{:?}", result.errors);
+        assert_eq!(result.imported, 1);
+
+        let loaded = load_snapshot(&settings_path).unwrap();
+        let command = loaded
+            .commands
+            .iter()
+            .find(|command| command.id == "ops-mkdir")
+            .unwrap();
+        assert_eq!(command.command, body);
+
+        let exported = export_snapshot_json(&settings_path).unwrap();
+        let roundtripped: QuickCommandsSnapshot = serde_json::from_str(&exported).unwrap();
+        let exported_command = roundtripped
+            .commands
+            .iter()
+            .find(|command| command.id == "ops-mkdir")
+            .unwrap();
+        assert_eq!(exported_command.command, body);
+
+        fs::remove_dir_all(settings_path.parent().unwrap()).unwrap();
     }
 
     #[test]

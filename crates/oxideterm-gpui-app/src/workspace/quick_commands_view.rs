@@ -13,8 +13,8 @@ use gpui::{
 use oxideterm_editor_core::utf16::replace_utf16;
 use oxideterm_gpui_editor::{EditorContextMenuLabels, EditorSettings, TextEditorView};
 use oxideterm_gpui_ui::{
-    ConfirmDialogVariant, ConfirmDialogView, SectionHeaderOptions, StatusPillOptions, StatusTone,
-    confirm::confirm_dialog,
+    SectionHeaderOptions, StatusPillOptions, StatusTone,
+    button::{ButtonOptions, ButtonRadius, ButtonSize, ButtonVariant, button_with},
     modal::{dismissible_dialog_backdrop, overlay_content_boundary, popover_backdrop},
     scroll::ScrollableElement,
     section_header,
@@ -36,14 +36,14 @@ use super::super::{
     QUICK_COMMAND_LIST_ESTIMATED_HEIGHT, QUICK_COMMAND_LIST_OVERSCAN, SelectableTextRole,
     TauriVirtualListSpec, TerminalNotice, TerminalNoticeVariant, WorkspaceApp,
     settings_mono_font_family, settings_ui_font_family,
-    sync_tauri_variable_list_state_by_signatures, tauri_virtual_list,
+    sync_tauri_variable_list_state_by_signatures,
 };
 use super::{
     QUICK_COMMAND_TEXTAREA_LINE_HEIGHT, QUICK_COMMAND_TEXTAREA_MIN_HEIGHT,
     QUICK_COMMAND_TEXTAREA_VERTICAL_PADDING, QuickCommand, QuickCommandCategory,
     QuickCommandCategoryDeletePrompt, QuickCommandCategoryDraft, QuickCommandConfirmationPolicy,
     QuickCommandEditorDraft, QuickCommandExecutionDraft, QuickCommandIcon,
-    QuickCommandImportStrategy, QuickCommandInput, QuickCommandParameter,
+    QuickCommandImportStrategy, QuickCommandInput, QuickCommandManagerMode, QuickCommandParameter,
     QuickCommandParameterEditorDraft, QuickCommandParameterKind, QuickCommandTargetProtocol,
     TerminalQuickCommandsState, default_quick_command_categories, now_ms,
 };
@@ -51,30 +51,41 @@ use crate::assets::LucideIcon;
 
 pub(super) fn quick_command_lucide_icon(icon: QuickCommandIcon) -> LucideIcon {
     match icon {
-        QuickCommandIcon::Server => LucideIcon::Server,
-        QuickCommandIcon::Folder => LucideIcon::Folder,
         QuickCommandIcon::Docker => LucideIcon::Docker,
         QuickCommandIcon::Zap => LucideIcon::Zap,
-        QuickCommandIcon::Terminal => LucideIcon::Terminal,
         QuickCommandIcon::Cpu => LucideIcon::Cpu,
-        QuickCommandIcon::Database => LucideIcon::HardDrive,
         QuickCommandIcon::Cloud => LucideIcon::Cloud,
-        QuickCommandIcon::Code => LucideIcon::Code2,
         QuickCommandIcon::Git => LucideIcon::GitFork,
         QuickCommandIcon::Shield => LucideIcon::Shield,
         QuickCommandIcon::Package => LucideIcon::Package,
         QuickCommandIcon::Rocket => LucideIcon::Rocket,
         QuickCommandIcon::Settings => LucideIcon::Settings,
-        QuickCommandIcon::Play => LucideIcon::Play,
-        QuickCommandIcon::Star => LucideIcon::Star,
-        QuickCommandIcon::Layers => LucideIcon::Layers,
         QuickCommandIcon::Network => LucideIcon::Network,
+        QuickCommandIcon::SunDim => LucideIcon::SunDim,
+        QuickCommandIcon::Cat => LucideIcon::Cat,
+        QuickCommandIcon::FaceSlightlySmilingPlus => LucideIcon::FaceSlightlySmilingPlus,
+        QuickCommandIcon::IceCreamCone => LucideIcon::IceCreamCone,
+        QuickCommandIcon::CloudHail => LucideIcon::CloudHail,
+        QuickCommandIcon::Radar => LucideIcon::Radar,
+        QuickCommandIcon::Leaf => LucideIcon::Leaf,
+        QuickCommandIcon::Apple => LucideIcon::Apple,
+        QuickCommandIcon::Webhook => LucideIcon::Webhook,
+        QuickCommandIcon::CirclePile => LucideIcon::CirclePile,
+        QuickCommandIcon::Palette => LucideIcon::Palette,
+        QuickCommandIcon::Sprout => LucideIcon::Sprout,
+        QuickCommandIcon::PiggyBank => LucideIcon::PiggyBank,
+        QuickCommandIcon::CloudSun => LucideIcon::CloudSun,
+        QuickCommandIcon::MoonStar => LucideIcon::MoonStar,
+        QuickCommandIcon::Snowflake => LucideIcon::Snowflake,
+        QuickCommandIcon::PawPrint => LucideIcon::PawPrint,
+        QuickCommandIcon::LoaderPinwheel => LucideIcon::LoaderPinwheel,
     }
 }
 
 const QUICK_COMMANDS_MANAGER_WIDTH: f32 = 960.0;
 const QUICK_COMMANDS_MANAGER_HEIGHT: f32 = 620.0;
 const QUICK_COMMANDS_MANAGER_SIDEBAR_WIDTH: f32 = 300.0;
+const QUICK_COMMANDS_MANAGER_CATEGORY_DROPDOWN_WIDTH: f32 = 200.0;
 
 #[derive(Clone)]
 struct QuickCommandCategoryDrag {
@@ -85,6 +96,36 @@ struct QuickCommandCategoryDrag {
 }
 
 impl gpui::Render for QuickCommandCategoryDrag {
+    fn render(&mut self, _: &mut gpui::Window, _: &mut Context<Self>) -> impl IntoElement {
+        let tokens = self.tokens;
+        div().pl(self.position.x).pt(self.position.y).child(
+            div()
+                .px_3()
+                .py_2()
+                .max_w(px(220.0))
+                .truncate()
+                .rounded(px(tokens.radii.md))
+                .border_1()
+                .border_color(rgb(tokens.ui.accent))
+                .bg(rgb(tokens.ui.bg_panel))
+                .text_color(rgb(tokens.ui.text))
+                .font_family(tokens.metrics.font_family)
+                .text_size(px(tokens.metrics.ui_text_sm))
+                .shadow(oxideterm_gpui_ui::theme_overlay_shadow(&tokens))
+                .child(self.name.clone()),
+        )
+    }
+}
+
+#[derive(Clone)]
+struct QuickCommandDrag {
+    id: String,
+    name: String,
+    position: gpui::Point<gpui::Pixels>,
+    tokens: oxideterm_theme::ThemeTokens,
+}
+
+impl gpui::Render for QuickCommandDrag {
     fn render(&mut self, _: &mut gpui::Window, _: &mut Context<Self>) -> impl IntoElement {
         let tokens = self.tokens;
         div().pl(self.position.x).pt(self.position.y).child(
@@ -353,12 +394,12 @@ pub(super) struct QuickCommandsRenderSnapshot {
     pub(super) category_editor: Option<QuickCommandCategoryDraft>,
     pub(super) pending_category_delete: Option<QuickCommandCategoryDeletePrompt>,
     pub(super) visible_commands: Arc<Vec<QuickCommand>>,
-    pub(super) pinned: bool,
     pub(super) managing: bool,
-    pub(super) list_state: gpui::ListState,
-    pub(super) manager_icon_picker_open: bool,
     pub(super) manager_category_dropdown_open: bool,
     pub(super) editor_category_menu_open: bool,
+    pub(super) manager_mode: QuickCommandManagerMode,
+    pub(super) manager_command_category_filter: Option<String>,
+    pub(super) manager_search_open: bool,
 }
 
 impl TerminalQuickCommandsState {
@@ -406,6 +447,7 @@ impl TerminalQuickCommandsState {
         self.panel.finish_resize();
         self.pinned = false;
         self.pending_execution = None;
+        self.button_context_menu = None;
         self.store.focused_input = None;
         self.store.highlighted_command = None;
         changed
@@ -461,9 +503,11 @@ impl TerminalQuickCommandsState {
         self.pending_execution = None;
         self.pending_category_delete = None;
         self.manager_open = true;
-        self.manager_icon_picker_open = false;
         self.manager_category_dropdown_open = false;
         self.editor_category_menu_open = false;
+        self.manager_mode = QuickCommandManagerMode::Command;
+        self.manager_command_category_filter = Some(self.store.active_category.clone());
+        self.manager_search_open = false;
         self.store.command_editor = None;
         self.command_input = None;
         self.command_input_subscription = None;
@@ -478,13 +522,12 @@ impl TerminalQuickCommandsState {
             || self.store.category_editor.is_some()
             || self.store.focused_input.is_some()
             || self.pending_category_delete.is_some()
-            || self.manager_icon_picker_open
             || self.manager_category_dropdown_open
             || self.editor_category_menu_open;
         self.manager_open = false;
-        self.manager_icon_picker_open = false;
         self.manager_category_dropdown_open = false;
         self.editor_category_menu_open = false;
+        self.button_context_menu = None;
         self.pending_category_delete = None;
         self.store.command_editor = None;
         self.command_input = None;
@@ -526,6 +569,16 @@ impl TerminalQuickCommandsState {
 
     pub(in crate::workspace) fn delete_command(&mut self, command_id: &str) {
         self.store.delete_command(command_id);
+        if self
+            .store
+            .command_editor
+            .as_ref()
+            .and_then(|draft| draft.id.as_deref())
+            == Some(command_id)
+        {
+            self.store.command_editor = None;
+        }
+        self.button_context_menu = None;
         self.store.highlighted_command = None;
     }
 
@@ -711,6 +764,22 @@ impl TerminalQuickCommandsState {
         if input == QuickCommandInput::Search {
             self.store.highlighted_command = None;
         }
+        if input == QuickCommandInput::CategoryName {
+            let draft_to_save = self
+                .store
+                .category_editor
+                .as_ref()
+                .filter(|draft| quick_command_category_draft_can_save(draft))
+                .cloned();
+            if let Some(draft) = draft_to_save {
+                let saved_id = self.store.upsert_category(draft);
+                if let Some(editor_draft) = self.store.category_editor.as_mut() {
+                    if editor_draft.id.is_none() {
+                        editor_draft.id = Some(saved_id);
+                    }
+                }
+            }
+        }
         true
     }
 
@@ -835,10 +904,15 @@ impl TerminalQuickCommandsState {
     }
 
     fn start_command_edit(&mut self, command: QuickCommand) {
+        let command_id = command.id.clone();
+        let command_category = command.category.clone();
         self.store.category_editor = None;
         self.manager_open = true;
+        self.manager_mode = QuickCommandManagerMode::Command;
+        self.manager_command_category_filter = Some(command_category);
+        self.button_context_menu = None;
         self.store.command_editor = Some(QuickCommandEditorDraft {
-            id: Some(command.id),
+            id: Some(command_id),
             name: command.name,
             command: command.command,
             category: command.category,
@@ -1035,7 +1109,8 @@ impl TerminalQuickCommandsState {
         target: Option<&QuickCommandTargetContext>,
     ) -> QuickCommandsRenderSnapshot {
         let visible_commands = Arc::new(if self.manager_open {
-            self.store.visible_commands_for_management()
+            self.store
+                .visible_commands_for_manager(self.manager_command_category_filter.as_deref())
         } else {
             self.visible_commands_for_targets(target)
         });
@@ -1069,12 +1144,12 @@ impl TerminalQuickCommandsState {
             category_editor: self.store.category_editor.clone(),
             pending_category_delete: self.pending_category_delete.clone(),
             visible_commands,
-            pinned: self.pinned,
             managing: self.manager_open,
-            list_state: self.list_state.clone(),
-            manager_icon_picker_open: self.manager_icon_picker_open,
             manager_category_dropdown_open: self.manager_category_dropdown_open,
             editor_category_menu_open: self.editor_category_menu_open,
+            manager_mode: self.manager_mode,
+            manager_command_category_filter: self.manager_command_category_filter.clone(),
+            manager_search_open: self.manager_search_open,
         }
     }
 }
@@ -1551,18 +1626,6 @@ impl WorkspaceApp {
             .into_any_element()
     }
 
-    pub(in crate::workspace) fn toggle_quick_commands_manager_icon_picker(
-        &mut self,
-        cx: &mut Context<Self>,
-    ) {
-        self.terminal.update(cx, |terminal, _cx| {
-            terminal.quick_commands.manager_icon_picker_open =
-                !terminal.quick_commands.manager_icon_picker_open;
-            terminal.quick_commands.manager_category_dropdown_open = false;
-        });
-        cx.notify();
-    }
-
     pub(in crate::workspace) fn toggle_quick_commands_manager_category_dropdown(
         &mut self,
         cx: &mut Context<Self>,
@@ -1570,7 +1633,6 @@ impl WorkspaceApp {
         self.terminal.update(cx, |terminal, _cx| {
             terminal.quick_commands.manager_category_dropdown_open =
                 !terminal.quick_commands.manager_category_dropdown_open;
-            terminal.quick_commands.manager_icon_picker_open = false;
         });
         cx.notify();
     }
@@ -1582,7 +1644,6 @@ impl WorkspaceApp {
         self.terminal.update(cx, |terminal, _cx| {
             terminal.quick_commands.editor_category_menu_open =
                 !terminal.quick_commands.editor_category_menu_open;
-            terminal.quick_commands.manager_icon_picker_open = false;
             terminal.quick_commands.manager_category_dropdown_open = false;
         });
         cx.notify();
@@ -1593,10 +1654,8 @@ impl WorkspaceApp {
         cx: &mut Context<Self>,
     ) {
         let changed = self.terminal.update(cx, |terminal, _cx| {
-            let changed = terminal.quick_commands.manager_icon_picker_open
-                || terminal.quick_commands.manager_category_dropdown_open
+            let changed = terminal.quick_commands.manager_category_dropdown_open
                 || terminal.quick_commands.editor_category_menu_open;
-            terminal.quick_commands.manager_icon_picker_open = false;
             terminal.quick_commands.manager_category_dropdown_open = false;
             terminal.quick_commands.editor_category_menu_open = false;
             changed
@@ -1604,34 +1663,6 @@ impl WorkspaceApp {
         if changed {
             cx.notify();
         }
-    }
-
-    pub(in crate::workspace) fn set_active_category_icon(
-        &mut self,
-        icon: QuickCommandIcon,
-        cx: &mut Context<Self>,
-    ) {
-        self.terminal.update(cx, |terminal, _cx| {
-            let active_id = terminal.quick_commands.store.active_category.clone();
-            if let Some(cat) = terminal
-                .quick_commands
-                .store
-                .categories
-                .iter()
-                .find(|c| c.id == active_id)
-                .cloned()
-            {
-                let draft = QuickCommandCategoryDraft {
-                    id: Some(cat.id),
-                    name: cat.name,
-                    icon,
-                    icon_color: cat.icon_color.unwrap_or_default(),
-                };
-                terminal.quick_commands.store.upsert_category(draft);
-            }
-            terminal.quick_commands.manager_icon_picker_open = false;
-        });
-        cx.notify();
     }
 
     pub(in crate::workspace) fn delete_manager_category(
@@ -1661,16 +1692,115 @@ impl WorkspaceApp {
         cx.notify();
     }
 
-    pub(in crate::workspace) fn cancel_quick_command_category_editor(
+
+    pub(in crate::workspace) fn set_quick_commands_manager_mode(
+        &mut self,
+        mode: QuickCommandManagerMode,
+        cx: &mut Context<Self>,
+    ) {
+        self.terminal.update(cx, |terminal, _cx| {
+            terminal.quick_commands.manager_mode = mode;
+            // Switching modes drops in-progress drafts so the inspector never
+            // shows a stale editor from the other mode.
+            terminal.quick_commands.store.command_editor = None;
+            terminal.quick_commands.store.category_editor = None;
+            terminal.quick_commands.manager_category_dropdown_open = false;
+            terminal.quick_commands.manager_search_open = false;
+        });
+        cx.notify();
+    }
+
+    pub(in crate::workspace) fn select_quick_commands_manager_category(
+        &mut self,
+        category_filter: Option<String>,
+        cx: &mut Context<Self>,
+    ) {
+        self.terminal.update(cx, |terminal, _cx| {
+            terminal.quick_commands.manager_command_category_filter = category_filter;
+            terminal.quick_commands.manager_category_dropdown_open = false;
+        });
+        cx.notify();
+    }
+
+    pub(in crate::workspace) fn toggle_quick_commands_manager_search(
         &mut self,
         cx: &mut Context<Self>,
     ) {
         self.terminal.update(cx, |terminal, _cx| {
-            terminal.quick_commands.cancel_editor();
+            terminal.quick_commands.manager_search_open =
+                !terminal.quick_commands.manager_search_open;
+            if terminal.quick_commands.manager_search_open {
+                terminal.quick_commands.store.focused_input = Some(QuickCommandInput::Search);
+            } else {
+                terminal.quick_commands.store.query.clear();
+            }
         });
-        self.ime_marked_text = None;
-        self.clear_ime_selection();
         cx.notify();
+    }
+
+    pub(in crate::workspace) fn set_quick_command_category_editor_icon(
+        &mut self,
+        icon: QuickCommandIcon,
+        cx: &mut Context<Self>,
+    ) {
+        self.terminal.update(cx, |terminal, _cx| {
+            let draft_to_save =
+                if let Some(draft) = terminal.quick_commands.store.category_editor.as_mut() {
+                    draft.icon = icon;
+                    if quick_command_category_draft_can_save(draft) {
+                        Some(draft.clone())
+                    } else {
+                        None
+                    }
+                } else {
+                    None
+                };
+            if let Some(draft) = draft_to_save {
+                let saved_id = terminal.quick_commands.store.upsert_category(draft);
+                if let Some(editor_draft) =
+                    terminal.quick_commands.store.category_editor.as_mut()
+                {
+                    if editor_draft.id.is_none() {
+                        editor_draft.id = Some(saved_id);
+                    }
+                }
+            }
+        });
+        cx.notify();
+    }
+
+    pub(in crate::workspace) fn move_quick_command_to(
+        &mut self,
+        source_id: &str,
+        target_id: &str,
+        cx: &mut Context<Self>,
+    ) {
+        let changed = self.terminal.update(cx, |terminal, _cx| {
+            terminal.quick_commands.store.move_command_to(source_id, target_id)
+        });
+        if changed {
+            cx.notify();
+        }
+    }
+
+    pub(in crate::workspace) fn delete_quick_commands_manager_category_with_commands(
+        &mut self,
+        cx: &mut Context<Self>,
+    ) -> bool {
+        let changed = self.terminal.update(cx, |terminal, _cx| {
+            let Some(prompt) = terminal.quick_commands.pending_category_delete.take() else {
+                return false;
+            };
+            terminal.quick_commands.store.highlighted_command = None;
+            terminal
+                .quick_commands
+                .store
+                .delete_category_with_commands(&prompt.id)
+        });
+        if changed {
+            cx.notify();
+        }
+        changed
     }
 
     pub(in crate::workspace) fn render_quick_commands_manager_modal(
@@ -1678,9 +1808,6 @@ impl WorkspaceApp {
         cx: &mut Context<Self>,
     ) -> AnyElement {
         let snapshot = self.quick_commands_render_snapshot(cx);
-        let popovers_open =
-            snapshot.manager_icon_picker_open || snapshot.manager_category_dropdown_open;
-
         let mut manager = oxideterm_gpui_ui::modal_container(&self.tokens)
             .w(px(QUICK_COMMANDS_MANAGER_WIDTH))
             .max_w_full()
@@ -1707,26 +1834,22 @@ impl WorkspaceApp {
                     .child(self.render_quick_command_manager_inspector(&snapshot, cx)),
             );
 
-        if popovers_open {
-            manager = manager.child(
-                div()
-                    .absolute()
-                    .top_0()
-                    .left_0()
-                    .right_0()
-                    .bottom_0()
-                    .on_mouse_down(MouseButton::Left, cx.listener(|this, _event, _window, cx| {
-                        this.close_quick_commands_manager_popovers(cx);
-                        cx.stop_propagation();
-                    })),
-            );
+        if snapshot.manager_category_dropdown_open {
+            if let Some(dropdown) = self.render_quick_commands_manager_category_filter_dropdown(
+                &snapshot,
+                cx,
+            ) {
+                manager = manager.child(dropdown);
+            }
         }
 
-        if snapshot.manager_icon_picker_open {
-            manager = manager.child(self.render_quick_commands_manager_icon_picker(&snapshot, cx));
-        } else if snapshot.manager_category_dropdown_open {
-            manager = manager
-                .child(self.render_quick_commands_manager_category_dropdown(&snapshot, cx));
+        if snapshot.editor_category_menu_open {
+            if let Some(menu) = self.render_quick_command_editor_category_menu(
+                &snapshot,
+                cx,
+            ) {
+                manager = manager.child(menu);
+            }
         }
 
         let manager_dialog = dismissible_dialog_backdrop()
@@ -1748,43 +1871,217 @@ impl WorkspaceApp {
             .bottom_0()
             .child(manager_dialog)
             .when_some(snapshot.pending_category_delete.as_ref(), |root, prompt| {
-                let defaults = default_quick_command_categories();
-                let destination = snapshot
-                    .categories
-                    .iter()
-                    .chain(defaults.iter())
-                    .find(|category| category.id == FALLBACK_QUICK_COMMAND_CATEGORY_ID)
-                    .expect("default categories contain the fallback group");
-                let description = self
-                    .i18n
-                    .t("terminal.quick_commands.delete_group_description")
-                    .replace("{{name}}", &prompt.name)
-                    .replace("{{destination}}", &destination.name);
-                root.child(confirm_dialog(
-                    &self.tokens,
-                    ConfirmDialogView {
-                        variant: ConfirmDialogVariant::Danger,
-                        title: div()
-                            .child(self.i18n.t("terminal.quick_commands.delete_group"))
-                            .into_any_element(),
-                        description: Some(div().child(description).into_any_element()),
-                        cancel_label: div()
-                            .child(self.i18n.t("common.actions.cancel"))
-                            .into_any_element(),
-                        confirm_label: div()
-                            .child(self.i18n.t("terminal.quick_commands.delete_group"))
-                            .into_any_element(),
-                    },
-                    cx.listener(|this, _event, _window, cx| {
-                        this.cancel_quick_command_category_delete(cx);
-                        cx.stop_propagation();
-                    }),
-                    cx.listener(|this, _event, _window, cx| {
-                        this.confirm_quick_command_category_delete(cx);
-                        cx.stop_propagation();
-                    }),
+                root.child(self.render_quick_commands_manager_delete_group_dialog(
+                    &snapshot,
+                    prompt,
+                    cx,
                 ))
             })
+            .into_any_element()
+    }
+
+    fn render_quick_commands_manager_delete_group_dialog(
+        &self,
+        snapshot: &QuickCommandsRenderSnapshot,
+        prompt: &QuickCommandCategoryDeletePrompt,
+        cx: &mut Context<Self>,
+    ) -> AnyElement {
+        let theme = self.tokens.ui;
+        let defaults = default_quick_command_categories();
+        let destination = snapshot
+            .categories
+            .iter()
+            .chain(defaults.iter())
+            .find(|category| category.id == FALLBACK_QUICK_COMMAND_CATEGORY_ID)
+            .map(|category| category.name.clone())
+            .unwrap_or_else(|| FALLBACK_QUICK_COMMAND_CATEGORY_ID.to_string());
+        let description = self
+            .i18n
+            .t("terminal.quick_commands.delete_group_description")
+            .replace("{{name}}", &prompt.name)
+            .replace("{{destination}}", &destination);
+
+        let cat = snapshot.categories.iter().find(|c| c.id == prompt.id);
+        let category_icon = cat.map(|c| c.icon).unwrap_or(QuickCommandIcon::Zap);
+        let count = snapshot
+            .category_counts
+            .get(prompt.id.as_str())
+            .copied()
+            .unwrap_or(0);
+
+        let card = div()
+            .w(px(420.0))
+            .max_w_full()
+            .rounded(px(self.tokens.radii.lg))
+            .overflow_hidden()
+            .border_1()
+            .border_color(rgba((theme.border << 8) | 0x99))
+            .bg(rgba((theme.bg_elevated << 8) | 0xfc))
+            .shadow(oxideterm_gpui_ui::theme_overlay_shadow(&self.tokens))
+            .flex()
+            .flex_col()
+            .on_mouse_down(MouseButton::Left, |_event, _window, cx| cx.stop_propagation())
+            .child(
+                div()
+                    .flex()
+                    .flex_col()
+                    .items_center()
+                    .gap(px(14.0))
+                    .px(px(24.0))
+                    .pt(px(24.0))
+                    .pb(px(20.0))
+                    .child(
+                        div()
+                            .size(px(48.0))
+                            .rounded_full()
+                            .border_1()
+                            .border_color(rgba((theme.error << 8) | 0x40))
+                            .bg(rgba((theme.error << 8) | 0x18))
+                            .flex()
+                            .items_center()
+                            .justify_center()
+                            .child(Self::render_lucide_icon(
+                                LucideIcon::Trash2,
+                                22.0,
+                                rgb(theme.error),
+                            )),
+                    )
+                    .child(
+                        div()
+                            .text_align(gpui::TextAlign::Center)
+                            .text_size(px(self.tokens.metrics.ui_text_base))
+                            .font_weight(gpui::FontWeight::SEMIBOLD)
+                            .text_color(rgb(theme.text))
+                            .child(self.i18n.t("terminal.quick_commands.delete_group")),
+                    )
+                    .child(
+                        div()
+                            .w_full()
+                            .rounded(px(self.tokens.radii.md))
+                            .border_1()
+                            .border_color(rgba((theme.border << 8) | 0x4d))
+                            .bg(rgba((theme.bg << 8) | 0x40))
+                            .px(px(12.0))
+                            .py(px(10.0))
+                            .flex()
+                            .items_center()
+                            .justify_between()
+                            .child(
+                                div()
+                                    .flex()
+                                    .items_center()
+                                    .gap(px(8.0))
+                                    .child(Self::render_lucide_icon(
+                                        quick_command_lucide_icon(category_icon),
+                                        15.0,
+                                        rgb(theme.accent),
+                                    ))
+                                    .child(
+                                        div()
+                                            .text_size(px(self.tokens.metrics.ui_text_sm))
+                                            .font_weight(gpui::FontWeight::MEDIUM)
+                                            .text_color(rgb(theme.text))
+                                            .child(prompt.name.clone()),
+                                    ),
+                            )
+                            .child(
+                                div()
+                                    .px(px(8.0))
+                                    .py(px(2.0))
+                                    .rounded_full()
+                                    .bg(rgba((theme.border << 8) | 0x40))
+                                    .text_size(px(self.tokens.metrics.ui_text_xs))
+                                    .font_weight(gpui::FontWeight::MEDIUM)
+                                    .text_color(rgb(theme.text_muted))
+                                    .child(format!(
+                                        "{} {}",
+                                        count,
+                                        self.i18n.t("terminal.quick_commands.commands")
+                                    )),
+                            ),
+                    )
+                    .child(
+                        div()
+                            .text_align(gpui::TextAlign::Center)
+                            .text_size(px(self.tokens.metrics.ui_text_xs))
+                            .text_color(rgb(theme.text_muted))
+                            .child(description),
+                    ),
+            )
+            .child(
+                div()
+                    .w_full()
+                    .px(px(20.0))
+                    .py(px(14.0))
+                    .border_t_1()
+                    .border_color(rgba((theme.border << 8) | 0x40))
+                    .bg(rgba((theme.bg << 8) | 0x20))
+                    .flex()
+                    .items_center()
+                    .justify_end()
+                    .gap(px(8.0))
+                    .child(
+                        button_with(
+                            &self.tokens,
+                            self.i18n.t("common.actions.cancel"),
+                            ButtonOptions {
+                                variant: ButtonVariant::Ghost,
+                                size: ButtonSize::Default,
+                                radius: ButtonRadius::Md,
+                                disabled: false,
+                            },
+                        )
+                        .on_mouse_down(MouseButton::Left, cx.listener(
+                            |this, _event, _window, cx| {
+                                this.cancel_quick_command_category_delete(cx);
+                                cx.stop_propagation();
+                            },
+                        )),
+                    )
+                    .child(
+                        button_with(
+                            &self.tokens,
+                            self.i18n.t("terminal.quick_commands.move_commands"),
+                            ButtonOptions {
+                                variant: ButtonVariant::Outline,
+                                size: ButtonSize::Default,
+                                radius: ButtonRadius::Md,
+                                disabled: false,
+                            },
+                        )
+                        .on_mouse_down(MouseButton::Left, cx.listener(
+                            |this, _event, _window, cx| {
+                                this.confirm_quick_command_category_delete(cx);
+                                cx.stop_propagation();
+                            },
+                        )),
+                    )
+                    .child(
+                        button_with(
+                            &self.tokens,
+                            self.i18n.t("terminal.quick_commands.delete"),
+                            ButtonOptions {
+                                variant: ButtonVariant::Destructive,
+                                size: ButtonSize::Default,
+                                radius: ButtonRadius::Md,
+                                disabled: false,
+                            },
+                        )
+                        .on_mouse_down(MouseButton::Left, cx.listener(
+                            |this, _event, _window, cx| {
+                                this.delete_quick_commands_manager_category_with_commands(cx);
+                                cx.stop_propagation();
+                            },
+                        )),
+                    ),
+            );
+
+        dismissible_dialog_backdrop()
+            .on_mouse_down(MouseButton::Left, cx.listener(|this, _event, _window, cx| {
+                this.cancel_quick_command_category_delete(cx);
+                cx.stop_propagation();
+            }))
+            .child(overlay_content_boundary(card))
             .into_any_element()
     }
 
@@ -1794,6 +2091,93 @@ impl WorkspaceApp {
         cx: &mut Context<Self>,
     ) -> AnyElement {
         let theme = self.tokens.ui;
+        let group_mode = snapshot.manager_mode == QuickCommandManagerMode::Group;
+
+        let make_tab = |label: String, icon: LucideIcon, active: bool, mode: QuickCommandManagerMode| {
+            div()
+                .h(px(24.0))
+                .px(px(8.0))
+                .flex()
+                .items_center()
+                .justify_center()
+                .gap(px(5.0))
+                .rounded(px(self.tokens.radii.sm))
+                .cursor_pointer()
+                .text_size(px(self.tokens.metrics.ui_text_xs))
+                .font_weight(if active {
+                    gpui::FontWeight::MEDIUM
+                } else {
+                    gpui::FontWeight::NORMAL
+                })
+                .bg(if active {
+                    rgba((theme.accent << 8) | 0x2e)
+                } else {
+                    rgba(0x00000000)
+                })
+                .text_color(if active {
+                    rgb(theme.accent)
+                } else {
+                    rgb(theme.text_muted)
+                })
+                .hover(move |s| {
+                    s.bg(if active {
+                        rgba((theme.accent << 8) | 0x3d)
+                    } else {
+                        rgba((theme.bg_hover << 8) | 0x80)
+                    })
+                    .text_color(if active {
+                        rgb(theme.accent)
+                    } else {
+                        rgb(theme.text)
+                    })
+                })
+                .child(Self::render_lucide_icon(
+                    icon,
+                    12.0,
+                    if active {
+                        rgb(theme.accent)
+                    } else {
+                        rgb(theme.text_muted)
+                    },
+                ))
+                .child(div().truncate().child(label))
+                .on_mouse_down(
+                    MouseButton::Left,
+                    cx.listener(move |this, _event, _window, cx| {
+                        this.set_quick_commands_manager_mode(mode, cx);
+                        cx.stop_propagation();
+                    }),
+                )
+        };
+
+        let mode_tabs = div()
+            .flex()
+            .items_center()
+            .gap(px(2.0))
+            .p(px(2.0))
+            .rounded(px(self.tokens.radii.md))
+            .border_1()
+            .border_color(rgba((theme.border << 8) | 0x80))
+            .bg(rgba((theme.bg << 8) | 0x60))
+            .child(make_tab(
+                self.i18n.t("terminal.quick_commands.groups"),
+                LucideIcon::Folder,
+                group_mode,
+                QuickCommandManagerMode::Group,
+            ))
+            .child(make_tab(
+                self.i18n.t("terminal.quick_commands.commands"),
+                LucideIcon::Terminal,
+                !group_mode,
+                QuickCommandManagerMode::Command,
+            ));
+
+        let add_button = if group_mode {
+            self.render_quick_commands_manager_add_group_button(cx)
+        } else {
+            self.render_quick_commands_manager_add_command_button(cx)
+        };
+
         div()
             .h(px(52.0))
             .flex_none()
@@ -1806,6 +2190,7 @@ impl WorkspaceApp {
             .justify_between()
             .child(
                 div()
+                    .h_full()
                     .flex()
                     .items_center()
                     .gap(px(8.0))
@@ -1834,15 +2219,29 @@ impl WorkspaceApp {
                             .mx(px(2.0))
                             .bg(rgba((theme.border << 8) | 0x66)),
                     )
-                    .child(self.render_quick_commands_manager_icon_button(snapshot, cx))
-                    .child(self.render_quick_commands_manager_group_dropdown_button(snapshot, cx))
-                    .child(self.render_quick_commands_manager_add_command_button(cx)),
+                    .child(mode_tabs)
+                    .child(
+                        div()
+                            .h(px(14.0))
+                            .w(px(1.0))
+                            .mx(px(2.0))
+                            .bg(rgba((theme.border << 8) | 0x66)),
+                    )
+                    .child(add_button)
+                    .when(!group_mode, |header| {
+                        header.child(self.render_quick_commands_manager_category_filter_button(
+                            snapshot, cx,
+                        ))
+                    }),
             )
             .child(
                 div()
                     .flex()
                     .items_center()
                     .gap(px(4.0))
+                    .when(!group_mode, |right| {
+                        right.child(self.render_quick_commands_manager_search_control(snapshot, cx))
+                    })
                     .child(self.quick_command_tooltip_icon_button(
                         LucideIcon::Upload,
                         "quick-commands-import",
@@ -1875,111 +2274,80 @@ impl WorkspaceApp {
             .into_any_element()
     }
 
-    fn render_quick_commands_manager_icon_button(
+    fn render_quick_commands_manager_add_group_button(
         &self,
-        snapshot: &QuickCommandsRenderSnapshot,
         cx: &mut Context<Self>,
     ) -> AnyElement {
         let theme = self.tokens.ui;
-        let active_cat = snapshot
-            .categories
-            .iter()
-            .find(|c| c.id == snapshot.active_category)
-            .or_else(|| snapshot.categories.first());
-        let icon = active_cat.map(|c| c.icon).unwrap_or(QuickCommandIcon::Folder);
-        let icon_color = active_cat
-            .and_then(|c| c.icon_color.as_deref())
-            .and_then(oxideterm_quick_commands::parse_icon_color)
-            .map(rgb)
-            .unwrap_or(rgb(theme.accent));
-        let is_open = snapshot.manager_icon_picker_open;
-        let tooltip_id = "quick-commands-category-icon-picker-btn".to_string();
-        let tooltip_id_hover = tooltip_id.clone();
-        let tooltip_title = self.i18n.t("terminal.quick_commands.category_icon");
-        let tooltip_title_move = tooltip_title.clone();
-
         div()
-            .id("quick-commands-icon-picker-btn")
+            .id("quick-commands-manager-add-group-btn")
             .h(px(28.0))
-            .px(px(6.0))
+            .px(px(8.0))
             .flex()
             .items_center()
             .gap(px(4.0))
             .rounded(px(self.tokens.radii.md))
             .border_1()
-            .border_color(if is_open {
-                rgb(theme.accent)
-            } else {
-                rgba((theme.border << 8) | 0x80)
-            })
-            .bg(if is_open {
-                rgba((theme.accent << 8) | 0x22)
-            } else {
-                rgba((theme.bg << 8) | 0x66)
-            })
+            .border_color(rgba((theme.border << 8) | 0x80))
+            .bg(rgba((theme.accent << 8) | 0x1f))
             .hover(|style| {
                 style
-                    .bg(rgba((theme.bg_hover << 8) | 0xcc))
+                    .bg(rgba((theme.accent << 8) | 0x33))
                     .border_color(rgb(theme.accent))
             })
             .cursor_pointer()
-            .child(Self::render_lucide_icon(
-                quick_command_lucide_icon(icon),
-                14.0,
-                icon_color,
-            ))
-            .child(Self::render_lucide_icon(
-                LucideIcon::ChevronDown,
-                10.0,
-                rgb(theme.text_muted),
-            ))
-            .on_mouse_move(cx.listener(move |this, event: &gpui::MouseMoveEvent, _window, cx| {
-                this.queue_workspace_tooltip(
-                    tooltip_id.clone(),
-                    tooltip_title_move.clone(),
-                    f32::from(event.position.x) + 12.0,
-                    f32::from(event.position.y) + 16.0,
-                    cx,
-                );
-            }))
-            .on_hover(cx.listener(move |this, hovered: &bool, _window, cx| {
-                if !*hovered {
-                    this.clear_workspace_tooltip(&tooltip_id_hover, cx);
-                }
-            }))
-            .on_mouse_down(MouseButton::Left, cx.listener(|this, _event, _window, cx| {
-                this.toggle_quick_commands_manager_icon_picker(cx);
-                cx.stop_propagation();
-            }))
+            .child(Self::render_lucide_icon(LucideIcon::Plus, 11.0, rgb(theme.accent)))
+            .child(
+                div()
+                    .text_size(px(self.tokens.metrics.ui_text_xs))
+                    .font_weight(gpui::FontWeight::MEDIUM)
+                    .text_color(rgb(theme.accent))
+                    .child(self.i18n.t("terminal.quick_commands.add_group_short")),
+            )
+            .on_mouse_down(
+                MouseButton::Left,
+                cx.listener(|this, _event, window, cx| {
+                    this.start_quick_command_category_create(cx);
+                    window.focus(&this.focus_handle, cx);
+                    cx.stop_propagation();
+                }),
+            )
             .into_any_element()
     }
 
-    fn render_quick_commands_manager_group_dropdown_button(
+    fn render_quick_commands_manager_category_filter_button(
         &self,
         snapshot: &QuickCommandsRenderSnapshot,
         cx: &mut Context<Self>,
     ) -> AnyElement {
         let theme = self.tokens.ui;
-        let active_cat = snapshot
-            .categories
-            .iter()
-            .find(|c| c.id == snapshot.active_category)
-            .or_else(|| snapshot.categories.first());
-        let name = active_cat
-            .map(|c| c.name.clone())
-            .unwrap_or_else(|| "All".to_string());
         let is_open = snapshot.manager_category_dropdown_open;
-        let tooltip_id = "quick-commands-category-dropdown-btn".to_string();
-        let tooltip_id_hover = tooltip_id.clone();
-        let tooltip_title = self.i18n.t("terminal.quick_commands.groups");
-        let tooltip_title_move = tooltip_title.clone();
+        let selected_category = snapshot
+            .manager_command_category_filter
+            .as_deref()
+            .and_then(|id| snapshot.categories.iter().find(|category| category.id == id));
+        let name = selected_category
+            .map(|category| category.name.clone())
+            .unwrap_or_else(|| self.i18n.t("terminal.quick_commands.all_categories"));
+        let category_icon = selected_category.map(|category| category.icon);
+        let count = if let Some(category) = selected_category {
+            snapshot
+                .category_counts
+                .get(category.id.as_str())
+                .copied()
+                .unwrap_or(0)
+        } else {
+            snapshot.category_counts.values().sum()
+        };
 
-        div()
-            .id("quick-commands-category-dropdown-btn")
+        let button = div()
+            .id("quick-commands-manager-category-filter-btn")
             .h(px(28.0))
+            .w(px(QUICK_COMMANDS_MANAGER_CATEGORY_DROPDOWN_WIDTH))
             .px(px(8.0))
             .flex()
             .items_center()
+            .justify_between()
             .gap(px(6.0))
             .rounded(px(self.tokens.radii.md))
             .border_1()
@@ -2001,35 +2369,111 @@ impl WorkspaceApp {
             .cursor_pointer()
             .child(
                 div()
-                    .text_size(px(self.tokens.metrics.ui_text_sm))
-                    .font_weight(gpui::FontWeight::MEDIUM)
-                    .text_color(rgb(theme.text))
-                    .child(name),
+                    .flex_1()
+                    .min_w(px(0.0))
+                    .flex()
+                    .items_center()
+                    .gap(px(6.0))
+                    .when_some(category_icon, |row, icon| {
+                        row.child(Self::render_lucide_icon(
+                            quick_command_lucide_icon(icon),
+                            12.0,
+                            if is_open {
+                                rgb(theme.accent)
+                            } else {
+                                rgb(theme.text_muted)
+                            },
+                        ))
+                    })
+                    .child(
+                        div()
+                            .truncate()
+                            .text_size(px(self.tokens.metrics.ui_text_xs))
+                            .font_weight(gpui::FontWeight::MEDIUM)
+                            .text_color(rgb(theme.text))
+                            .child(name),
+                    ),
             )
-            .child(Self::render_lucide_icon(
-                LucideIcon::ChevronDown,
-                10.0,
-                rgb(theme.text_muted),
-            ))
-            .on_mouse_move(cx.listener(move |this, event: &gpui::MouseMoveEvent, _window, cx| {
-                this.queue_workspace_tooltip(
-                    tooltip_id.clone(),
-                    tooltip_title_move.clone(),
-                    f32::from(event.position.x) + 12.0,
-                    f32::from(event.position.y) + 16.0,
-                    cx,
-                );
-            }))
-            .on_hover(cx.listener(move |this, hovered: &bool, _window, cx| {
-                if !*hovered {
-                    this.clear_workspace_tooltip(&tooltip_id_hover, cx);
-                }
-            }))
+            .child(
+                div()
+                    .flex_none()
+                    .flex()
+                    .items_center()
+                    .gap(px(6.0))
+                    .child(
+                        div()
+                            .flex_none()
+                            .h(px(16.0))
+                            .min_w(px(16.0))
+                            .px(px(5.0))
+                            .rounded_full()
+                            .bg(rgba((theme.border << 8) | 0x40))
+                            .text_size(px(10.0))
+                            .font_weight(gpui::FontWeight::MEDIUM)
+                            .text_color(if is_open {
+                                rgb(theme.accent)
+                            } else {
+                                rgb(theme.text_muted)
+                            })
+                            .flex()
+                            .items_center()
+                            .justify_center()
+                            .child(count.to_string()),
+                    )
+                    .child(Self::render_lucide_icon(
+                        LucideIcon::ChevronDown,
+                        10.0,
+                        rgb(theme.text_muted),
+                    )),
+            )
             .on_mouse_down(MouseButton::Left, cx.listener(|this, _event, _window, cx| {
                 this.toggle_quick_commands_manager_category_dropdown(cx);
                 cx.stop_propagation();
-            }))
-            .into_any_element()
+            }));
+
+        select_anchor_probe(
+            SelectAnchorId::QuickCommandsManagerCategoryFilter,
+            button,
+            {
+                let workspace = cx.entity();
+                move |anchor, _window, cx| {
+                    let _ = workspace.update(cx, |this, _cx| {
+                        this.select_anchors.insert(anchor.id, anchor);
+                    });
+                }
+            },
+        )
+        .into_any_element()
+    }
+
+    fn render_quick_commands_manager_search_control(
+        &self,
+        snapshot: &QuickCommandsRenderSnapshot,
+        cx: &mut Context<Self>,
+    ) -> AnyElement {
+        if snapshot.manager_search_open {
+            return div()
+                .w(px(160.0))
+                .child(self.render_quick_command_text_input(
+                    QuickCommandInput::Search,
+                    snapshot.query.clone(),
+                    snapshot.focused_input,
+                    self.i18n.t("terminal.quick_commands.search"),
+                    cx,
+                ))
+                .into_any_element();
+        }
+        self.quick_command_tooltip_icon_button(
+            LucideIcon::Search,
+            "quick-commands-manager-search",
+            self.i18n.t("terminal.quick_commands.search"),
+            |this, _event, _window, cx| {
+                this.toggle_quick_commands_manager_search(cx);
+                cx.stop_propagation();
+            },
+            cx,
+        )
+        .into_any_element()
     }
 
     fn render_quick_commands_manager_add_command_button(
@@ -2077,388 +2521,68 @@ impl WorkspaceApp {
             .into_any_element()
     }
 
-    fn render_quick_commands_manager_icon_picker(
+    fn render_quick_commands_manager_category_filter_dropdown(
         &self,
         snapshot: &QuickCommandsRenderSnapshot,
         cx: &mut Context<Self>,
-    ) -> AnyElement {
+    ) -> Option<AnyElement> {
         let theme = self.tokens.ui;
-        let active_cat = snapshot
-            .categories
-            .iter()
-            .find(|c| c.id == snapshot.active_category)
-            .or_else(|| snapshot.categories.first());
-        let active_icon = active_cat.map(|c| c.icon);
-
-        let icons = [
-            QuickCommandIcon::Terminal,
-            QuickCommandIcon::Server,
-            QuickCommandIcon::Folder,
-            QuickCommandIcon::Docker,
-            QuickCommandIcon::Zap,
-            QuickCommandIcon::Cpu,
-            QuickCommandIcon::Database,
-            QuickCommandIcon::Cloud,
-            QuickCommandIcon::Code,
-            QuickCommandIcon::Git,
-            QuickCommandIcon::Shield,
-            QuickCommandIcon::Package,
-            QuickCommandIcon::Rocket,
-            QuickCommandIcon::Settings,
-            QuickCommandIcon::Play,
-            QuickCommandIcon::Star,
-            QuickCommandIcon::Layers,
-            QuickCommandIcon::Network,
-        ];
-
-        let mut grid = div().flex().flex_wrap().gap(px(6.0)).w(px(164.0));
-        for icon in icons {
-            let is_selected = active_icon == Some(icon);
-            grid = grid.child(
-                div()
-                    .size(px(28.0))
-                    .flex()
-                    .items_center()
-                    .justify_center()
-                    .rounded(px(self.tokens.radii.md))
-                    .border_1()
-                    .border_color(if is_selected {
-                        rgb(theme.accent)
-                    } else {
-                        rgba((theme.border << 8) | 0x40)
-                    })
-                    .bg(if is_selected {
-                        rgba((theme.accent << 8) | 0x22)
-                    } else {
-                        rgba(0x00000000)
-                    })
-                    .hover(|style| {
-                        style
-                            .bg(rgba((theme.bg_hover << 8) | 0xb3))
-                            .border_color(rgb(theme.accent))
-                    })
-                    .cursor_pointer()
-                    .child(Self::render_lucide_icon(
-                        quick_command_lucide_icon(icon),
-                        14.0,
-                        if is_selected {
-                            rgb(theme.accent)
-                        } else {
-                            rgb(theme.text_muted)
-                        },
-                    ))
-                    .on_mouse_down(
-                        MouseButton::Left,
-                        cx.listener(move |this, _event, _window, cx| {
-                            this.set_active_category_icon(icon, cx);
-                            cx.stop_propagation();
-                        }),
-                    ),
-            );
-        }
-
-        div()
-            .id("quick-commands-icon-picker-popover")
-            .absolute()
-            .top(px(48.0))
-            .left(px(112.0))
-            .p(px(8.0))
-            .rounded(px(self.tokens.radii.lg))
-            .border_1()
-            .border_color(rgba((theme.border << 8) | 0x99))
-            .bg(rgba((theme.bg_elevated << 8) | 0xfc))
-            .shadow(oxideterm_gpui_ui::theme_overlay_shadow(&self.tokens))
-            .occlude()
-            .on_mouse_down(MouseButton::Left, |_, _, cx| cx.stop_propagation())
-            .child(grid)
-            .into_any_element()
-    }
-
-    fn render_quick_commands_manager_category_dropdown(
-        &self,
-        snapshot: &QuickCommandsRenderSnapshot,
-        cx: &mut Context<Self>,
-    ) -> AnyElement {
-        let theme = self.tokens.ui;
-        let editing_draft = snapshot.category_editor.as_ref();
+        let current_filter = snapshot.manager_command_category_filter.clone();
+        let anchor = self
+            .select_anchors
+            .get(&SelectAnchorId::QuickCommandsManagerCategoryFilter)?;
 
         let mut list = div().flex().flex_col().gap(px(2.0));
 
-        for category in &snapshot.categories {
-            let is_active = category.id == snapshot.active_category;
-            let count = snapshot
-                .category_counts
-                .get(category.id.as_str())
-                .copied()
-                .unwrap_or(0);
-            let can_delete = category.id != FALLBACK_QUICK_COMMAND_CATEGORY_ID;
-
-            let is_editing_this =
-                editing_draft.and_then(|d| d.id.as_deref()) == Some(&category.id);
-
-            if is_editing_this {
-                let name_val = editing_draft.map(|d| d.name.clone()).unwrap_or_default();
-                let can_save_cat =
-                    editing_draft.map_or(false, quick_command_category_draft_can_save);
-
-                let rename_row = div()
-                    .px(px(6.0))
-                    .py(px(4.0))
-                    .flex()
-                    .items_center()
-                    .gap(px(4.0))
-                    .rounded(px(self.tokens.radii.sm))
-                    .bg(rgba((theme.accent << 8) | 0x14))
-                    .border_1()
-                    .border_color(rgb(theme.accent))
-                    .child(
-                        div()
-                            .flex_1()
-                            .min_w(px(0.0))
-                            .child(self.render_quick_command_text_input(
-                                QuickCommandInput::CategoryName,
-                                name_val,
-                                snapshot.focused_input,
-                                self.i18n
-                                    .t("terminal.quick_commands.group_name_placeholder"),
-                                cx,
-                            )),
-                    )
-                    .child(
-                        div()
-                            .size(px(22.0))
-                            .flex()
-                            .items_center()
-                            .justify_center()
-                            .rounded(px(self.tokens.radii.sm))
-                            .cursor_pointer()
-                            .hover(|s| s.bg(rgba((theme.bg_hover << 8) | 0xcc)))
-                            .child(Self::render_lucide_icon(
-                                LucideIcon::Check,
-                                12.0,
-                                if can_save_cat {
-                                    rgb(theme.accent)
-                                } else {
-                                    rgb(theme.text_muted)
-                                },
-                            ))
-                            .on_mouse_down(
-                                MouseButton::Left,
-                                cx.listener(move |this, _event, _window, cx| {
-                                    this.save_quick_command_category_editor(cx);
-                                    cx.stop_propagation();
-                                }),
-                            ),
-                    )
-                    .child(
-                        div()
-                            .size(px(22.0))
-                            .flex()
-                            .items_center()
-                            .justify_center()
-                            .rounded(px(self.tokens.radii.sm))
-                            .cursor_pointer()
-                            .hover(|s| s.bg(rgba((theme.bg_hover << 8) | 0xcc)))
-                            .child(Self::render_lucide_icon(
-                                LucideIcon::X,
-                                12.0,
-                                rgb(theme.text_muted),
-                            ))
-                            .on_mouse_down(
-                                MouseButton::Left,
-                                cx.listener(|this, _event, _window, cx| {
-                                    this.cancel_quick_command_category_editor(cx);
-                                    cx.stop_propagation();
-                                }),
-                            ),
-                    );
-
-                list = list.child(rename_row);
-            } else {
-                let drag = QuickCommandCategoryDrag {
-                    id: category.id.clone(),
-                    name: category.name.clone(),
-                    position: gpui::Point::default(),
-                    tokens: self.tokens,
-                };
-                let cat_id_for_drop = category.id.clone();
-                let cat_id_for_click = category.id.clone();
-                let cat_for_edit = category.clone();
-                let cat_id_for_delete = category.id.clone();
-
-                let row = div()
-                    .h(px(30.0))
-                    .px(px(6.0))
-                    .flex()
-                    .items_center()
-                    .justify_between()
-                    .rounded(px(self.tokens.radii.sm))
-                    .bg(if is_active {
-                        rgba((theme.accent << 8) | 0x22)
-                    } else {
-                        rgba(0x00000000)
-                    })
-                    .hover(|style| style.bg(rgba((theme.bg_hover << 8) | 0xb3)))
-                    .cursor_pointer()
-                    .text_size(px(self.tokens.metrics.ui_text_xs))
-                    .text_color(if is_active {
-                        rgb(theme.accent)
-                    } else {
-                        rgb(theme.text)
-                    })
-                    .drag_over::<QuickCommandCategoryDrag>({
-                        let target = cat_id_for_drop.clone();
-                        move |row, drag, _, _| {
-                            if drag.id != target {
-                                row.bg(rgba((theme.accent << 8) | 0x33))
-                            } else {
-                                row
-                            }
-                        }
-                    })
-                    .on_drop(cx.listener({
-                        let target = cat_id_for_drop.clone();
-                        move |this, drag: &QuickCommandCategoryDrag, _, cx| {
-                            this.terminal.update(cx, |terminal, _| {
-                                terminal
-                                    .quick_commands
-                                    .store
-                                    .move_category(&drag.id, &target);
-                            });
-                            cx.stop_propagation();
-                            cx.notify();
-                        }
-                    }))
-                    .child(
-                        div()
-                            .flex_1()
-                            .min_w(px(0.0))
-                            .flex()
-                            .items_center()
-                            .gap(px(6.0))
-                            .child(
-                                div()
-                                    .id((
-                                        gpui::ElementId::from("quick-commands-manager-cat-drag"),
-                                        category.id.clone(),
-                                    ))
-                                    .size(px(16.0))
-                                    .flex_none()
-                                    .flex()
-                                    .items_center()
-                                    .justify_center()
-                                    .rounded(px(self.tokens.radii.sm))
-                                    .cursor(gpui::CursorStyle::OpenHand)
-                                    .child(
-                                        div()
-                                            .w(px(5.0))
-                                            .flex()
-                                            .flex_wrap()
-                                            .gap(px(1.5))
-                                            .children((0..6).map(move |_| {
-                                                div()
-                                                    .size(px(1.5))
-                                                    .rounded(px(1.0))
-                                                    .bg(rgb(theme.text_muted))
-                                            })),
-                                    )
-                                    .on_mouse_down(MouseButton::Left, |_, _, cx| {
-                                        cx.stop_propagation()
-                                    })
-                                    .on_drag(drag, |drag, position, _, cx| {
-                                        let mut preview = drag.clone();
-                                        preview.position = position;
-                                        cx.new(|_| preview)
-                                    }),
-                            )
-                            .child(
-                                div()
-                                    .flex_1()
-                                    .truncate()
-                                    .child(category.name.clone())
-                                    .on_mouse_down(
-                                        MouseButton::Left,
-                                        cx.listener({
-                                            let cat_id = cat_id_for_click.clone();
-                                            move |this, _event, _window, cx| {
-                                                this.terminal.update(cx, |t, _| {
-                                                    t.quick_commands.select_category(&cat_id);
-                                                    t.quick_commands.manager_category_dropdown_open =
-                                                        false;
-                                                });
-                                                cx.stop_propagation();
-                                                cx.notify();
-                                            }
-                                        }),
-                                    ),
-                            ),
-                    )
-                    .child({
-                        let mut actions = div().flex().flex_none().items_center().gap(px(3.0));
-                        if can_delete {
-                            let delete_id = cat_id_for_delete.clone();
-                            actions = actions.child(
-                                div()
-                                    .size(px(18.0))
-                                    .flex()
-                                    .items_center()
-                                    .justify_center()
-                                    .rounded(px(self.tokens.radii.sm))
-                                    .cursor_pointer()
-                                    .hover(|s| s.bg(rgba((theme.bg_hover << 8) | 0xcc)))
-                                    .child(Self::render_lucide_icon(
-                                        LucideIcon::Trash2,
-                                        11.0,
-                                        rgb(0xef4444),
-                                    ))
-                                    .on_mouse_down(
-                                        MouseButton::Left,
-                                        cx.listener(move |this, _event, _window, cx| {
-                                            this.delete_manager_category(&delete_id, cx);
-                                            cx.stop_propagation();
-                                        }),
-                                    ),
-                            );
-                        }
-
-                        actions = actions.child(
-                            div()
-                                .size(px(18.0))
-                                .flex()
-                                .items_center()
-                                .justify_center()
-                                .rounded(px(self.tokens.radii.sm))
-                                .cursor_pointer()
-                                .hover(|s| s.bg(rgba((theme.bg_hover << 8) | 0xcc)))
-                                .child(Self::render_lucide_icon(
-                                    LucideIcon::Pencil,
-                                    11.0,
-                                    rgb(theme.text_muted),
-                                ))
-                                .on_mouse_down(
-                                    MouseButton::Left,
-                                    cx.listener(move |this, _event, window, cx| {
-                                        this.start_quick_command_category_edit(
-                                            cat_for_edit.clone(),
-                                            cx,
-                                        );
-                                        window.focus(&this.focus_handle, cx);
-                                        cx.stop_propagation();
-                                    }),
-                                ),
-                        );
-
-                        actions = actions.child(
+        // "全部" reveals every command across groups for global search.
+        let all_selected = current_filter.is_none();
+        let all_count: usize = snapshot.category_counts.values().sum();
+        list = list.child(
+            div()
+                .h(px(28.0))
+                .px(px(8.0))
+                .flex()
+                .items_center()
+                .justify_between()
+                .gap(px(6.0))
+                .rounded(px(self.tokens.radii.sm))
+                .bg(if all_selected {
+                    rgba((theme.accent << 8) | 0x22)
+                } else {
+                    rgba(0x00000000)
+                })
+                .hover(|style| style.bg(rgba((theme.bg_hover << 8) | 0xb3)))
+                .cursor_pointer()
+                .text_size(px(self.tokens.metrics.ui_text_xs))
+                .text_color(if all_selected {
+                    rgb(theme.accent)
+                } else {
+                    rgb(theme.text)
+                })
+                .child(
+                    div()
+                        .flex_1()
+                        .min_w(px(0.0))
+                        .truncate()
+                        .child(self.i18n.t("terminal.quick_commands.all_categories")),
+                )
+                .child(
+                    div()
+                        .flex_none()
+                        .flex()
+                        .items_center()
+                        .gap(px(6.0))
+                        .child(
                             div()
                                 .flex_none()
-                                .h(px(15.0))
-                                .min_w(px(15.0))
-                                .px(px(4.0))
+                                .h(px(16.0))
+                                .min_w(px(16.0))
+                                .px(px(5.0))
                                 .rounded_full()
                                 .bg(rgba((theme.border << 8) | 0x40))
                                 .text_size(px(10.0))
                                 .font_weight(gpui::FontWeight::MEDIUM)
-                                .text_color(if is_active {
+                                .text_color(if all_selected {
                                     rgb(theme.accent)
                                 } else {
                                     rgb(theme.text_muted)
@@ -2466,159 +2590,182 @@ impl WorkspaceApp {
                                 .flex()
                                 .items_center()
                                 .justify_center()
-                                .child(count.to_string()),
-                        );
+                                .child(all_count.to_string()),
+                        )
+                        .child(
+                            div()
+                                .flex_none()
+                                .w(px(12.0))
+                                .h(px(12.0))
+                                .flex()
+                                .items_center()
+                                .justify_center()
+                                .when(all_selected, |slot| {
+                                    slot.child(Self::render_lucide_icon(
+                                        LucideIcon::Check,
+                                        12.0,
+                                        rgb(theme.accent),
+                                    ))
+                                }),
+                        ),
+                )
+                .on_mouse_down(MouseButton::Left, cx.listener(|this, _event, _window, cx| {
+                    this.select_quick_commands_manager_category(None, cx);
+                    cx.stop_propagation();
+                })),
+        );
 
-                        actions
-                    });
-
-                list = list.child(row);
-            }
+        for category in &snapshot.categories {
+            let is_selected = current_filter.as_deref() == Some(category.id.as_str());
+            let cat_id = category.id.clone();
+            let count = snapshot
+                .category_counts
+                .get(category.id.as_str())
+                .copied()
+                .unwrap_or(0);
+            list = list.child(
+                div()
+                    .h(px(28.0))
+                    .px(px(8.0))
+                    .flex()
+                    .items_center()
+                    .justify_between()
+                    .gap(px(6.0))
+                    .rounded(px(self.tokens.radii.sm))
+                    .bg(if is_selected {
+                        rgba((theme.accent << 8) | 0x22)
+                    } else {
+                        rgba(0x00000000)
+                    })
+                    .hover(|style| style.bg(rgba((theme.bg_hover << 8) | 0xb3)))
+                    .cursor_pointer()
+                    .text_size(px(self.tokens.metrics.ui_text_xs))
+                    .text_color(if is_selected {
+                        rgb(theme.accent)
+                    } else {
+                        rgb(theme.text)
+                    })
+                    .child(
+                        div()
+                            .flex_1()
+                            .min_w(px(0.0))
+                            .flex()
+                            .items_center()
+                            .gap(px(6.0))
+                            .child(Self::render_lucide_icon(
+                                quick_command_lucide_icon(category.icon),
+                                13.0,
+                                if is_selected {
+                                    rgb(theme.accent)
+                                } else {
+                                    rgb(theme.text_muted)
+                                },
+                            ))
+                            .child(div().flex_1().truncate().child(category.name.clone())),
+                    )
+                    .child(
+                        div()
+                            .flex_none()
+                            .flex()
+                            .items_center()
+                            .gap(px(6.0))
+                            .child(
+                                div()
+                                    .flex_none()
+                                    .h(px(16.0))
+                                    .min_w(px(16.0))
+                                    .px(px(5.0))
+                                    .rounded_full()
+                                    .bg(rgba((theme.border << 8) | 0x40))
+                                    .text_size(px(10.0))
+                                    .font_weight(gpui::FontWeight::MEDIUM)
+                                    .text_color(if is_selected {
+                                        rgb(theme.accent)
+                                    } else {
+                                        rgb(theme.text_muted)
+                                    })
+                                    .flex()
+                                    .items_center()
+                                    .justify_center()
+                                    .child(count.to_string()),
+                            )
+                            .child(
+                                div()
+                                    .flex_none()
+                                    .w(px(12.0))
+                                    .h(px(12.0))
+                                    .flex()
+                                    .items_center()
+                                    .justify_center()
+                                    .when(is_selected, |slot| {
+                                        slot.child(Self::render_lucide_icon(
+                                            LucideIcon::Check,
+                                            12.0,
+                                            rgb(theme.accent),
+                                        ))
+                                    }),
+                            ),
+                    )
+                    .on_mouse_down(MouseButton::Left, cx.listener({
+                        let id = cat_id.clone();
+                        move |this, _event, _window, cx| {
+                            this.select_quick_commands_manager_category(Some(id.clone()), cx);
+                            cx.stop_propagation();
+                        }
+                    })),
+            );
         }
 
-        let is_creating = editing_draft.is_some_and(|d| d.id.is_none());
-        let bottom_section = if is_creating {
-            let name_val = editing_draft.map(|d| d.name.clone()).unwrap_or_default();
-            let can_save_cat =
-                editing_draft.map_or(false, quick_command_category_draft_can_save);
-
-            div()
-                .mt(px(4.0))
-                .pt(px(4.0))
-                .border_t_1()
-                .border_color(rgba((theme.border << 8) | 0x40))
-                .px(px(6.0))
-                .py(px(4.0))
-                .flex()
-                .items_center()
-                .gap(px(4.0))
-                .rounded(px(self.tokens.radii.sm))
-                .bg(rgba((theme.accent << 8) | 0x14))
-                .border_1()
-                .border_color(rgb(theme.accent))
-                .child(
-                    div()
-                        .flex_1()
-                        .min_w(px(0.0))
-                        .child(self.render_quick_command_text_input(
-                            QuickCommandInput::CategoryName,
-                            name_val,
-                            snapshot.focused_input,
-                            self.i18n
-                                .t("terminal.quick_commands.group_name_placeholder"),
-                            cx,
-                        )),
-                )
-                .child(
-                    div()
-                        .size(px(22.0))
-                        .flex()
-                        .items_center()
-                        .justify_center()
-                        .rounded(px(self.tokens.radii.sm))
-                        .cursor_pointer()
-                        .hover(|s| s.bg(rgba((theme.bg_hover << 8) | 0xcc)))
-                        .child(Self::render_lucide_icon(
-                            LucideIcon::Check,
-                            12.0,
-                            if can_save_cat {
-                                rgb(theme.accent)
-                            } else {
-                                rgb(theme.text_muted)
-                            },
-                        ))
-                        .on_mouse_down(
-                            MouseButton::Left,
-                            cx.listener(move |this, _event, _window, cx| {
-                                this.save_quick_command_category_editor(cx);
-                                cx.stop_propagation();
-                            }),
-                        ),
-                )
-                .child(
-                    div()
-                        .size(px(22.0))
-                        .flex()
-                        .items_center()
-                        .justify_center()
-                        .rounded(px(self.tokens.radii.sm))
-                        .cursor_pointer()
-                        .hover(|s| s.bg(rgba((theme.bg_hover << 8) | 0xcc)))
-                        .child(Self::render_lucide_icon(
-                            LucideIcon::X,
-                            12.0,
-                            rgb(theme.text_muted),
-                        ))
-                        .on_mouse_down(
-                            MouseButton::Left,
-                            cx.listener(|this, _event, _window, cx| {
-                                this.cancel_quick_command_category_editor(cx);
-                                cx.stop_propagation();
-                            }),
-                        ),
-                )
-        } else {
-            div()
-                .mt(px(4.0))
-                .pt(px(4.0))
-                .border_t_1()
-                .border_color(rgba((theme.border << 8) | 0x40))
-                .child(
-                    div()
-                        .h(px(26.0))
-                        .px(px(6.0))
-                        .flex()
-                        .items_center()
-                        .gap(px(6.0))
-                        .rounded(px(self.tokens.radii.sm))
-                        .cursor_pointer()
-                        .text_size(px(self.tokens.metrics.ui_text_xs))
-                        .text_color(rgb(theme.text_muted))
-                        .hover(|s| {
-                            s.bg(rgba((theme.bg_hover << 8) | 0xb3))
-                                .text_color(rgb(theme.text))
-                        })
-                        .child(Self::render_lucide_icon(
-                            LucideIcon::Plus,
-                            12.0,
-                            rgb(theme.text_muted),
-                        ))
-                        .child(self.i18n.t("terminal.quick_commands.add_group"))
-                        .on_mouse_down(
-                            MouseButton::Left,
-                            cx.listener(|this, _event, window, cx| {
-                                this.start_quick_command_category_create(cx);
-                                window.focus(&this.focus_handle, cx);
-                                cx.stop_propagation();
-                            }),
-                        ),
-                )
-        };
-
-        div()
-            .id("quick-commands-category-dropdown-popover")
-            .absolute()
-            .top(px(48.0))
-            .left(px(154.0))
-            .w(px(210.0))
-            .max_h(px(320.0))
-            .overflow_hidden()
-            .p(px(6.0))
-            .rounded(px(self.tokens.radii.lg))
+        let popup = div()
+            .id("quick-commands-manager-category-filter-dropdown")
+            .w(px(QUICK_COMMANDS_MANAGER_CATEGORY_DROPDOWN_WIDTH))
+            .max_h(px(260.0))
+            .overflow_y_scroll()
+            .p(px(4.0))
+            .rounded(px(self.tokens.radii.md))
             .border_1()
             .border_color(rgba((theme.border << 8) | 0x99))
             .bg(rgba((theme.bg_elevated << 8) | 0xfc))
             .shadow(oxideterm_gpui_ui::theme_overlay_shadow(&self.tokens))
             .occlude()
             .on_mouse_down(MouseButton::Left, |_, _, cx| cx.stop_propagation())
-            .child(
-                div()
-                    .max_h(px(240.0))
-                    .overflow_y_scrollbar()
-                    .child(list),
-            )
-            .child(bottom_section)
-            .into_any_element()
+            .child(list);
+
+        Some(
+            popover_backdrop()
+                .on_mouse_down(
+                    MouseButton::Left,
+                    cx.listener(|this, _, _, cx| {
+                        this.terminal.update(cx, |t, _| {
+                            t.quick_commands.manager_category_dropdown_open = false;
+                        });
+                        cx.stop_propagation();
+                        cx.notify();
+                    }),
+                )
+                .on_mouse_down(
+                    MouseButton::Right,
+                    cx.listener(|this, _, _, cx| {
+                        this.terminal.update(cx, |t, _| {
+                            t.quick_commands.manager_category_dropdown_open = false;
+                        });
+                        cx.stop_propagation();
+                        cx.notify();
+                    }),
+                )
+                .child(
+                    deferred(
+                        anchored()
+                            .anchor(Corner::TopLeft)
+                            .position(anchor.bounds.bottom_left())
+                            .offset(point(px(0.0), px(4.0)))
+                            .position_mode(AnchoredPositionMode::Window)
+                            .child(popup),
+                    )
+                    .with_priority(oxideterm_gpui_ui::modal::TAURI_SELECT_LAYER_PRIORITY),
+                )
+                .into_any_element(),
+        )
     }
 
     fn export_quick_commands(&mut self, cx: &mut Context<Self>) {
@@ -2788,6 +2935,11 @@ impl WorkspaceApp {
         cx: &mut Context<Self>,
     ) -> AnyElement {
         let theme = self.tokens.ui;
+        let content = if snapshot.manager_mode == QuickCommandManagerMode::Group {
+            self.render_quick_commands_manager_group_list(snapshot, cx)
+        } else {
+            self.render_quick_command_rows(snapshot, cx)
+        };
         div()
             .w(px(QUICK_COMMANDS_MANAGER_SIDEBAR_WIDTH))
             .h_full()
@@ -2798,7 +2950,200 @@ impl WorkspaceApp {
             .border_r_1()
             .border_color(rgba((theme.border << 8) | 0x66))
             .bg(rgba((theme.bg << 8) | 0x40))
-            .child(self.render_quick_command_rows(snapshot, cx))
+            .child(content)
+            .into_any_element()
+    }
+
+    fn render_quick_commands_manager_group_list(
+        &self,
+        snapshot: &QuickCommandsRenderSnapshot,
+        cx: &mut Context<Self>,
+    ) -> AnyElement {
+        let theme = self.tokens.ui;
+        let mut list = div()
+            .flex()
+            .flex_col()
+            .gap(px(2.0))
+            .px(px(6.0))
+            .pt(px(6.0))
+            .pb(px(6.0));
+        for category in &snapshot.categories {
+            let is_active = category.id == snapshot.active_category;
+            let count = snapshot
+                .category_counts
+                .get(category.id.as_str())
+                .copied()
+                .unwrap_or(0);
+            let can_delete = category.id != FALLBACK_QUICK_COMMAND_CATEGORY_ID;
+            let cat_for_edit = category.clone();
+            let cat_id_for_delete = category.id.clone();
+            let drag = QuickCommandCategoryDrag {
+                id: category.id.clone(),
+                name: category.name.clone(),
+                position: gpui::Point::default(),
+                tokens: self.tokens,
+            };
+            let cat_id_for_drop = category.id.clone();
+
+            let row = div()
+                .h(px(34.0))
+                .px(px(8.0))
+                .flex()
+                .items_center()
+                .justify_between()
+                .rounded(px(self.tokens.radii.sm))
+                .border_1()
+                .border_color(if is_active {
+                    rgba((theme.accent << 8) | 0x66)
+                } else {
+                    rgba(0x00000000)
+                })
+                .bg(if is_active {
+                    rgba((theme.accent << 8) | 0x22)
+                } else {
+                    rgba(0x00000000)
+                })
+                .hover(|style| style.bg(rgba((theme.bg_hover << 8) | 0xb3)))
+                .cursor_pointer()
+                .drag_over::<QuickCommandCategoryDrag>({
+                    let target = cat_id_for_drop.clone();
+                    move |row, drag, _, _| {
+                        if drag.id != target {
+                            row.bg(rgba((theme.accent << 8) | 0x33))
+                        } else {
+                            row
+                        }
+                    }
+                })
+                .on_drop(cx.listener({
+                    let target = cat_id_for_drop.clone();
+                    move |this, drag: &QuickCommandCategoryDrag, _, cx| {
+                        this.terminal.update(cx, |terminal, _| {
+                            terminal.quick_commands.store.move_category(&drag.id, &target);
+                        });
+                        cx.stop_propagation();
+                        cx.notify();
+                    }
+                }))
+                .child(
+                    div()
+                        .flex_1()
+                        .min_w(px(0.0))
+                        .flex()
+                        .items_center()
+                        .gap(px(6.0))
+                        .child(
+                            div()
+                                .id((
+                                    gpui::ElementId::from("quick-commands-manager-cat-drag"),
+                                    category.id.clone(),
+                                ))
+                                .size(px(16.0))
+                                .flex_none()
+                                .flex()
+                                .items_center()
+                                .justify_center()
+                                .rounded(px(self.tokens.radii.sm))
+                                .cursor(gpui::CursorStyle::OpenHand)
+                                .child(Self::render_lucide_icon(
+                                    LucideIcon::Grip,
+                                    14.0,
+                                    rgb(theme.text_muted),
+                                ))
+                                .on_mouse_down(MouseButton::Left, |_, _, cx| {
+                                    cx.stop_propagation()
+                                })
+                                .on_drag(drag, |drag, position, _, cx| {
+                                    let mut preview = drag.clone();
+                                    preview.position = position;
+                                    cx.new(|_| preview)
+                                }),
+                        )
+                        .child(Self::render_lucide_icon(
+                            quick_command_lucide_icon(category.icon),
+                            13.0,
+                            if is_active {
+                                rgb(theme.accent)
+                            } else {
+                                rgb(theme.text_muted)
+                            },
+                        ))
+                        .child(
+                            div()
+                                .flex_1()
+                                .truncate()
+                                .text_size(px(self.tokens.metrics.ui_text_sm))
+                                .font_weight(if is_active {
+                                    gpui::FontWeight::MEDIUM
+                                } else {
+                                    gpui::FontWeight::NORMAL
+                                })
+                                .text_color(if is_active {
+                                    rgb(theme.accent)
+                                } else {
+                                    rgb(theme.text)
+                                })
+                                .child(category.name.clone()),
+                        )
+                        .on_mouse_down(MouseButton::Left, cx.listener({
+                            let cat = cat_for_edit.clone();
+                            move |this, _event, _window, cx| {
+                                this.terminal.update(cx, |terminal, _cx| {
+                                    terminal.quick_commands.select_category(&cat.id);
+                                    terminal.quick_commands.start_category_edit(cat.clone());
+                                });
+                                cx.stop_propagation();
+                                cx.notify();
+                            }
+                        })),
+                )
+                .child(
+                    div()
+                        .flex_none()
+                        .flex()
+                        .items_center()
+                        .gap(px(4.0))
+                        .child(
+                            div()
+                                .flex_none()
+                                .h(px(16.0))
+                                .min_w(px(16.0))
+                                .px(px(5.0))
+                                .rounded_full()
+                                .bg(rgba((theme.border << 8) | 0x40))
+                                .text_size(px(10.0))
+                                .font_weight(gpui::FontWeight::MEDIUM)
+                                .text_color(if is_active {
+                                    rgb(theme.accent)
+                                } else {
+                                    rgb(theme.text_muted)
+                                })
+                                .flex()
+                                .items_center()
+                                .justify_center()
+                                .child(count.to_string()),
+                        )
+                        .when(can_delete, |actions| {
+                            actions.child(self.quick_command_action_button(
+                                LucideIcon::Trash2,
+                                move |this, _event, _window, cx| {
+                                    this.delete_manager_category(&cat_id_for_delete, cx);
+                                    cx.stop_propagation();
+                                    cx.notify();
+                                },
+                                cx,
+                            ))
+                        }),
+                );
+
+            list = list.child(row);
+        }
+
+        div()
+            .flex_1()
+            .min_h(px(0.0))
+            .overflow_y_scrollbar()
+            .child(list)
             .into_any_element()
     }
 
@@ -2808,30 +3153,16 @@ impl WorkspaceApp {
         cx: &mut Context<Self>,
     ) -> AnyElement {
         let theme = self.tokens.ui;
-        let content = if snapshot.command_editor.is_some() {
+        let content = if snapshot.manager_mode == QuickCommandManagerMode::Group {
+            if snapshot.category_editor.is_some() {
+                self.render_quick_command_manager_group_editor(snapshot, cx)
+            } else {
+                self.render_quick_command_manager_empty()
+            }
+        } else if snapshot.command_editor.is_some() {
             self.render_quick_command_editor(snapshot, cx)
         } else {
-            div()
-                .h_full()
-                .flex()
-                .flex_col()
-                .items_center()
-                .justify_center()
-                .gap(px(10.0))
-                .text_color(rgb(theme.text_muted))
-                .child(Self::render_lucide_icon(
-                    LucideIcon::Pencil,
-                    22.0,
-                    rgb(theme.text_muted),
-                ))
-                .child(
-                    div()
-                        .max_w(px(280.0))
-                        .text_center()
-                        .text_size(px(self.tokens.metrics.ui_text_sm))
-                        .child(self.i18n.t("terminal.quick_commands.manager_empty")),
-                )
-                .into_any_element()
+            self.render_quick_command_manager_empty()
         };
         div()
             .flex_1()
@@ -2840,6 +3171,184 @@ impl WorkspaceApp {
             .min_h(px(0.0))
             .bg(rgba((theme.bg << 8) | 0x40))
             .child(content)
+            .into_any_element()
+    }
+
+    fn render_quick_command_manager_empty(&self) -> AnyElement {
+        let theme = self.tokens.ui;
+        div()
+            .h_full()
+            .flex()
+            .flex_col()
+            .items_center()
+            .justify_center()
+            .gap(px(10.0))
+            .text_color(rgb(theme.text_muted))
+            .child(Self::render_lucide_icon(
+                LucideIcon::Pencil,
+                22.0,
+                rgb(theme.text_muted),
+            ))
+            .child(
+                div()
+                    .max_w(px(280.0))
+                    .text_center()
+                    .text_size(px(self.tokens.metrics.ui_text_sm))
+                    .child(self.i18n.t("terminal.quick_commands.manager_empty")),
+            )
+            .into_any_element()
+    }
+
+    fn render_quick_command_manager_group_editor(
+        &self,
+        snapshot: &QuickCommandsRenderSnapshot,
+        cx: &mut Context<Self>,
+    ) -> AnyElement {
+        let theme = self.tokens.ui;
+        let draft = snapshot.category_editor.clone();
+        let name = draft
+            .as_ref()
+            .map(|draft| draft.name.clone())
+            .unwrap_or_default();
+        let selected_icon = draft
+            .as_ref()
+            .map(|draft| draft.icon)
+            .unwrap_or(QuickCommandIcon::Zap);
+
+        let icons = [
+            QuickCommandIcon::Docker,
+            QuickCommandIcon::Zap,
+            QuickCommandIcon::Cpu,
+            QuickCommandIcon::Cloud,
+            QuickCommandIcon::Git,
+            QuickCommandIcon::Shield,
+            QuickCommandIcon::Package,
+            QuickCommandIcon::Rocket,
+            QuickCommandIcon::Settings,
+            QuickCommandIcon::Network,
+            QuickCommandIcon::SunDim,
+            QuickCommandIcon::Cat,
+            QuickCommandIcon::FaceSlightlySmilingPlus,
+            QuickCommandIcon::IceCreamCone,
+            QuickCommandIcon::CloudHail,
+            QuickCommandIcon::Radar,
+            QuickCommandIcon::Leaf,
+            QuickCommandIcon::Apple,
+            QuickCommandIcon::Webhook,
+            QuickCommandIcon::CirclePile,
+            QuickCommandIcon::Palette,
+            QuickCommandIcon::Sprout,
+            QuickCommandIcon::PiggyBank,
+            QuickCommandIcon::CloudSun,
+            QuickCommandIcon::MoonStar,
+            QuickCommandIcon::Snowflake,
+            QuickCommandIcon::PawPrint,
+            QuickCommandIcon::LoaderPinwheel,
+        ];
+
+        let mut grid = div().w(px(496.0)).flex().flex_wrap().gap(px(8.0));
+        for icon in icons {
+            let is_selected = selected_icon == icon;
+            grid = grid.child(
+                div()
+                    .size(px(48.0))
+                    .flex()
+                    .items_center()
+                    .justify_center()
+                    .rounded(px(self.tokens.radii.md))
+                    .border_1()
+                    .border_color(if is_selected {
+                        rgb(theme.accent)
+                    } else {
+                        rgba((theme.border << 8) | 0x40)
+                    })
+                    .bg(if is_selected {
+                        rgba((theme.accent << 8) | 0x22)
+                    } else {
+                        rgba(0x00000000)
+                    })
+                    .hover(|style| {
+                        style
+                            .bg(rgba((theme.bg_hover << 8) | 0xb3))
+                            .border_color(rgb(theme.accent))
+                    })
+                    .cursor_pointer()
+                    .child(Self::render_lucide_icon(
+                        quick_command_lucide_icon(icon),
+                        24.0,
+                        if is_selected {
+                            rgb(theme.accent)
+                        } else {
+                            rgb(theme.text_muted)
+                        },
+                    ))
+                    .on_mouse_down(MouseButton::Left, cx.listener(
+                        move |this, _event, _window, cx| {
+                            this.set_quick_command_category_editor_icon(icon, cx);
+                            cx.stop_propagation();
+                        },
+                    )),
+            );
+        }
+
+        div()
+            .h_full()
+            .flex()
+            .flex_col()
+            .child(
+                div()
+                    .flex_1()
+                    .min_h(px(0.0))
+                    .overflow_y_scrollbar()
+                    .p(px(16.0))
+                    .flex()
+                    .flex_col()
+                    .gap(px(16.0))
+                    .child(
+                        div()
+                            .rounded(px(self.tokens.radii.md))
+                            .border_1()
+                            .border_color(rgba((theme.border << 8) | 0x66))
+                            .bg(rgba((theme.bg << 8) | 0x33))
+                            .p(px(16.0))
+                            .flex()
+                            .flex_col()
+                            .gap(px(10.0))
+                            .child(
+                                div()
+                                    .text_size(px(self.tokens.metrics.ui_text_sm))
+                                    .font_weight(gpui::FontWeight::SEMIBOLD)
+                                    .text_color(rgb(theme.text))
+                                    .child(self.i18n.t("terminal.quick_commands.group_name_placeholder")),
+                            )
+                            .child(self.render_quick_command_text_input(
+                                QuickCommandInput::CategoryName,
+                                name,
+                                snapshot.focused_input,
+                                String::new(),
+                                cx,
+                            )),
+                    )
+                    .child(
+                        div()
+                            .rounded(px(self.tokens.radii.md))
+                            .border_1()
+                            .border_color(rgba((theme.border << 8) | 0x66))
+                            .bg(rgba((theme.bg << 8) | 0x33))
+                            .p(px(16.0))
+                            .flex()
+                            .flex_col()
+                            .gap(px(12.0))
+                            .child(
+                                div()
+                                    .text_size(px(self.tokens.metrics.ui_text_sm))
+                                    .font_weight(gpui::FontWeight::SEMIBOLD)
+                                    .text_color(rgb(theme.text))
+                                    .child(self.i18n.t("terminal.quick_commands.category_icon")),
+                            )
+                            .child(grid),
+                    ),
+            )
             .into_any_element()
     }
 
@@ -2879,72 +3388,32 @@ impl WorkspaceApp {
                 .into_any_element();
         }
 
-        let state = snapshot.list_state.clone();
-        let spec = TauriVirtualListSpec::new(
-            px(QUICK_COMMAND_LIST_ESTIMATED_HEIGHT),
-            QUICK_COMMAND_LIST_OVERSCAN,
-        );
-        let workspace = cx.entity();
-        let visible_commands = snapshot.visible_commands.clone();
-        let pinned = snapshot.pinned;
-        let managing = snapshot.managing;
-        let highlighted_command = snapshot.highlighted_command.clone();
+        let mut list = div()
+            .flex()
+            .flex_col()
+            .gap(px(2.0))
+            .px(px(6.0))
+            .pt(px(6.0))
+            .pb(px(6.0));
+        for command in snapshot.visible_commands.iter().cloned() {
+            list = list.child(self.render_quick_command_row(
+                command,
+                snapshot.managing,
+                snapshot.highlighted_command.as_deref(),
+                cx,
+            ));
+        }
         div()
             .flex_1()
             .min_h(px(0.0))
-            .on_scroll_wheel(|_, _, cx| cx.stop_propagation())
-            .child(tauri_virtual_list(
-                state,
-                spec,
-                move |index, _window, cx| {
-                    let visible_commands = visible_commands.clone();
-                    let highlighted_command = highlighted_command.clone();
-                    workspace.update(cx, |this, cx| {
-                        this.render_quick_command_list_item(
-                            index,
-                            &visible_commands,
-                            pinned,
-                            managing,
-                            highlighted_command.as_deref(),
-                            cx,
-                        )
-                    })
-                },
-            ))
-            .into_any_element()
-    }
-
-    fn render_quick_command_list_item(
-        &self,
-        index: usize,
-        visible_commands: &[QuickCommand],
-        pinned: bool,
-        managing: bool,
-        highlighted_command: Option<&str>,
-        cx: &mut Context<Self>,
-    ) -> AnyElement {
-        let total = visible_commands.len();
-        let Some(command) = visible_commands.get(index).cloned() else {
-            return div().into_any_element();
-        };
-        div()
-            .px(px(8.0))
-            .when(index == 0, |item| item.pt(px(8.0)))
-            .pb(px(if index + 1 == total { 8.0 } else { 4.0 }))
-            .child(self.render_quick_command_row(
-                command,
-                pinned,
-                managing,
-                highlighted_command,
-                cx,
-            ))
+            .overflow_y_scrollbar()
+            .child(list)
             .into_any_element()
     }
 
     fn render_quick_command_row(
         &self,
         command: QuickCommand,
-        _pinned: bool,
         managing: bool,
         highlighted_command: Option<&str>,
         cx: &mut Context<Self>,
@@ -2954,10 +3423,15 @@ impl WorkspaceApp {
         let command_for_insert = command.command.clone();
         let command_for_run = command.clone();
         let command_for_primary_action = command.clone();
-        let command_id_for_move_up = command.id.clone();
-        let command_id_for_move_down = command.id.clone();
         let command_id_for_delete = command.id.clone();
         let command_id_for_hover = command.id.clone();
+        let command_id_for_drop = command.id.clone();
+        let drag = QuickCommandDrag {
+            id: command.id.clone(),
+            name: command.name.clone(),
+            position: gpui::Point::default(),
+            tokens: self.tokens,
+        };
         let description_for_tooltip = command.description.clone();
         let tooltip_id = format!("quick-command-description-{}", command.id);
         let tooltip_id_for_hover = tooltip_id.clone();
@@ -2978,6 +3452,162 @@ impl WorkspaceApp {
             "quick-command-row",
             command.id.as_str(),
         );
+
+        if managing {
+            let row = div()
+                .id(("quick-command-row", selection_group_id))
+                .h(px(34.0))
+                .px(px(8.0))
+                .flex()
+                .items_center()
+                .justify_between()
+                .rounded(px(self.tokens.radii.sm))
+                .border_1()
+                .border_color(if is_selected_in_manager {
+                    rgba((theme.accent << 8) | 0x66)
+                } else {
+                    rgba(0x00000000)
+                })
+                .bg(if is_selected_in_manager {
+                    rgba((theme.accent << 8) | 0x22)
+                } else if highlighted {
+                    rgba((theme.bg_hover << 8) | 0xb3)
+                } else {
+                    rgba(0x00000000)
+                })
+                .hover(move |style| {
+                    style
+                        .bg(rgba((theme.bg_hover << 8) | 0xb3))
+                        .text_color(rgb(theme.text))
+                })
+                .on_mouse_move(
+                    cx.listener(move |this, event: &gpui::MouseMoveEvent, _window, cx| {
+                        if this.terminal.update(cx, |terminal, _cx| {
+                            terminal
+                                .quick_commands
+                                .set_highlighted_command(command_id_for_hover.clone())
+                        }) {
+                            cx.notify();
+                        }
+                        if let Some(description) = description_for_tooltip.clone() {
+                            this.queue_workspace_tooltip(
+                                tooltip_id.clone(),
+                                description,
+                                f32::from(event.position.x) + 12.0,
+                                f32::from(event.position.y) + 16.0,
+                                cx,
+                            );
+                        }
+                    }),
+                )
+                .on_hover(cx.listener(move |this, hovered: &bool, _window, cx| {
+                    if !*hovered {
+                        this.clear_workspace_tooltip(&tooltip_id_for_hover, cx);
+                    }
+                }))
+                .drag_over::<QuickCommandDrag>({
+                    let target = command_id_for_drop.clone();
+                    move |row, drag, _, _| {
+                        if drag.id != target {
+                            row.bg(rgba((theme.accent << 8) | 0x33))
+                        } else {
+                            row
+                        }
+                    }
+                })
+                .on_drop(cx.listener({
+                    let target = command_id_for_drop.clone();
+                    move |this, drag: &QuickCommandDrag, _, cx| {
+                        this.move_quick_command_to(&drag.id, &target, cx);
+                        cx.stop_propagation();
+                    }
+                }))
+                .child(
+                    div()
+                        .flex_1()
+                        .min_w(px(0.0))
+                        .flex()
+                        .items_center()
+                        .gap(px(6.0))
+                        .child(
+                            div()
+                                .id((
+                                    gpui::ElementId::from("quick-commands-manager-cmd-drag"),
+                                    command.id.clone(),
+                                ))
+                                .size(px(16.0))
+                                .flex_none()
+                                .flex()
+                                .items_center()
+                                .justify_center()
+                                .rounded(px(self.tokens.radii.sm))
+                                .cursor(gpui::CursorStyle::OpenHand)
+                                .child(Self::render_lucide_icon(
+                                    LucideIcon::Grip,
+                                    14.0,
+                                    rgb(theme.text_muted),
+                                ))
+                                .on_mouse_down(MouseButton::Left, |_, _, cx| cx.stop_propagation())
+                                .on_drag(drag, |drag, position, _, cx| {
+                                    let mut preview = drag.clone();
+                                    preview.position = position;
+                                    cx.new(|_| preview)
+                                }),
+                        )
+                        .child(
+                            div()
+                                .flex_1()
+                                .truncate()
+                                .text_size(px(self.tokens.metrics.ui_text_sm))
+                                .font_weight(if is_selected_in_manager {
+                                    gpui::FontWeight::MEDIUM
+                                } else {
+                                    gpui::FontWeight::NORMAL
+                                })
+                                .text_color(if is_selected_in_manager {
+                                    rgb(theme.accent)
+                                } else {
+                                    rgb(theme.text)
+                                })
+                                .child(self.render_row_safe_selectable_display_text_in_group(
+                                    selection_group_id,
+                                    "quick-command-row-cell",
+                                    ("name", command.id.as_str()),
+                                    0,
+                                    command.name.clone(),
+                                    if is_selected_in_manager { theme.accent } else { theme.text },
+                                    None,
+                                    cx,
+                                )),
+                        )
+                        .cursor_pointer()
+                        .on_mouse_down(
+                            MouseButton::Left,
+                            cx.listener(move |this, _event, window, cx| {
+                                this.start_quick_command_edit(
+                                    command_for_primary_action.clone(),
+                                    cx,
+                                );
+                                window.focus(&this.focus_handle, cx);
+                                cx.stop_propagation();
+                                cx.notify();
+                            }),
+                        ),
+                )
+                .child(self.quick_command_action_button(
+                    LucideIcon::Trash2,
+                    move |this, _event, _window, cx| {
+                        this.terminal.update(cx, |terminal, _cx| {
+                            terminal.quick_commands.delete_command(&command_id_for_delete)
+                        });
+                        cx.stop_propagation();
+                        cx.notify();
+                    },
+                    cx,
+                ));
+            return row.into_any_element();
+        }
+
         div()
             .id(("quick-command-row", selection_group_id))
             .rounded(px(self.tokens.radii.md))
@@ -3033,6 +3663,48 @@ impl WorkspaceApp {
                     this.clear_workspace_tooltip(&tooltip_id_for_hover, cx);
                 }
             }))
+            .drag_over::<QuickCommandDrag>({
+                let target = command_id_for_drop.clone();
+                move |row, drag, _, _| {
+                    if drag.id != target {
+                        row.bg(rgba((theme.accent << 8) | 0x33))
+                    } else {
+                        row
+                    }
+                }
+            })
+            .on_drop(cx.listener({
+                let target = command_id_for_drop.clone();
+                move |this, drag: &QuickCommandDrag, _, cx| {
+                    this.move_quick_command_to(&drag.id, &target, cx);
+                    cx.stop_propagation();
+                }
+            }))
+            .child(
+                div()
+                    .id((
+                        gpui::ElementId::from("quick-commands-manager-cmd-drag"),
+                        command.id.clone(),
+                    ))
+                    .flex_none()
+                    .size(px(16.0))
+                    .flex()
+                    .items_center()
+                    .justify_center()
+                    .rounded(px(self.tokens.radii.sm))
+                    .cursor(gpui::CursorStyle::OpenHand)
+                    .child(Self::render_lucide_icon(
+                        LucideIcon::Grip,
+                        14.0,
+                        rgb(theme.text_muted),
+                    ))
+                    .on_mouse_down(MouseButton::Left, |_, _, cx| cx.stop_propagation())
+                    .on_drag(drag, |drag, position, _, cx| {
+                        let mut preview = drag.clone();
+                        preview.position = position;
+                        cx.new(|_| preview)
+                    }),
+            )
             .child(
                 div()
                     .flex_1()
@@ -3154,34 +3826,6 @@ impl WorkspaceApp {
             })
             .when(managing, |row| {
                 row.child(self.quick_command_action_button(
-                    LucideIcon::ArrowUp,
-                    move |this, _event, _window, cx| {
-                        this.terminal.update(cx, |terminal, _cx| {
-                            terminal
-                                .quick_commands
-                                .store
-                                .move_command(&command_id_for_move_up, -1)
-                        });
-                        cx.stop_propagation();
-                        cx.notify();
-                    },
-                    cx,
-                ))
-                .child(self.quick_command_action_button(
-                    LucideIcon::ArrowDown,
-                    move |this, _event, _window, cx| {
-                        this.terminal.update(cx, |terminal, _cx| {
-                            terminal
-                                .quick_commands
-                                .store
-                                .move_command(&command_id_for_move_down, 1)
-                        });
-                        cx.stop_propagation();
-                        cx.notify();
-                    },
-                    cx,
-                ))
-                .child(self.quick_command_action_button(
                     LucideIcon::Trash2,
                     move |this, _event, _window, cx| {
                         this.terminal.update(cx, |terminal, _cx| {
@@ -3565,7 +4209,7 @@ impl WorkspaceApp {
         let current_cat_name = current_category
             .map(|c| c.name.clone())
             .unwrap_or_else(|| "All".to_string());
-        let current_cat_icon = current_category.map(|c| c.icon).unwrap_or(QuickCommandIcon::Folder);
+        let current_cat_icon = current_category.map(|c| c.icon).unwrap_or(QuickCommandIcon::Zap);
 
         let button = div()
             .id("quick-command-editor-category-btn")
@@ -3617,7 +4261,7 @@ impl WorkspaceApp {
                 }),
             );
 
-        let button = select_anchor_probe(
+        select_anchor_probe(
             SelectAnchorId::QuickCommandEditorCategory,
             button,
             {
@@ -3628,134 +4272,130 @@ impl WorkspaceApp {
                     });
                 }
             },
-        );
+        )
+        .into_any_element()
+    }
 
-        let mut wrap = div().relative().child(button);
+    fn render_quick_command_editor_category_menu(
+        &self,
+        snapshot: &QuickCommandsRenderSnapshot,
+        cx: &mut Context<Self>,
+    ) -> Option<AnyElement> {
+        let theme = self.tokens.ui;
+        let draft = snapshot.command_editor.as_ref()?;
+        let anchor = self
+            .select_anchors
+            .get(&SelectAnchorId::QuickCommandEditorCategory)?;
 
-        if is_open {
-            let mut list = div().flex().flex_col().gap(px(2.0));
-            for category in &snapshot.categories {
-                let cat_id = category.id.clone();
-                let is_selected = cat_id == draft.category;
-                list = list.child(
-                    div()
-                        .h(px(26.0))
-                        .px(px(8.0))
-                        .rounded(px(self.tokens.radii.sm))
-                        .flex()
-                        .items_center()
-                        .gap(px(6.0))
-                        .cursor_pointer()
-                        .bg(if is_selected {
-                            rgba((theme.accent << 8) | 0x22)
+        let mut list = div().flex().flex_col().gap(px(2.0));
+        for category in &snapshot.categories {
+            let cat_id = category.id.clone();
+            let is_selected = cat_id == draft.category;
+            list = list.child(
+                div()
+                    .h(px(26.0))
+                    .px(px(8.0))
+                    .rounded(px(self.tokens.radii.sm))
+                    .flex()
+                    .items_center()
+                    .gap(px(6.0))
+                    .cursor_pointer()
+                    .bg(if is_selected {
+                        rgba((theme.accent << 8) | 0x22)
+                    } else {
+                        rgba(0x00000000)
+                    })
+                    .hover(|s| s.bg(rgba((theme.bg_hover << 8) | 0xb3)))
+                    .child(Self::render_lucide_icon(
+                        quick_command_lucide_icon(category.icon),
+                        12.0,
+                        if is_selected {
+                            rgb(theme.accent)
                         } else {
-                            rgba(0x00000000)
-                        })
-                        .hover(|s| s.bg(rgba((theme.bg_hover << 8) | 0xb3)))
-                        .child(Self::render_lucide_icon(
-                            quick_command_lucide_icon(category.icon),
-                            12.0,
-                            if is_selected {
+                            rgb(theme.text_muted)
+                        },
+                    ))
+                    .child(
+                        div()
+                            .flex_1()
+                            .truncate()
+                            .text_size(px(self.tokens.metrics.ui_text_xs))
+                            .font_weight(if is_selected {
+                                gpui::FontWeight::MEDIUM
+                            } else {
+                                gpui::FontWeight::NORMAL
+                            })
+                            .text_color(if is_selected {
                                 rgb(theme.accent)
                             } else {
-                                rgb(theme.text_muted)
-                            },
-                        ))
-                        .child(
-                            div()
-                                .flex_1()
-                                .truncate()
-                                .text_size(px(self.tokens.metrics.ui_text_xs))
-                                .font_weight(if is_selected {
-                                    gpui::FontWeight::MEDIUM
-                                } else {
-                                    gpui::FontWeight::NORMAL
-                                })
-                                .text_color(if is_selected {
-                                    rgb(theme.accent)
-                                } else {
-                                    rgb(theme.text)
-                                })
-                                .child(category.name.clone()),
-                        )
-                        .on_mouse_down(
-                            MouseButton::Left,
-                            cx.listener(move |this, _event, _window, cx| {
-                                this.terminal.update(cx, |terminal, _cx| {
-                                    terminal.quick_commands.set_command_category(cat_id.clone());
-                                    terminal.quick_commands.editor_category_menu_open = false;
-                                });
-                                cx.stop_propagation();
-                                cx.notify();
-                            }),
-                        ),
-                );
-            }
+                                rgb(theme.text)
+                            })
+                            .child(category.name.clone()),
+                    )
+                    .on_mouse_down(
+                        MouseButton::Left,
+                        cx.listener(move |this, _event, _window, cx| {
+                            this.terminal.update(cx, |terminal, _cx| {
+                                terminal.quick_commands.set_command_category(cat_id.clone());
+                                terminal.quick_commands.editor_category_menu_open = false;
+                            });
+                            cx.stop_propagation();
+                            cx.notify();
+                        }),
+                    ),
+            );
+        }
 
-            let popup = div()
-                .w(px(160.0))
-                .max_h(px(200.0))
-                .overflow_y_scrollbar()
-                .p(px(4.0))
-                .rounded(px(self.tokens.radii.md))
-                .border_1()
-                .border_color(rgba((theme.border << 8) | 0x99))
-                .bg(rgba((theme.bg_elevated << 8) | 0xfc))
-                .shadow(oxideterm_gpui_ui::theme_overlay_shadow(&self.tokens))
-                .occlude()
-                .on_mouse_down(MouseButton::Left, |_, _, cx| cx.stop_propagation())
-                .child(list);
+        let popup = div()
+            .id("quick-command-editor-category-popup")
+            .w(px(160.0))
+            .max_h(px(200.0))
+            .overflow_y_scroll()
+            .p(px(4.0))
+            .rounded(px(self.tokens.radii.md))
+            .border_1()
+            .border_color(rgba((theme.border << 8) | 0x99))
+            .bg(rgba((theme.bg_elevated << 8) | 0xfc))
+            .shadow(oxideterm_gpui_ui::theme_overlay_shadow(&self.tokens))
+            .occlude()
+            .on_mouse_down(MouseButton::Left, |_, _, cx| cx.stop_propagation())
+            .child(list);
 
-            if let Some(anchor) = self.select_anchors.get(&SelectAnchorId::QuickCommandEditorCategory) {
-                wrap = wrap.child(
-                    popover_backdrop()
-                        .on_mouse_down(
-                            MouseButton::Left,
-                            cx.listener(|this, _, _, cx| {
-                                this.terminal.update(cx, |t, _| {
-                                    t.quick_commands.editor_category_menu_open = false;
-                                });
-                                cx.stop_propagation();
-                                cx.notify();
-                            }),
-                        )
-                        .on_mouse_down(
-                            MouseButton::Right,
-                            cx.listener(|this, _, _, cx| {
-                                this.terminal.update(cx, |t, _| {
-                                    t.quick_commands.editor_category_menu_open = false;
-                                });
-                                cx.stop_propagation();
-                                cx.notify();
-                            }),
-                        )
-                        .child(
-                            deferred(
-                                anchored()
-                                    .anchor(Corner::TopRight)
-                                    .position(anchor.bounds.bottom_right())
-                                    .offset(point(px(0.0), px(4.0)))
-                                    .position_mode(AnchoredPositionMode::Window)
-                                    .child(popup),
-                            )
-                            .with_priority(oxideterm_gpui_ui::modal::TAURI_SELECT_LAYER_PRIORITY),
-                        ),
-                );
-            } else {
-                wrap = wrap.child(
+        Some(
+            popover_backdrop()
+                .on_mouse_down(
+                    MouseButton::Left,
+                    cx.listener(|this, _, _, cx| {
+                        this.terminal.update(cx, |t, _| {
+                            t.quick_commands.editor_category_menu_open = false;
+                        });
+                        cx.stop_propagation();
+                        cx.notify();
+                    }),
+                )
+                .on_mouse_down(
+                    MouseButton::Right,
+                    cx.listener(|this, _, _, cx| {
+                        this.terminal.update(cx, |t, _| {
+                            t.quick_commands.editor_category_menu_open = false;
+                        });
+                        cx.stop_propagation();
+                        cx.notify();
+                    }),
+                )
+                .child(
                     deferred(
-                        div()
-                            .absolute()
-                            .top(px(32.0))
-                            .right_0()
+                        anchored()
+                            .anchor(Corner::TopRight)
+                            .position(anchor.bounds.bottom_right())
+                            .offset(point(px(0.0), px(4.0)))
+                            .position_mode(AnchoredPositionMode::Window)
                             .child(popup),
                     )
                     .with_priority(oxideterm_gpui_ui::modal::TAURI_SELECT_LAYER_PRIORITY),
-                );
-            }
-        }
-
-        wrap.into_any_element()
+                )
+                .into_any_element(),
+        )
     }
 
     fn render_quick_command_parameter_editor(
@@ -4444,7 +5084,11 @@ impl WorkspaceApp {
         cx.notify();
     }
 
-    fn start_quick_command_edit(&mut self, command: QuickCommand, cx: &mut Context<Self>) {
+    pub(in crate::workspace) fn start_quick_command_edit(
+        &mut self,
+        command: QuickCommand,
+        cx: &mut Context<Self>,
+    ) {
         self.terminal.update(cx, |terminal, _cx| {
             terminal.quick_commands.start_command_edit(command)
         });
@@ -4455,17 +5099,6 @@ impl WorkspaceApp {
     fn start_quick_command_category_create(&mut self, cx: &mut Context<Self>) {
         self.terminal.update(cx, |terminal, _cx| {
             terminal.quick_commands.start_category_create()
-        });
-        cx.notify();
-    }
-
-    fn start_quick_command_category_edit(
-        &mut self,
-        category: QuickCommandCategory,
-        cx: &mut Context<Self>,
-    ) {
-        self.terminal.update(cx, |terminal, _cx| {
-            terminal.quick_commands.start_category_edit(category)
         });
         cx.notify();
     }
@@ -4486,13 +5119,6 @@ impl WorkspaceApp {
         }
     }
 
-    fn save_quick_command_category_editor(&mut self, cx: &mut Context<Self>) {
-        if self.terminal.update(cx, |terminal, _cx| {
-            terminal.quick_commands.save_category_editor()
-        }) {
-            cx.notify();
-        }
-    }
 }
 
 #[cfg(test)]

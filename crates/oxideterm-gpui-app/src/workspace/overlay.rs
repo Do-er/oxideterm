@@ -62,6 +62,9 @@ pub(in crate::workspace) enum WorkspaceOverlayIntent {
         label: String,
         x: f32,
         y: f32,
+        // Some surfaces must always wait out the delay instead of inheriting
+        // the warm-switch fast path from a recently visible tooltip.
+        force_delay: bool,
     },
     ClearTooltip {
         id: String,
@@ -390,9 +393,20 @@ impl WorkspaceOverlayEntity {
             WorkspaceOverlayIntent::ConnectionTraceEvents(events) => {
                 self.apply_connection_trace_events(events, cx.background_executor().now())
             }
-            WorkspaceOverlayIntent::QueueTooltip { id, label, x, y } => {
-                self.queue_tooltip(id, label, x, y, cx.background_executor().now())
-            }
+            WorkspaceOverlayIntent::QueueTooltip {
+                id,
+                label,
+                x,
+                y,
+                force_delay,
+            } => self.queue_tooltip_with_force(
+                id,
+                label,
+                x,
+                y,
+                force_delay,
+                cx.background_executor().now(),
+            ),
             WorkspaceOverlayIntent::ClearTooltip { id } => {
                 self.clear_tooltip(&id, cx.background_executor().now())
             }
@@ -677,7 +691,21 @@ impl WorkspaceOverlayEntity {
         );
     }
 
+    // Test-only convenience; production always states whether it forces the delay.
+    #[cfg(test)]
     fn queue_tooltip(&mut self, id: String, label: String, x: f32, y: f32, now: Instant) -> bool {
+        self.queue_tooltip_with_force(id, label, x, y, false, now)
+    }
+
+    fn queue_tooltip_with_force(
+        &mut self,
+        id: String,
+        label: String,
+        x: f32,
+        y: f32,
+        force_delay: bool,
+        now: Instant,
+    ) -> bool {
         if let Some(tooltip) = self.tooltip.as_mut()
             && tooltip.id == id
             && tooltip.remove_at.is_none_or(|deadline| now < deadline)
@@ -710,7 +738,8 @@ impl WorkspaceOverlayEntity {
             .tooltip
             .take()
             .filter(|tooltip| tooltip.remove_at.is_none_or(|deadline| now < deadline));
-        let warm = previous.is_some() || self.tooltip_warm_until.is_some_and(|until| now < until);
+        let warm = !force_delay
+            && (previous.is_some() || self.tooltip_warm_until.is_some_and(|until| now < until));
         if warm {
             self.tooltip_pending = None;
             let mut tooltip =

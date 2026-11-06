@@ -16,7 +16,8 @@ mod v1;
 
 pub use editing::{
     FALLBACK_QUICK_COMMAND_CATEGORY_ID, QuickCommandCategoryDraft, QuickCommandDraft,
-    delete_quick_command, delete_quick_command_category, ensure_active_quick_command_category,
+    delete_quick_command, delete_quick_command_category,
+    delete_quick_command_category_with_commands, ensure_active_quick_command_category,
     match_quick_command_host_pattern, match_quick_command_host_patterns,
     quick_command_available_for_target, quick_command_category_draft_can_save,
     quick_command_draft_can_save, upsert_quick_command, upsert_quick_command_category,

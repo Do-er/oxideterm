@@ -111,6 +111,7 @@ mod tests {
 
         assert_eq!(snapshot.version, QUICK_COMMANDS_SCHEMA_VERSION);
         assert_eq!(snapshot.categories[0].id, "ops");
+        assert_eq!(snapshot.categories[0].icon, QuickCommandIcon::Cpu);
         assert_eq!(snapshot.categories[0].icon_color, None);
         assert_eq!(snapshot.commands[0].command, "uptime");
         assert_eq!(

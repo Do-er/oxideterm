@@ -635,7 +635,7 @@ mod tests {
         let categories = vec![QuickCommandCategory {
             id: "ops".to_string(),
             name: "Operations".to_string(),
-            icon: QuickCommandIcon::Server,
+            icon: QuickCommandIcon::Zap,
             icon_color: None,
             sort_order: 0,
         }];
@@ -659,7 +659,7 @@ mod tests {
         }];
 
         let metadata = native_plugin_quick_command_metadata(&categories, &commands);
-        assert_eq!(metadata["categories"][0]["icon"], "server");
+        assert_eq!(metadata["categories"][0]["icon"], "zap");
         assert_eq!(metadata["commands"][0]["hasDescription"], true);
         assert_eq!(metadata["commands"][0]["hostRestricted"], true);
         let command = &metadata["commands"][0];

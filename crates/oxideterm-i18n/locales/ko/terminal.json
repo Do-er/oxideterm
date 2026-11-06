@@ -332,7 +332,13 @@
       "toast_executed": "Quick command sent",
       "add_group": "Add group",
       "delete_group": "Delete group",
-      "delete_group_description": "이 그룹을 삭제하기 전에 \"{{name}}\"의 명령을 \"{{destination}}\"(으)로 이동합니다.",
+      "delete_group_description": "\"{{name}}\"의 모든 명령을 \"{{destination}}\"(으)로 이동하거나 삭제하시겠습니까?",
+      "commands": "명령",
+      "add_group_short": "그룹",
+      "all_categories": "전체",
+      "search": "검색",
+      "move_commands": "이동",
+      "delete": "삭제",
       "group_name_placeholder": "Group name",
       "manage": "관리",
       "import": "빠른 명령 가져오기",
@@ -365,7 +371,8 @@
       "risk_medium": "중간",
       "risk_dynamic": "동적",
       "category_icon": "아이콘",
-      "line_delay_label": "줄 간격 지연 (ms)"
+      "line_delay_label": "줄 간격 지연 (ms)",
+      "edit": "편집"
     },
     "cwd": {
       "search_directories": "파일 및 디렉터리 검색...",

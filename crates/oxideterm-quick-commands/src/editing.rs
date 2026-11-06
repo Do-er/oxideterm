@@ -71,15 +71,16 @@ pub fn visible_quick_commands(
 
 pub fn visible_quick_commands_for_management(
     commands: &[QuickCommand],
-    active_category: &str,
+    category_filter: Option<&str>,
     query: &str,
 ) -> Vec<QuickCommand> {
     // Management must expose unavailable commands so users can repair their
-    // host and protocol constraints without switching terminal context.
+    // host and protocol constraints without switching terminal context. A
+    // `None` filter means "all groups" so the manager can search globally.
     let normalized_query = query.trim().to_lowercase();
     commands
         .iter()
-        .filter(|command| command.category == active_category)
+        .filter(|command| category_filter.is_none_or(|id| command.category == id))
         .filter(|command| quick_command_matches_query(command, &normalized_query))
         .cloned()
         .collect()
@@ -256,6 +257,21 @@ pub fn delete_quick_command_category(
     for command in commands.iter_mut().filter(|command| command.category == id) {
         command.category = FALLBACK_QUICK_COMMAND_CATEGORY_ID.to_string();
     }
+    true
+}
+
+pub fn delete_quick_command_category_with_commands(
+    categories: &mut Vec<QuickCommandCategory>,
+    commands: &mut Vec<QuickCommand>,
+    id: &str,
+) -> bool {
+    if id == FALLBACK_QUICK_COMMAND_CATEGORY_ID
+        || !categories.iter().any(|category| category.id == id)
+    {
+        return false;
+    }
+    categories.retain(|category| category.id != id);
+    commands.retain(|command| command.category != id);
     true
 }
 

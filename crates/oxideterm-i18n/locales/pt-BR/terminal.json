@@ -332,7 +332,13 @@
       "toast_executed": "Quick command sent",
       "add_group": "Add group",
       "delete_group": "Delete group",
-      "delete_group_description": "Os comandos em \"{{name}}\" serão movidos para \"{{destination}}\" antes da exclusão deste grupo.",
+      "delete_group_description": "Mover todos os comandos em \"{{name}}\" para \"{{destination}}\" ou excluí-los?",
+      "commands": "Comandos",
+      "add_group_short": "Grupo",
+      "all_categories": "Todos",
+      "search": "Pesquisar",
+      "move_commands": "Mover",
+      "delete": "Excluir",
       "group_name_placeholder": "Group name",
       "manage": "Gerenciar",
       "import": "Importar comandos rápidos",
@@ -365,7 +371,8 @@
       "risk_medium": "Médio",
       "risk_dynamic": "Dinâmico",
       "category_icon": "Ícone",
-      "line_delay_label": "Atraso entre linhas (ms)"
+      "line_delay_label": "Atraso entre linhas (ms)",
+      "edit": "Editar"
     },
     "cwd": {
       "search_directories": "Pesquisar arquivos e diretórios...",
