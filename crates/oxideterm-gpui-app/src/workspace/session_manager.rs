@@ -40,7 +40,10 @@ use oxideterm_gpui_ui::{
         ToolbarButtonIconPosition, ToolbarButtonOptions,
     },
     checkbox, confirm_dialog,
-    context_menu::{ContextMenuActionableStyle, context_menu_event_boundary},
+    context_menu::{
+        ContextMenuActionableStyle, context_menu_event_boundary,
+        context_menu_item_height_estimate,
+    },
     dropdown_menu::{
         DropdownMenuItemKind, dropdown_menu_content, dropdown_menu_item, dropdown_menu_separator,
     },

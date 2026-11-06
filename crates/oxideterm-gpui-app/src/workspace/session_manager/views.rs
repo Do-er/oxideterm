@@ -2429,6 +2429,31 @@ impl WorkspaceApp {
         cx: &mut Context<Self>,
     ) -> AnyElement {
         let viewport = window.viewport_size();
+        let batch_selected_tunnels =
+            matches!(&menu.target, SessionManagerRowActionTarget::Batch).then(|| {
+                self.session_manager
+                    .read(cx)
+                    .selected_items
+                    .iter()
+                    .map(|target| match target {
+                        SessionManagerSelectionTarget::Tunnel(id) => Some(id.clone()),
+                        _ => None,
+                    })
+                    .collect::<Option<Vec<_>>>()
+            });
+        // Starting a tunnel needs its host credentials, so the action only
+        // applies when every selected row is a tunnel of the same host, and at
+        // least one of them is not already running.
+        let start_tunnels = batch_selected_tunnels.flatten().filter(|ids| {
+            ids.iter().any(|id| {
+                !matches!(
+                    self.ssh_tunnel_status(id),
+                    oxideterm_forwarding::ForwardStatus::Active
+                        | oxideterm_forwarding::ForwardStatus::Starting
+                        | oxideterm_forwarding::ForwardStatus::Suspended
+                )
+            })
+        });
         let menu_height = match &menu.target {
             SessionManagerRowActionTarget::Connection(_) => {
                 MANAGER_ROW_ACTION_MENU_CONNECTION_HEIGHT
@@ -2447,7 +2472,14 @@ impl WorkspaceApp {
             }
             SessionManagerRowActionTarget::GroupRoot => MANAGER_ROW_ACTION_MENU_PROFILE_HEIGHT,
             SessionManagerRowActionTarget::Group(_) => MANAGER_ROW_ACTION_MENU_GROUP_HEIGHT,
-            SessionManagerRowActionTarget::Batch => MANAGER_ROW_ACTION_MENU_BATCH_HEIGHT,
+            SessionManagerRowActionTarget::Batch => {
+                MANAGER_ROW_ACTION_MENU_BATCH_HEIGHT
+                    + if start_tunnels.is_some() {
+                        context_menu_item_height_estimate(&self.tokens)
+                    } else {
+                        0.0
+                    }
+            }
         };
         let (requested_x, requested_y) = match menu.origin {
             SessionManagerRowActionMenuOrigin::ActionButton => (
@@ -2769,6 +2801,25 @@ impl WorkspaceApp {
         }
 
         if matches!(&menu.target, SessionManagerRowActionTarget::Batch) {
+            popup = popup.when_some(start_tunnels, |popup, ids| {
+                popup.child(self.render_session_manager_menu_action(
+                    dropdown_menu_item(
+                        &self.tokens,
+                        self.i18n.t("ssh_tunnel.start_selected"),
+                        DropdownMenuItemKind::Plain,
+                        false,
+                        false,
+                    ),
+                    false,
+                    false,
+                    has_background,
+                    move |this, _event, window, cx| {
+                        this.start_ssh_tunnels(&ids, false, window, cx);
+                        cx.stop_propagation();
+                    },
+                    cx,
+                ))
+            });
             popup = popup
                 .child(self.render_session_manager_menu_action(
                     dropdown_menu_item(
