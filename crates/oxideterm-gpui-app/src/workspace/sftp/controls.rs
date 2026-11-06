@@ -7,6 +7,7 @@ impl WorkspaceApp {
         _has_background: bool,
         cx: &mut Context<Self>,
     ) -> AnyElement {
+        let ui = self.sftp_ui_metrics();
         let (label, message) = match error {
             SftpViewError::Operation(message) => ("sftp.errors.connection_sync", message),
             SftpViewError::Directory(message) => ("sftp.errors.directory_load_failed", message),
@@ -21,7 +22,7 @@ impl WorkspaceApp {
             .bg(rgba((SFTP_YELLOW << 8) | 0x1a))
             .px(px(12.0))
             .py(px(8.0))
-            .text_size(px(SFTP_TEXT_XS))
+            .text_size(px(ui.text_xs))
             .text_color(rgb(self.tokens.ui.text))
             .child(self.render_selectable_text_scoped(
                 "sftp-init-error",
@@ -73,11 +74,12 @@ impl WorkspaceApp {
         listener: impl Fn(&MouseDownEvent, &mut Window, &mut App) + 'static,
         workspace: gpui::Entity<Self>,
     ) -> AnyElement {
+        let ui = self.sftp_ui_metrics();
         self.workspace_tooltip_icon_button(
             icon,
-            SFTP_ICON_SM,
+            ui.size(SFTP_ICON_SM),
             rgb(self.tokens.ui.text),
-            IconButtonOptions::opaque_toolbar(SFTP_TOOL_BUTTON, ButtonRadius::Md),
+            IconButtonOptions::opaque_toolbar(ui.size(SFTP_TOOL_BUTTON), ButtonRadius::Md),
             title,
             "sftp-icon-button",
             true,
@@ -110,6 +112,7 @@ impl WorkspaceApp {
         &self,
         cx: &mut Context<Self>,
     ) -> AnyElement {
+        let ui = self.sftp_ui_metrics();
         let path = self.sftp_terminal_directory(cx);
         let mut title = self.i18n.t("sftp.toolbar.reveal_terminal_directory");
         if let Some(combo) = crate::keybindings::action_definition("sftp.revealTerminalDirectory")
@@ -130,11 +133,11 @@ impl WorkspaceApp {
         );
         self.workspace_tooltip_icon_button(
             LucideIcon::FolderInput,
-            SFTP_ICON_SM,
+            ui.size(SFTP_ICON_SM),
             rgb(self.tokens.ui.text),
             IconButtonOptions {
                 disabled: path.is_none(),
-                ..IconButtonOptions::opaque_toolbar(SFTP_TOOL_BUTTON, ButtonRadius::Md)
+                ..IconButtonOptions::opaque_toolbar(ui.size(SFTP_TOOL_BUTTON), ButtonRadius::Md)
             },
             title,
             "sftp-terminal-directory",
@@ -202,12 +205,13 @@ impl WorkspaceApp {
         label: String,
         cx: &mut Context<Self>,
     ) -> AnyElement {
+        let ui = self.sftp_ui_metrics();
         let theme = self.tokens.ui;
         self.workspace_toolbar_action_button(
             label,
             Some(Self::render_lucide_icon(
                 icon,
-                SFTP_ICON_SM,
+                ui.size(SFTP_ICON_SM),
                 rgb(theme.text),
             )),
             ToolbarButtonOptions {
@@ -217,9 +221,9 @@ impl WorkspaceApp {
                 ..ToolbarButtonOptions::compact_text(
                     ButtonVariant::Ghost,
                     ButtonRadius::Sm,
-                    24.0,
+                    ui.size(24.0),
                     8.0,
-                    SFTP_TEXT_XS,
+                    ui.text_xs,
                 )
             },
             self.sftp_listener(cx, move |this, _event, _window, cx| {
@@ -251,6 +255,7 @@ impl WorkspaceApp {
         variant: SftpButtonVariant,
         listener: impl Fn(&MouseDownEvent, &mut Window, &mut App) + 'static,
     ) -> AnyElement {
+        let ui = self.sftp_ui_metrics();
         let theme = self.tokens.ui;
         // Mirrors the Tauri Button variants used by SFTP dialogs and keeps
         // irreversible conflict actions visually distinct from the safe default.
@@ -296,9 +301,9 @@ impl WorkspaceApp {
                 ..ToolbarButtonOptions::compact_text(
                     ButtonVariant::Ghost,
                     ButtonRadius::Md,
-                    32.0,
+                    ui.size(32.0),
                     12.0,
-                    SFTP_TEXT_XS,
+                    ui.text_xs,
                 )
             },
             listener,

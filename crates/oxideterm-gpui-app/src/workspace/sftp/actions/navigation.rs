@@ -678,12 +678,13 @@ impl WorkspaceApp {
         event: &ScrollWheelEvent,
         cx: &mut Context<Self>,
     ) {
+        let ui = self.sftp_ui_metrics();
         let scroll_handle = match pane {
             SftpPane::Local => self.sftp_view().read(cx).local_path_scroll.clone(),
             SftpPane::Remote => self.sftp_view().read(cx).remote_path_scroll.clone(),
         };
         if let Some(changed) =
-            scroll_breadcrumb_by_wheel(&scroll_handle, event, px(SFTP_PANE_HEADER_HEIGHT))
+            scroll_breadcrumb_by_wheel(&scroll_handle, event, px(ui.size(SFTP_PANE_HEADER_HEIGHT)))
         {
             cx.stop_propagation();
             if changed {
@@ -1127,7 +1128,7 @@ impl SftpWorkspaceEntity {
                 scroll_tauri_virtual_list_to_index(
                     &self.local_file_scroll,
                     next,
-                    sftp_file_list_virtual_spec(),
+                    sftp_file_list_virtual_spec(self.file_row_height),
                     TauriVirtualScrollAlign::Nearest,
                 );
             }
@@ -1138,7 +1139,7 @@ impl SftpWorkspaceEntity {
                 scroll_tauri_virtual_list_to_index(
                     &self.remote_file_scroll,
                     next,
-                    sftp_file_list_virtual_spec(),
+                    sftp_file_list_virtual_spec(self.file_row_height),
                     TauriVirtualScrollAlign::Nearest,
                 );
             }

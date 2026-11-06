@@ -122,13 +122,15 @@ mod drag_tests {
         let workspace = shell.read_with(cx, |shell, _| shell.session_entity());
         cx.run_until_parked();
         let view = workspace.read_with(cx, |workspace, _| workspace.sftp_view().clone());
-        for (source, target, direction, path, release_outside) in [
+        for (source, target, direction, path, release_outside, font_size, row_height) in [
             (
                 SftpPane::Local,
                 SftpPane::Remote,
                 Some(SftpTransferDirection::Upload),
                 "/local/drag.txt",
                 false,
+                14,
+                25.0,
             ),
             (
                 SftpPane::Remote,
@@ -136,6 +138,8 @@ mod drag_tests {
                 Some(SftpTransferDirection::Download),
                 "/remote/drag.txt",
                 false,
+                21,
+                37.5,
             ),
             (
                 SftpPane::Local,
@@ -143,6 +147,8 @@ mod drag_tests {
                 None,
                 "/local/drag.txt",
                 false,
+                24,
+                42.5,
             ),
             (
                 SftpPane::Local,
@@ -150,8 +156,13 @@ mod drag_tests {
                 None,
                 "/local/drag.txt",
                 true,
+                14,
+                25.0,
             ),
         ] {
+            workspace.update(cx, |workspace, cx| {
+                workspace.edit_settings(|settings| settings.appearance.ui_font_size = font_size, cx);
+            });
             view.update(cx, |sftp, cx| {
                 sftp.local_files = vec![file("/local/drag.txt")];
                 sftp.remote_files = vec![file("/remote/drag.txt")];
@@ -176,9 +187,28 @@ mod drag_tests {
                     SftpPane::Remote => sftp.remote_file_scroll.0.borrow().base_handle.bounds(),
                 };
                 let start = bounds(source);
-                assert!(start.size.width > px(0.0) && start.size.height > px(SFTP_ROW_HEIGHT));
+                let measured = match source {
+                    SftpPane::Local => sftp
+                        .local_file_scroll
+                        .0
+                        .borrow()
+                        .last_item_size
+                        .unwrap()
+                        .contents
+                        .height,
+                    SftpPane::Remote => sftp
+                        .remote_file_scroll
+                        .0
+                        .borrow()
+                        .last_item_size
+                        .unwrap()
+                        .contents
+                        .height,
+                };
+                assert_eq!(measured, px(row_height), "UI font size {font_size}");
+                assert!(start.size.width > px(0.0) && start.size.height > px(row_height));
                 (
-                    Point::new(start.center().x, start.top() + px(SFTP_ROW_HEIGHT / 2.0)),
+                    Point::new(start.center().x, start.top() + px(row_height / 2.0)),
                     bounds(target).center(),
                 )
             });
@@ -234,6 +264,10 @@ impl WorkspaceApp {
         has_background: bool,
         cx: &mut Context<Self>,
     ) -> AnyElement {
+        let ui = self.sftp_ui_metrics();
+        self.sftp_view().update(cx, |sftp, _| {
+            sftp.file_row_height = ui.size(SFTP_ROW_HEIGHT);
+        });
         let tokens = self.tokens;
         let theme = tokens.ui;
         let compact = self.sftp_view().read(cx).current_surface_id == Some(SftpSurfaceId::Sidebar);
@@ -339,7 +373,7 @@ impl WorkspaceApp {
                         .items_center()
                         .justify_center()
                         .gap(px(8.0))
-                        .text_size(px(SFTP_TEXT_XS))
+                        .text_size(px(ui.text_xs))
                         .text_color(rgb(theme.text_muted))
                         .child(self.render_loading_icon(
                             ("sftp-file-list-loading", pane as usize),
@@ -368,7 +402,7 @@ impl WorkspaceApp {
                         .flex_col()
                         .items_center()
                         .justify_center()
-                        .text_size(px(SFTP_TEXT_XS))
+                        .text_size(px(ui.text_xs))
                         .text_color(rgb(theme.text_muted))
                         .child(
                             div()
@@ -404,7 +438,7 @@ impl WorkspaceApp {
             ("sftp-file-list-virtual", pane as u64),
             row_count,
             scroll_handle,
-            sftp_file_list_virtual_spec(),
+            sftp_file_list_virtual_spec(ui.size(SFTP_ROW_HEIGHT)),
             move |range, _window, _cx| {
                 let workspace_focus = workspace_focus.clone();
                 range
@@ -440,7 +474,7 @@ impl WorkspaceApp {
                             };
                         div()
                             .w_full()
-                            .h(px(SFTP_ROW_HEIGHT))
+                            .h(px(ui.size(SFTP_ROW_HEIGHT)))
                             .flex()
                             .flex_row()
                             .items_center()
@@ -448,7 +482,7 @@ impl WorkspaceApp {
                             .py(px(4.0))
                             .border_b_1()
                             .border_color(rgba(theme.border << 8))
-                            .text_size(px(SFTP_TEXT_XS))
+                            .text_size(px(ui.text_xs))
                             .text_color(if is_selected {
                                 rgb(theme.accent)
                             } else {
@@ -478,7 +512,7 @@ impl WorkspaceApp {
                                             oxideterm_gpui_ui::file_icons::file_icon(&file.name)
                                         };
                                         icon.with_symlink(file.is_symlink)
-                                            .render(SFTP_ICON_MD, &tokens)
+                                            .render(ui.size(SFTP_ICON_MD), &tokens)
                                     })
                                     // Tauri file rows are select-none. Plain
                                     // display text also prevents retaining the
@@ -488,7 +522,7 @@ impl WorkspaceApp {
                             .when(!compact, |row| {
                                 row.child(
                                     div()
-                                        .w(px(SFTP_SIZE_COL))
+                                        .w(px(ui.size(SFTP_SIZE_COL)))
                                         .flex_none()
                                         .text_align(gpui::TextAlign::Right)
                                         .text_color(rgb(theme.text_muted))
@@ -503,7 +537,7 @@ impl WorkspaceApp {
                                 );
                                 row.child(
                                     div()
-                                        .w(px(SFTP_MODIFIED_COL))
+                                        .w(px(ui.size(SFTP_MODIFIED_COL)))
                                         .flex_none()
                                         .text_align(gpui::TextAlign::Right)
                                         .text_color(rgb(theme.text_muted))

@@ -8,6 +8,7 @@ impl WorkspaceApp {
         has_background: bool,
         cx: &mut Context<Self>,
     ) -> AnyElement {
+        let ui = self.sftp_ui_metrics();
         let theme = self.tokens.ui;
         let viewport = window.viewport_size();
         let placement = browser_behavior::clamp_context_menu_position(
@@ -15,8 +16,8 @@ impl WorkspaceApp {
             menu.y,
             f32::from(viewport.width),
             f32::from(viewport.height),
-            SFTP_CONTEXT_MENU_WIDTH,
-            SFTP_CONTEXT_MENU_MAX_HEIGHT,
+            ui.size(SFTP_CONTEXT_MENU_WIDTH),
+            ui.size(SFTP_CONTEXT_MENU_MAX_HEIGHT),
             8.0,
         );
         let selected_count = self.sftp_selected_names(menu.pane, cx).len();
@@ -41,7 +42,7 @@ impl WorkspaceApp {
         };
         let popup = context_menu_event_boundary(
             div()
-                .w(px(SFTP_CONTEXT_MENU_WIDTH))
+                .w(px(ui.size(SFTP_CONTEXT_MENU_WIDTH)))
                 .p(px(SFTP_CONTEXT_MENU_PADDING))
                 .rounded(px(self.tokens.radii.sm))
                 .border_1()
@@ -221,13 +222,14 @@ impl WorkspaceApp {
         listener: impl Fn(&mut Self, &MouseDownEvent, &mut Window, &mut Context<Self>) + 'static,
         cx: &mut Context<Self>,
     ) -> AnyElement {
+        let ui = self.sftp_ui_metrics();
         let theme = self.tokens.ui;
         let disabled = disabled
             || self.sftp_view().read(cx).context_menu_presence.phase()
                 == oxideterm_gpui_ui::motion::ExitPhase::Exiting;
         let color = if danger { SFTP_RED } else { theme.text };
         let item = div()
-            .h(px(SFTP_CONTEXT_MENU_ITEM_HEIGHT))
+            .h(px(ui.size(SFTP_CONTEXT_MENU_ITEM_HEIGHT)))
             .w_full()
             .flex()
             .flex_row()
@@ -236,9 +238,13 @@ impl WorkspaceApp {
             .px(px(12.0))
             .py(px(6.0))
             .rounded(px(self.tokens.radii.xs))
-            .text_size(px(SFTP_TEXT_XS))
+            .text_size(px(ui.text_xs))
             .text_color(rgb(color))
-            .child(Self::render_lucide_icon(icon, SFTP_ICON_SM, rgb(color)))
+            .child(Self::render_lucide_icon(
+                icon,
+                ui.size(SFTP_ICON_SM),
+                rgb(color),
+            ))
             .child(div().truncate().child(self.render_display_text_with_role(
                 SelectableTextRole::NonSelectable,
                 "sftp-context-menu",
