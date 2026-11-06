@@ -477,6 +477,10 @@ pub fn set_command_bar_current_directory_awareness(settings: &mut PersistedSetti
     settings.terminal.command_bar.current_directory_awareness = value;
 }
 
+pub fn set_command_bar_ssh_latency(settings: &mut PersistedSettings, value: bool) {
+    settings.terminal.command_bar.ssh_latency = value;
+}
+
 pub fn set_quick_bar_enabled(settings: &mut PersistedSettings, value: bool) {
     settings.terminal.command_bar.quick_bar_enabled = value;
 }

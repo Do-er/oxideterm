@@ -105,6 +105,7 @@ pub enum SettingsSelect {
     TerminalFontFamily,
     TerminalCjkFontFamily,
     TerminalEncoding,
+    SshLatencyInterval,
     TerminalBackspaceSequence,
     TerminalDeleteSequence,
     TerminalSessionLogFileMode,

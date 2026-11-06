@@ -109,6 +109,12 @@ pub struct TerminalCommandBarSettings {
     pub enabled: bool,
     #[serde(default = "default_command_bar_current_directory_awareness")]
     pub current_directory_awareness: bool,
+    /// Latency probes are a separate opt-in from the composer bar itself, so a
+    /// user can keep command entry without periodically opening SSH channels.
+    #[serde(default = "default_command_bar_ssh_latency")]
+    pub ssh_latency: bool,
+    #[serde(default = "default_ssh_latency_interval_secs")]
+    pub ssh_latency_interval_secs: u16,
     pub smart_completion: bool,
     #[serde(default = "default_command_bar_compact_input_enabled")]
     pub compact_input_enabled: bool,
@@ -157,6 +163,8 @@ impl Default for TerminalCommandBarSettings {
         Self {
             enabled: true,
             current_directory_awareness: true,
+            ssh_latency: true,
+            ssh_latency_interval_secs: default_ssh_latency_interval_secs(),
             smart_completion: true,
             compact_input_enabled: false,
             quick_commands_enabled: true,
@@ -174,6 +182,14 @@ impl Default for TerminalCommandBarSettings {
 }
 
 fn default_command_bar_current_directory_awareness() -> bool {
+    true
+}
+
+fn default_ssh_latency_interval_secs() -> u16 {
+    10
+}
+
+fn default_command_bar_ssh_latency() -> bool {
     true
 }
 
@@ -734,7 +750,12 @@ mod tests {
         for (field, _, _) in defaults {
             value.as_object_mut().unwrap().remove(field);
         }
-        for field in ["currentDirectoryAwareness", "quickBarEnabled"] {
+        for field in [
+            "currentDirectoryAwareness",
+            "quickBarEnabled",
+            "sshLatency",
+            "sshLatencyIntervalSecs",
+        ] {
             value["commandBar"].as_object_mut().unwrap().remove(field);
         }
 
@@ -754,6 +775,13 @@ mod tests {
         }
         assert_eq!(settings.semantic_scheme, TerminalSemanticScheme::Balanced);
         assert!(settings.command_bar.current_directory_awareness);
+        assert!(settings.command_bar.ssh_latency);
+        assert_eq!(settings.command_bar.ssh_latency_interval_secs, 10);
+        let mut saved_command_bar = serde_json::to_value(&settings.command_bar).unwrap();
+        saved_command_bar["sshLatency"] = serde_json::json!(false);
+        let disabled_latency: TerminalCommandBarSettings =
+            serde_json::from_value(saved_command_bar).unwrap();
+        assert!(!disabled_latency.ssh_latency);
         assert!(!settings.command_bar.quick_bar_enabled);
         assert!(!settings.command_bar.compact_input_enabled);
         assert_eq!(settings.command_bar.quick_bar_category, None);
