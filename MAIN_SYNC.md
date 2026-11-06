@@ -50,11 +50,11 @@ dev 自合并基点 `f2593f3bd` 起改动 270 个文件，集中在 `gpui-app`(1
 
 ## 提交清单
 
-共 79 个提交。#1–#56 全部已处置，#57–#79 中 12 个已处置、11 个待处理。只追加，不删行。
+共 79 个提交。#1–#56 全部已处置，#57–#79 中 15 个已处置、8 个待处理。只追加，不删行。
 
 `未处理` 的 14 条及依赖：#57 历史建议、#58 macOS 快捷键、#60 SFTP 字号、#61/#71/#72 延迟监控链、#63/#67 平铺链、#73/#77/#78 本地 Host Tools 链、#74 转发批量启动、#76 BLE、#79 2.3.1 发布。
 
-`处置` 取值及本表分布：`直接继承` 4、`cherry-pick 合入` 50、`手工移植` 5、`不同步` 9、`未处理` 11。
+`处置` 取值及本表分布：`直接继承` 4、`cherry-pick 合入` 50、`手工移植` 8、`不同步` 9、`未处理` 8。
 
 | # | main 提交 | 内容 | 领域 | 状态 | 处置 | 说明 | dev 侧提交 |
 | --- | --- | --- | --- | --- | --- | --- | --- |
@@ -118,7 +118,7 @@ dev 自合并基点 `f2593f3bd` 起改动 270 个文件，集中在 `gpui-app`(1
 | 58 | `bbff798ee` | macOS 隐藏与最小化快捷键 | 应用层 UI（窗口平台） | ⬜ | 未处理 | 零冲突。`platform.rs` 在 dev 与合并基点逐字节一致，`gpui` 已提供 `hide()`、`hide_other_apps()`、`minimize_window()`。待定：落「应用层 UI 不同步」还是为其单列平台例外 | — |
 | 59 | `99fec8b27` | Docker CLI 20.10 之前的状态解析兼容 | 协议 / 依赖底层 | ✅ | cherry-pick 合入 | 零冲突，单文件。`ps` 模板去掉 `.State`，改从 `inspect` 已有样本取 `State.Status`，新增 `docker_state_from_status` 在 inspect 不可用时按状态文本推导 | `6575a8e46` |
 | 60 | `af468f4c2` | SFTP 界面字号随应用 UI 缩放 | 应用层 UI | ⬜ | 未处理 | 引入 `SftpUiMetrics`/`sftp_ui_metrics()` 替换 `SFTP_TEXT_XS`、`SFTP_ICON_SM` 常量。`controls.rs`、`file_list.rs`、`menus.rs` 在 dev 与合并基点逐字节一致，冲突纯属上游上下文（基于已含 #12 的 main）错位；`sftp/tree.rs` 为 modify/delete，因 #12 判不同步而 dev 无此文件。若采纳需去掉 tree.rs 相关 hunk 后手工落到 dev 的 sftp 文件 | — |
-| 61 | `074910e08` | SSH 延迟监控：传输层采样与命令条展示 | 协议 / 依赖底层 + 应用层 UI | ⬜ | 未处理 | 全部冲突。可分层：`oxideterm-ssh/src/transport/latency.rs`、`runtime_entity.rs` 采样调度、`settings/model/terminal.rs` 的 `ssh_latency` 与探测间隔、11 个语言包设置项为独立底层能力；`terminal_command_bar/{bar,context,privilege}.rs` 展示部分无宿主——`render_terminal_target_indicator` 已被 `aaad32c98` 删除，命令条改为 composer 结构，`TerminalCommandBarSettings` 无 `ssh_latency` | — |
+| 61 | `074910e08` | SSH 延迟监控：传输层采样与命令条展示 | 协议 / 依赖底层 + 应用层 UI | ✅ | 手工移植 | 三层拆开处理。底层 `oxideterm-ssh/src/transport/latency.rs`、`runtime_entity.rs` 采样调度、`tabs/nodes.rs` 的 `LatencyUpdated` 事件直接摘取。UI 层无宿主：`render_terminal_target_indicator` 与 cwd/git/project 上下文 chip 已被 `aaad32c98` 删除、命令条改为 composer 结构，故 `context.rs`/`bar.rs`/`privilege.rs` 保留 dev 侧，另行手写 `render_terminal_ssh_latency_chip` 落到右侧动作簇（与上游 #72 最终形态同一位置），`render_terminal_command_bar` 增加 `window` 参数 | `1c894e18a` |
 | 62 | `dae89e399` | 全部本地化 README 增加 Star History 图表 | 文档 | ✅ | cherry-pick 合入 | 零冲突，11 个 README 各追加 10 行 | `c43e0e499` |
 | 63 | `99102cf7a` | 平铺选中会话并放大窗格 | 应用层 UI / workspace 核心 | ⬜ | 未处理 | 代码文件可自动合入，仅 11 个 `terminal.json` 的 broadcast 键冲突。`oxideterm-workspace` 的 `MAX_PANES_PER_TAB: 4 → 16`、`PaneNode::tiled`、`tabs/entity.rs` 的 `tile_terminal_panes`/`zoomed_panes` 为纯逻辑层；`pane_tree.rs` 双击放大与 `bar.rs` 广播菜单入口需按 dev 的 composer 结构重写 | — |
 | 64 | `4f617dfe9` | 按输入分块保留 UTF-8 控制符分派 | 终端内核 | ✅ | cherry-pick 合入 | 零冲突，单文件。dev 仅额外持有 `graphics_attribute` 分支。新增跨分块 C1 控制符保持用例 | `e61c902bb` |
@@ -128,8 +128,8 @@ dev 自合并基点 `f2593f3bd` 起改动 270 个文件，集中在 `gpui-app`(1
 | 68 | `62703e53a` | 扩充原生子系统架构图与所有权流程 | 文档 | ✅ | 手工移植 | 代码零冲突，但正文夹带 main 独有能力。按文档跟随所属代码领域的原则改回 dev 实测行为后合入：删除 BLE 后端（`session/ble.rs` 与 `oxideterm-ble` 在 dev 不存在）、`MAX_PANES_PER_TAB` 由 16 改回 4、删除平铺与窗格放大（dev 只有 `move_terminal_pane_to_tab`/`combine_pages`，无 `zoomed_panes`），en 与 zh-Hans 同步 | `67f65ec53`、`9410f170b` |
 | 69 | `d9ce2404c` | 开发者与用户指南修订 | 文档 | ✅ | 手工移植 | 零代码冲突。`runtime-ownership.md` 同批夹带 main 的 `MAX_PANES_PER_TAB` (16) 与 tiling 描述，改回 dev 的 4 与「拆分/合并」后合入；其余为 crate-map 入口表、CLI 同步命令说明与 IDE 访问方式，已核对 `cloud-sync sync/push/pull/apply`、`--strategy local-wins`、Pure Shell/Agent 访问、目录监控能力在 dev 均存在 | `e3a555f9f` |
 | 70 | `30656e547` | 可选连续曲率圆角 | 渲染 / 图形底座 | ✅ | cherry-pick 合入 | 唯一冲突 `OXIDETERM_PATCHES.md`：dev 已有「Window level pinning and macOS hover ownership」一节，与上游「Optional continuous Bézier corners」相邻，两节并列保留。引入 `CornerShape`、`Window::set_corner_shape`、Metal/HLSL/WGSL 三后端轮廓、`CornerStyle` 设置与 11 个语言包标签 | `0494ed3c3` |
-| 71 | `18af573ab` | 延迟监控可配置并显示严重度 | 协议 / 依赖底层 + 应用层 UI | ⬜ | 未处理 | 依赖 #61 | — |
-| 72 | `d93cf3d55` | 延迟探测间隔配置与紧凑工具栏读数 | 协议 / 依赖底层 + 应用层 UI | ⬜ | 未处理 | 依赖 #61、#71 | — |
+| 71 | `18af573ab` | 延迟监控可配置并显示严重度 | 协议 / 依赖底层 + 应用层 UI | ✅ | 手工移植 | 依赖 #61。`ssh_latency` 开关进 `TerminalCommandBarSettings` 与 `set_command_bar_ssh_latency`，`configure_ssh_latency` 接到 `root/init.rs` 与 `settings/surface.rs`。dev 无 `show_current_directory`/`project_tasks`/`git_status` 字段，相关设置行与搜索键未移植；严重度色调经 `StatusTone` 映射到 `MonospaceDatumTone` | `1c894e18a` |
+| 72 | `d93cf3d55` | 延迟探测间隔配置与紧凑工具栏读数 | 协议 / 依赖底层 + 应用层 UI | ✅ | 手工移植 | 依赖 #61、#71。`ssh_latency_interval_secs`（默认 10，5–60 归一化）、`SettingsSelect::SshLatencyInterval` 与 `SelectAnchorId::SettingsSshLatencyInterval`、间隔选择弹层落在 `settings/controls.rs`；`SshLatencyMonitor` 改为可配间隔并加 `set_enabled` 的悬挂/排空语义 | `1c894e18a` |
 | 73 | `e915656ef` | Host Tools 支持本地机器 | 协议 / 依赖底层 | ✅ | cherry-pick 合入 | 零冲突。`env_remove` 由本提交自身引入 `tty::Options`，dev 无需预先具备。新增 `connection_monitor/exec.rs`、`HostCommandTarget::{Ssh,Local}`、`oxide-local-host` 连接 ID；`remove_env` 贯通 `LocalPtyConfig` → `LocalTerminalInstance` → `pane_tree` 分屏继承 | `c3c0bfc78` |
 | 74 | `168833b72` | 端口转发批量启动选中隧道 | 应用层 UI | ⬜ | 未处理 | 冲突 `session_manager/tree.rs`：dev 已把会话管理器迁为侧栏抽屉，且只有单数 `connect_ssh_tunnel_with_config`，无 `start_ssh_tunnels` | — |
 | 75 | `34f2200c5` | SFTP 本地修改时间悬停显示完整时间 | 应用层 UI | ✅ | cherry-pick 合入 | 零冲突，3 个文件。`format_modified` 改为返回 `Option<DateTime<Local>>` 的 `local_modified_time`，列表单元只显示日期，悬停经 `oxideterm_gpui_ui::tooltip::tooltip_view` 显示到秒 | `42cd2df88` |
