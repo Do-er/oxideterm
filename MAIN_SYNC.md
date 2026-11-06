@@ -50,11 +50,11 @@ dev 自合并基点 `f2593f3bd` 起改动 270 个文件，集中在 `gpui-app`(1
 
 ## 提交清单
 
-共 79 个提交。#1–#56 全部已处置，#57–#79 中 9 个已处置、14 个待处理。只追加，不删行。
+共 79 个提交。#1–#56 全部已处置，#57–#79 中 12 个已处置、11 个待处理。只追加，不删行。
 
 `未处理` 的 14 条及依赖：#57 历史建议、#58 macOS 快捷键、#60 SFTP 字号、#61/#71/#72 延迟监控链、#63/#67 平铺链、#73/#77/#78 本地 Host Tools 链、#74 转发批量启动、#76 BLE、#79 2.3.1 发布。
 
-`处置` 取值及本表分布：`直接继承` 4、`cherry-pick 合入` 47、`手工移植` 5、`不同步` 9、`未处理` 14。
+`处置` 取值及本表分布：`直接继承` 4、`cherry-pick 合入` 50、`手工移植` 5、`不同步` 9、`未处理` 11。
 
 | # | main 提交 | 内容 | 领域 | 状态 | 处置 | 说明 | dev 侧提交 |
 | --- | --- | --- | --- | --- | --- | --- | --- |
@@ -130,10 +130,10 @@ dev 自合并基点 `f2593f3bd` 起改动 270 个文件，集中在 `gpui-app`(1
 | 70 | `30656e547` | 可选连续曲率圆角 | 渲染 / 图形底座 | ✅ | cherry-pick 合入 | 唯一冲突 `OXIDETERM_PATCHES.md`：dev 已有「Window level pinning and macOS hover ownership」一节，与上游「Optional continuous Bézier corners」相邻，两节并列保留。引入 `CornerShape`、`Window::set_corner_shape`、Metal/HLSL/WGSL 三后端轮廓、`CornerStyle` 设置与 11 个语言包标签 | `0494ed3c3` |
 | 71 | `18af573ab` | 延迟监控可配置并显示严重度 | 协议 / 依赖底层 + 应用层 UI | ⬜ | 未处理 | 依赖 #61 | — |
 | 72 | `d93cf3d55` | 延迟探测间隔配置与紧凑工具栏读数 | 协议 / 依赖底层 + 应用层 UI | ⬜ | 未处理 | 依赖 #61、#71 | — |
-| 73 | `e915656ef` | Host Tools 支持本地机器 | 协议 / 依赖底层 | ⬜ | 未处理 | 合并预览零冲突，但需实地确认 dev 的 `alacritty-terminal/src/tty/mod.rs` `Options` 是否带 `env_remove`——`conpty.rs` 在该提交中改用它。新增 `connection_monitor/exec.rs`、`HostCommandTarget::{Ssh,Local}`、`oxide-local-host` 连接 ID | — |
+| 73 | `e915656ef` | Host Tools 支持本地机器 | 协议 / 依赖底层 | ✅ | cherry-pick 合入 | 零冲突。`env_remove` 由本提交自身引入 `tty::Options`，dev 无需预先具备。新增 `connection_monitor/exec.rs`、`HostCommandTarget::{Ssh,Local}`、`oxide-local-host` 连接 ID；`remove_env` 贯通 `LocalPtyConfig` → `LocalTerminalInstance` → `pane_tree` 分屏继承 | `c3c0bfc78` |
 | 74 | `168833b72` | 端口转发批量启动选中隧道 | 应用层 UI | ⬜ | 未处理 | 冲突 `session_manager/tree.rs`：dev 已把会话管理器迁为侧栏抽屉，且只有单数 `connect_ssh_tunnel_with_config`，无 `start_ssh_tunnels` | — |
 | 75 | `34f2200c5` | SFTP 本地修改时间悬停显示完整时间 | 应用层 UI | ✅ | cherry-pick 合入 | 零冲突，3 个文件。`format_modified` 改为返回 `Option<DateTime<Local>>` 的 `local_modified_time`，列表单元只显示日期，悬停经 `oxideterm_gpui_ui::tooltip::tooltip_view` 显示到秒 | `42cd2df88` |
 | 76 | `ee557d5c3` | BLE 已保存配置重连不匹配离线设备的 BlueZ 缓存 | 平台集成（BLE） | ⬜ | 未处理 | 修改 `terminal/src/session/ble.rs`，该文件在 dev 不存在。按既有 BLE 领域决策倾向不同步 | — |
-| 77 | `c592ab934` | Host Tools 同时管理 Zellij 与 Herdr 会话 | 协议 / 依赖底层 | ⬜ | 未处理 | 冲突 `connection_monitor/entity.rs`，冲突段为 `host_command_target`，依赖 #73 的 `exec.rs` 与 `run_command_capture` | — |
-| 78 | `b22ee38c3` | Host 命令目标保持与本地进程生命周期收敛 | 协议 / 依赖底层 | ⬜ | 未处理 | 依赖 #73、#77。新增 `connection_monitor/exec/windows.rs`（Job Object），`Cargo.toml` 增 Windows 特性 | — |
+| 77 | `c592ab934` | Host Tools 同时管理 Zellij 与 Herdr 会话 | 协议 / 依赖底层 | ✅ | cherry-pick 合入 | 预览冲突仅在 `connection_monitor/entity.rs` 的 `host_command_target` 附近；按 #73 → #77 顺序应用后自动合并。新增多路复用 provider 抽象（tmux/Zellij/Herdr） | `37639553b` |
+| 78 | `b22ee38c3` | Host 命令目标保持与本地进程生命周期收敛 | 协议 / 依赖底层 | ✅ | cherry-pick 合入 | 依赖 #73、#77，顺序应用后自动合并。新增 `connection_monitor/exec/windows.rs`（Job Object 进程树终止），`Cargo.toml` 增 `libc` 与 Windows 特性 | `b781dd2d0` |
 | 79 | `617d889ac` | 发布 OxideTerm 2.3.1 | 文档 | ⬜ | 未处理 | 同 #51：`Cargo.toml`/`Cargo.lock` 改回 2.3.1 与 dev 的 3.0.0 冲突，changelog 描述 dev 不会发布的内容，倾向不同步 | — |
