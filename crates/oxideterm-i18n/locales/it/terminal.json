@@ -565,6 +565,9 @@
       "repeat_unit": "×"
     },
     "broadcast": {
+      "tile_selected": "Affianca i terminali selezionati",
+      "tile_selection_hint": "Seleziona da 2 a {{max}} terminali nella finestra principale.",
+      "tiled_title": "Terminali affiancati",
       "isolate_member": "Isola",
       "resume_member": "Riprendi broadcast",
       "pause_group": "Sospendi broadcast",

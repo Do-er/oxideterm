@@ -565,6 +565,9 @@
       "repeat_unit": "×"
     },
     "broadcast": {
+      "tile_selected": "Ausgewählte Terminals anordnen",
+      "tile_selection_hint": "Wählen Sie 2–{{max}} Terminals im Hauptfenster.",
+      "tiled_title": "Angeordnete Terminals",
       "isolate_member": "Isolieren",
       "resume_member": "Broadcast fortsetzen",
       "pause_group": "Broadcast pausieren",

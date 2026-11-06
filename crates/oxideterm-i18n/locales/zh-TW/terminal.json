@@ -565,6 +565,9 @@
       "repeat_unit": "次"
     },
     "broadcast": {
+      "tile_selected": "平鋪所選終端",
+      "tile_selection_hint": "請選擇主視窗中的 2–{{max}} 個終端。",
+      "tiled_title": "平鋪終端",
       "isolate_member": "臨時隔離",
       "resume_member": "恢復廣播",
       "pause_group": "暫停廣播",

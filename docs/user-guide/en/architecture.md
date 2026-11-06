@@ -556,7 +556,7 @@ flowchart TB
     Validate["Validate source / destination<br/>pane count and ownership"]
     Reject["Rejected operation<br/>both layouts and locations unchanged"]
     Move["Move existing pane IDs<br/>split, combine or detach"]
-    Layout["PaneNode tree<br/>terminal and utility leaves, up to 4"]
+    Layout["PaneNode tree<br/>terminal and utility leaves, up to 16"]
     Mount["Main / detached window<br/>derive visible panes"]
     View["Render active pane surfaces"]
     Transport["Existing session / node owners<br/>unchanged by layout moves"]
@@ -610,7 +610,7 @@ Tabs are closeable views. They are not the durable source of truth for saved con
 
 Tab scopes are window-local filters: all tabs, global pages, local terminals, or a specific connection. Mixed layouts combine their panes' memberships and stay intact in every matching scope. Scope selection and last-active-tab memory affect presentation, not runtime ownership, and are not persisted across restart. Rendering, keyboard navigation, reordering, bulk closing, and scroll positioning share the visible tab list and content-based widths.
 
-`PaneNode` represents terminal leaves, utility-page leaves and nested groups. A tab can contain up to 4 panes, as defined by `MAX_PANES_PER_TAB`. Splitting and combining tabs use this same limit. The host validates the source and destination before changing their layouts; a rejected drop leaves both trees and their session locations unchanged.
+`PaneNode` represents terminal leaves, utility-page leaves and nested groups. A tab can contain up to 16 panes, as defined by `MAX_PANES_PER_TAB`. Splitting and combining tabs use this same limit. The host validates the source and destination before changing their layouts; a rejected drop leaves both trees and their session locations unchanged.
 
 `WorkspaceTabHostEntity` owns terminal entities, subscriptions, window mounts and session-to-pane locations. Combining tabs moves existing panes into one layout while preserving their pane IDs, sessions and runtime consumers. Extraction moves an existing pane into another tab. These operations do not reconnect the terminal transport.
 

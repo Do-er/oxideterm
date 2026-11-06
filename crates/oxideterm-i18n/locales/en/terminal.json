@@ -155,6 +155,9 @@
       "repeat_unit": "×"
     },
     "broadcast": {
+      "tile_selected": "Tile selected terminals",
+      "tile_selection_hint": "Select 2–{{max}} terminals in the main window.",
+      "tiled_title": "Tiled terminals",
       "isolate_member": "Isolate",
       "resume_member": "Resume broadcast",
       "pause_group": "Pause broadcast",

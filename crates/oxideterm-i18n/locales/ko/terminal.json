@@ -565,6 +565,9 @@
       "repeat_unit": "회"
     },
     "broadcast": {
+      "tile_selected": "선택한 터미널 바둑판 배열",
+      "tile_selection_hint": "기본 창에서 터미널 2~{{max}}개를 선택하세요.",
+      "tiled_title": "바둑판 배열 터미널",
       "isolate_member": "임시 격리",
       "resume_member": "브로드캐스트 재개",
       "pause_group": "브로드캐스트 일시 중지",

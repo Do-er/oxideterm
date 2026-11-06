@@ -155,6 +155,9 @@
       "repeat_unit": "次"
     },
     "broadcast": {
+      "tile_selected": "平铺所选终端",
+      "tile_selection_hint": "请选择主窗口中的 2–{{max}} 个终端。",
+      "tiled_title": "平铺终端",
       "isolate_member": "临时隔离",
       "resume_member": "恢复广播",
       "pause_group": "暂停广播",

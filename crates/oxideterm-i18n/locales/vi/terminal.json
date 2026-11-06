@@ -565,6 +565,9 @@
       "repeat_unit": "lần"
     },
     "broadcast": {
+      "tile_selected": "Xếp các cửa sổ dòng lệnh đã chọn",
+      "tile_selection_hint": "Chọn từ 2 đến {{max}} cửa sổ dòng lệnh trong cửa sổ chính.",
+      "tiled_title": "Các cửa sổ dòng lệnh đã xếp",
       "isolate_member": "Cách ly",
       "resume_member": "Tiếp tục phát lệnh",
       "pause_group": "Tạm dừng phát lệnh",

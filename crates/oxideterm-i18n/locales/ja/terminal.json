@@ -565,6 +565,9 @@
       "repeat_unit": "回"
     },
     "broadcast": {
+      "tile_selected": "選択したターミナルを並べる",
+      "tile_selection_hint": "メインウィンドウのターミナルを2～{{max}}個選択してください。",
+      "tiled_title": "並べたターミナル",
       "isolate_member": "一時的に分離",
       "resume_member": "ブロードキャストを再開",
       "pause_group": "ブロードキャストを一時停止",

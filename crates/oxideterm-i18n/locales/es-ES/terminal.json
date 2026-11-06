@@ -565,6 +565,9 @@
       "repeat_unit": "×"
     },
     "broadcast": {
+      "tile_selected": "Distribuir terminales seleccionados",
+      "tile_selection_hint": "Selecciona entre 2 y {{max}} terminales de la ventana principal.",
+      "tiled_title": "Terminales en mosaico",
       "isolate_member": "Aislar",
       "resume_member": "Reanudar difusión",
       "pause_group": "Pausar difusión",
