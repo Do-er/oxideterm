@@ -50,11 +50,11 @@ dev 自合并基点 `f2593f3bd` 起改动 270 个文件，集中在 `gpui-app`(1
 
 ## 提交清单
 
-共 79 个提交。#1–#56 全部已处置，#57–#79 中 17 个已处置、6 个待处理。只追加，不删行。
+共 79 个提交。#1–#56 全部已处置，#57–#79 中 18 个已处置、5 个待处理。只追加，不删行。
 
-`未处理` 的 6 条及依赖：#57 历史建议、#63/#67 平铺链、#74 转发批量启动、#76 BLE、#79 2.3.1 发布。
+`未处理` 的 5 条及依赖：#57 历史建议、#63/#67 平铺链、#76 BLE、#79 2.3.1 发布。
 
-`处置` 取值及本表分布：`直接继承` 4、`cherry-pick 合入` 51、`手工移植` 9、`不同步` 9、`未处理` 6。
+`处置` 取值及本表分布：`直接继承` 4、`cherry-pick 合入` 51、`手工移植` 10、`不同步` 9、`未处理` 5。
 
 | # | main 提交 | 内容 | 领域 | 状态 | 处置 | 说明 | dev 侧提交 |
 | --- | --- | --- | --- | --- | --- | --- | --- |
@@ -131,7 +131,7 @@ dev 自合并基点 `f2593f3bd` 起改动 270 个文件，集中在 `gpui-app`(1
 | 71 | `18af573ab` | 延迟监控可配置并显示严重度 | 协议 / 依赖底层 + 应用层 UI | ✅ | 手工移植 | 依赖 #61。`ssh_latency` 开关进 `TerminalCommandBarSettings` 与 `set_command_bar_ssh_latency`，`configure_ssh_latency` 接到 `root/init.rs` 与 `settings/surface.rs`。dev 无 `show_current_directory`/`project_tasks`/`git_status` 字段，相关设置行与搜索键未移植；严重度色调经 `StatusTone` 映射到 `MonospaceDatumTone` | `1c894e18a` |
 | 72 | `d93cf3d55` | 延迟探测间隔配置与紧凑工具栏读数 | 协议 / 依赖底层 + 应用层 UI | ✅ | 手工移植 | 依赖 #61、#71。`ssh_latency_interval_secs`（默认 10，5–60 归一化）、`SettingsSelect::SshLatencyInterval` 与 `SelectAnchorId::SettingsSshLatencyInterval`、间隔选择弹层落在 `settings/controls.rs`；`SshLatencyMonitor` 改为可配间隔并加 `set_enabled` 的悬挂/排空语义 | `1c894e18a` |
 | 73 | `e915656ef` | Host Tools 支持本地机器 | 协议 / 依赖底层 | ✅ | cherry-pick 合入 | 零冲突。`env_remove` 由本提交自身引入 `tty::Options`，dev 无需预先具备。新增 `connection_monitor/exec.rs`、`HostCommandTarget::{Ssh,Local}`、`oxide-local-host` 连接 ID；`remove_env` 贯通 `LocalPtyConfig` → `LocalTerminalInstance` → `pane_tree` 分屏继承 | `c3c0bfc78` |
-| 74 | `168833b72` | 端口转发批量启动选中隧道 | 应用层 UI | ⬜ | 未处理 | 冲突 `session_manager/tree.rs`：dev 已把会话管理器迁为侧栏抽屉，且只有单数 `connect_ssh_tunnel_with_config`，无 `start_ssh_tunnels` | — |
+| 74 | `168833b72` | 端口转发批量启动选中隧道 | 应用层 UI | ✅ | 手工移植 | 冲突 `session_manager/tree.rs` 取 dev 侧：会话管理器在 dev 已是侧栏抽屉，工具栏只剩搜索与折叠，上游的选中项操作岛不存在。改由 `session_manager/views.rs` 的批量右键菜单挂出「启动所选隧道」，并按其可见性把 `MANAGER_ROW_ACTION_MENU_BATCH_HEIGHT` 加上一行 `context_menu_item_height_estimate`。`ssh_tunnels.rs` 按同主机分组、共享连接、串行排队与失败清理整体摘取；`tree.rs` 涉及的上游 modal 授权续跑改由 `tunnel_start_groups` 承接 | `6361176b3` |
 | 75 | `34f2200c5` | SFTP 本地修改时间悬停显示完整时间 | 应用层 UI | ✅ | cherry-pick 合入 | 零冲突，3 个文件。`format_modified` 改为返回 `Option<DateTime<Local>>` 的 `local_modified_time`，列表单元只显示日期，悬停经 `oxideterm_gpui_ui::tooltip::tooltip_view` 显示到秒 | `42cd2df88` |
 | 76 | `ee557d5c3` | BLE 已保存配置重连不匹配离线设备的 BlueZ 缓存 | 平台集成（BLE） | ⬜ | 未处理 | 修改 `terminal/src/session/ble.rs`，该文件在 dev 不存在。按既有 BLE 领域决策倾向不同步 | — |
 | 77 | `c592ab934` | Host Tools 同时管理 Zellij 与 Herdr 会话 | 协议 / 依赖底层 | ✅ | cherry-pick 合入 | 预览冲突仅在 `connection_monitor/entity.rs` 的 `host_command_target` 附近；按 #73 → #77 顺序应用后自动合并。新增多路复用 provider 抽象（tmux/Zellij/Herdr） | `37639553b` |
