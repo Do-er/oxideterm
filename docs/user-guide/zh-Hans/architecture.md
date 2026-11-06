@@ -95,7 +95,7 @@ flowchart TB
         Views["窗口与工作区控件<br/>标签、范围、侧栏、对话框"]
         App["WorkspaceApp<br/>动作分发、订阅、关闭流程"]
         Tabs["WorkspaceTabHostEntity<br/>窗格树、终端实体、窗口挂载"]
-        Terminal["TerminalPane / TerminalSession<br/>本地、SSH、Mosh、Telnet、串口、BLE"]
+        Terminal["TerminalPane / TerminalSession<br/>本地、SSH、Mosh、Telnet、串口"]
         Grid["vte / alacritty_terminal / terminal-graphics<br/>ANSI、网格、历史、协议图像"]
         Paint["oxideterm-gpui-terminal / GPUI<br/>快照、行缓存、字形、图像上传"]
         Media["背景媒体与特效<br/>解码、动画、合成"]
@@ -123,7 +123,7 @@ flowchart TB
     end
     subgraph Outside["系统资源、辅助进程与远端端点"]
         direction TB
-        LocalIO["本地 PTY 与 Shell<br/>Mosh / Telnet 端点 / 串口 / BLE 设备"]
+        LocalIO["本地 PTY 与 Shell<br/>Mosh / Telnet 端点 / 串口设备"]
         SSH["SSH 服务器与跳板机"]
         Helpers["插件提供的 RDP/VNC 辅助程序"]
         AgentProcesses["ACP 智能体进程"]
@@ -549,9 +549,9 @@ flowchart TB
     Visible["可见标签列表<br/>导航、排序与批量关闭"]
     Validate["校验来源与目标<br/>窗格数量与所有权"]
     Reject["拒绝操作<br/>两侧布局与位置映射不变"]
-    Move["移动已有窗格 ID<br/>平铺、拆分、提取或分离窗口"]
-    Layout["PaneNode 树<br/>终端与工具叶节点，最多 16 个"]
-    Mount["主窗口 / 独立窗口与放大状态<br/>计算可见窗格"]
+    Move["移动已有窗格 ID<br/>拆分、合并或分离窗口"]
+    Layout["PaneNode 树<br/>终端与工具叶节点，最多 4 个"]
+    Mount["主窗口 / 独立窗口<br/>计算可见窗格"]
     View["绘制当前可见窗格页面"]
     Transport["已有会话与节点所有者<br/>不因布局移动而替换"]
 
@@ -604,9 +604,9 @@ flowchart TB
 
 标签范围是窗口内的筛选状态，包含全部标签、全局页面、本地终端和具体连接。混合布局合并各窗格的归属，在所有匹配范围中保持完整。范围及上次活动标签只影响展示，不拥有连接，也不跨重启保存。绘制、快捷键导航、排序、批量关闭和滚动定位共用可见标签列表与按内容计算的宽度。
 
-`PaneNode` 表示终端窗格、工具页面和嵌套分组。每个标签页最多容纳 16 个窗格，上限由 `MAX_PANES_PER_TAB` 定义，拆分和合并共用这一限制。宿主先校验来源和目标，再修改布局；拖放被拒绝时，两棵布局树及会话位置保持不变。
+`PaneNode` 表示终端窗格、工具页面和嵌套分组。每个标签页最多容纳 4 个窗格，上限由 `MAX_PANES_PER_TAB` 定义，拆分和合并共用这一限制。宿主先校验来源和目标，再修改布局；拖放被拒绝时，两棵布局树及会话位置保持不变。
 
-`WorkspaceTabHostEntity` 持有终端实体、订阅、窗口挂载关系和会话到窗格的位置映射。平铺操作将 2 至 16 个已有终端窗格放入同一布局，保留窗格 ID、会话和运行时消费者。单窗格放大只改变可见范围，保留原有布局树；提取窗格则将已有窗格移入另一个标签页。这些操作不会重新连接终端传输。
+`WorkspaceTabHostEntity` 持有终端实体、订阅、窗口挂载关系和会话到窗格的位置映射。合并标签页把已有窗格放入同一布局，保留窗格 ID、会话和运行时消费者。提取窗格则将已有窗格移入另一个标签页。这些操作不会重新连接终端传输。
 
 布局限制、校验和所有权变更见[窗格模型](../../../crates/oxideterm-workspace/src/lib.rs)与[标签宿主](../../../crates/oxideterm-gpui-app/src/workspace/tabs/entity.rs)。
 
@@ -690,7 +690,7 @@ SSH 终端职责：
 - 复用节点拥有的 SSH 传输，同时把 shell 通道状态保留在面板本地。
 - 通过“活跃终端 -> 节点 -> 保存 owner”解析提权凭据作用域，而不是从 host、title 或 prompt 文本启发式反推。
 
-终端会话接口还包含 Telnet、Mosh、串口和 BLE 后端，分别将传输适配为终端输入、输出、尺寸调整和生命周期操作。BLE 使用 GATT 通知与写入通道，共用串口的发送和显示选项，不会为了显示终端文本而创建 SSH 节点。传输专属状态由 `oxideterm-terminal/src/session/` 及对应协议 crate 管理。
+终端会话接口还包含 Telnet、Mosh 和串口后端，分别将传输适配为终端输入、输出、尺寸调整和生命周期操作。串口后端共用本地 Shell 路径的发送和显示选项，不会为了显示终端文本而创建 SSH 节点。传输专属状态由 `oxideterm-terminal/src/session/` 及对应协议 crate 管理。
 
 ### 终端渲染与图像
 
@@ -727,7 +727,7 @@ flowchart TB
         ProtocolImages["协议图像与放置记录<br/>所属屏幕、网格锚点、像素租约"]
         ImageCache["图像渲染缓存<br/>图像版本、裁剪、动画时钟"]
         Replies["协议回复<br/>本地 PTY 优先写入队列"]
-        Visibility["标签 / 独立窗口 / 锁定 / 放大<br/>释放隐藏的展示资源"]
+        Visibility["标签 / 独立窗口 / 锁定<br/>释放隐藏的展示资源"]
         Background["背景媒体与界面浮层"]
     end
 
@@ -1922,7 +1922,7 @@ flowchart TB
 %%{init: {"layout": "dagre", "flowchart": {"nodeSpacing": 45, "rankSpacing": 75, "curve": "basis"}}}%%
 flowchart TB
     Session["协议运行时<br/>解析并维护当前终端状态"]
-    Visibility["宿主计算可见性<br/>标签、窗口、锁定与窗格放大"]
+    Visibility["宿主计算可见性<br/>标签、窗口与锁定"]
     Hidden["隐藏显示层<br/>释放行、字形与显示图像缓存"]
     Retained["保留会话、协议图像像素<br/>与动画时钟"]
     Snapshot["可见快照<br/>共享行内容与变化状态"]
@@ -1960,7 +1960,7 @@ flowchart TB
 - 长时间 AI 总结。
 - 重型设置序列化。
 
-标签宿主根据当前标签、独立窗口、工作区锁定状态和窗格放大状态决定渲染缓存是否可见。终端隐藏时释放行布局、保留的字形批次和已准备的显示图像；终端会话、协议像素和动画时钟仍由运行时或窗格持有。再次显示时，展示资源根据当前状态重建。隐藏窗格不会断开共享 SSH 节点。
+标签宿主根据当前标签、独立窗口和工作区锁定状态决定渲染缓存是否可见。终端隐藏时释放行布局、保留的字形批次和已准备的显示图像；终端会话、协议像素和动画时钟仍由运行时或窗格持有。再次显示时，展示资源根据当前状态重建。隐藏窗格不会断开共享 SSH 节点。
 
 上述渲染路径由各支持平台共用。性能测量区分解析、快照生成、行布局、绘制指令构建和 GPU 呈现；CPU 基准结果不能直接代表输入到显示的延迟，也不能外推到其他平台。成对测试、结果和保留或撤回的实验见[性能与基准测试](../../development/performance-and-benchmarking.md)。
 
@@ -2913,7 +2913,6 @@ flowchart TB
 | 共享 GPUI 组件和平台辅助 | `oxideterm-gpui-ui`, `oxideterm-gpui-platform`, `oxideterm-theme` |
 | 终端渲染和终端领域 | `oxideterm-gpui-terminal`, `oxideterm-terminal`, `oxideterm-terminal-*` |
 | 终端解析、网格与历史 | 工作区维护的 `vte`、`alacritty_terminal` 分支；显示快照位于 `oxideterm-terminal-model` |
-| BLE 终端传输 | `oxideterm-ble`、`oxideterm-terminal/src/session/ble.rs` |
 | 终端 modem 传输 | `oxideterm-modem-transfer`, 终端 modem worker 集成 |
 | SSH、节点路由、重连 | `oxideterm-ssh`, `oxideterm-topology`, `oxideterm-session-adapter` |
 | 主机工具和连接监控 | `oxideterm-connection-monitor`, 应用连接监控页面 |

@@ -95,7 +95,7 @@ flowchart TB
         Views["Windows and workspace controls<br/>tabs, scopes, sidebars, dialogs"]
         App["WorkspaceApp<br/>actions, subscriptions, shutdown"]
         Tabs["WorkspaceTabHostEntity<br/>pane trees, terminal entities, window mounts"]
-        Terminal["TerminalPane / TerminalSession<br/>local, SSH, Mosh, Telnet, serial, BLE"]
+        Terminal["TerminalPane / TerminalSession<br/>local, SSH, Mosh, Telnet, serial"]
         Grid["vte / alacritty_terminal / terminal-graphics<br/>ANSI, grid, history, protocol images"]
         Paint["oxideterm-gpui-terminal / GPUI<br/>snapshots, row caches, glyphs, image uploads"]
         Media["Background media and effects<br/>decode, animation, composition"]
@@ -123,7 +123,7 @@ flowchart TB
     end
     subgraph Outside["OS resources, helper processes and remote endpoints"]
         direction TB
-        LocalIO["Local PTY and shell<br/>Mosh / Telnet endpoints / serial / BLE devices"]
+        LocalIO["Local PTY and shell<br/>Mosh / Telnet endpoints / serial devices"]
         SSH["SSH servers and jump hosts"]
         Helpers["Plugin-provided RDP/VNC helpers"]
         AgentProcesses["ACP agent processes"]
@@ -555,9 +555,9 @@ flowchart TB
     Visible["Visible tab list<br/>navigation, reorder, bulk close"]
     Validate["Validate source / destination<br/>pane count and ownership"]
     Reject["Rejected operation<br/>both layouts and locations unchanged"]
-    Move["Move existing pane IDs<br/>tile, split, extract or detach"]
-    Layout["PaneNode tree<br/>terminal and utility leaves, up to 16"]
-    Mount["Main / detached window and zoom<br/>derive visible panes"]
+    Move["Move existing pane IDs<br/>split, combine or detach"]
+    Layout["PaneNode tree<br/>terminal and utility leaves, up to 4"]
+    Mount["Main / detached window<br/>derive visible panes"]
     View["Render active pane surfaces"]
     Transport["Existing session / node owners<br/>unchanged by layout moves"]
 
@@ -610,9 +610,9 @@ Tabs are closeable views. They are not the durable source of truth for saved con
 
 Tab scopes are window-local filters: all tabs, global pages, local terminals, or a specific connection. Mixed layouts combine their panes' memberships and stay intact in every matching scope. Scope selection and last-active-tab memory affect presentation, not runtime ownership, and are not persisted across restart. Rendering, keyboard navigation, reordering, bulk closing, and scroll positioning share the visible tab list and content-based widths.
 
-`PaneNode` represents terminal leaves, utility-page leaves and nested groups. A tab can contain up to 16 panes, as defined by `MAX_PANES_PER_TAB`. Splitting and combining tabs use this same limit. The host validates the source and destination before changing their layouts; a rejected drop leaves both trees and their session locations unchanged.
+`PaneNode` represents terminal leaves, utility-page leaves and nested groups. A tab can contain up to 4 panes, as defined by `MAX_PANES_PER_TAB`. Splitting and combining tabs use this same limit. The host validates the source and destination before changing their layouts; a rejected drop leaves both trees and their session locations unchanged.
 
-`WorkspaceTabHostEntity` owns terminal entities, subscriptions, window mounts and session-to-pane locations. Tiling moves 2 to 16 existing terminal panes into one layout while preserving their pane IDs, sessions and runtime consumers. Pane zoom changes which pane is visible without replacing the underlying pane tree. Extraction moves an existing pane into another tab. These operations do not reconnect the terminal transport.
+`WorkspaceTabHostEntity` owns terminal entities, subscriptions, window mounts and session-to-pane locations. Combining tabs moves existing panes into one layout while preserving their pane IDs, sessions and runtime consumers. Extraction moves an existing pane into another tab. These operations do not reconnect the terminal transport.
 
 See the [pane model](../../../crates/oxideterm-workspace/src/lib.rs) and [tab host](../../../crates/oxideterm-gpui-app/src/workspace/tabs/entity.rs) for layout limits, validation and ownership transitions.
 
@@ -696,7 +696,7 @@ SSH terminal responsibilities:
 - Reuse the node-owned SSH transport while keeping shell-channel state pane-local.
 - Resolve privilege credential scope through the active terminal's owning node, not through host/title/prompt heuristics.
 
-The terminal session interface also has Telnet, Mosh, serial and BLE backends. They adapt their transport to terminal input, output, resize and lifecycle operations. BLE uses a GATT notification/write stream and shares serial send/display options; it does not acquire an SSH node merely to display terminal text. Transport-specific state lives in `oxideterm-terminal/src/session/` and the corresponding protocol crates.
+The terminal session interface also has Telnet, Mosh and serial backends. They adapt their transport to terminal input, output, resize and lifecycle operations. A serial backend shares send and display options with the local shell path and does not acquire an SSH node merely to display terminal text. Transport-specific state lives in `oxideterm-terminal/src/session/` and the corresponding protocol crates.
 
 ### Terminal Rendering And Graphics
 
@@ -733,7 +733,7 @@ flowchart TB
         ProtocolImages["Protocol images and placements<br/>screen, grid anchors, pixel leases"]
         ImageCache["Image render cache<br/>image version, crop, animation clock"]
         Replies["Protocol replies<br/>local PTY priority write queue"]
-        Visibility["Tab / detached window / lock / zoom<br/>release hidden presentation resources"]
+        Visibility["Tab / detached window / lock<br/>release hidden presentation resources"]
         Background["Background media and UI overlays"]
     end
 
@@ -1937,7 +1937,7 @@ Treat these as output boundaries:
 %%{init: {"layout": "dagre", "flowchart": {"nodeSpacing": 45, "rankSpacing": 75, "curve": "basis"}}}%%
 flowchart TB
     Session["Protocol runtime<br/>parse and maintain current terminal state"]
-    Visibility["Host-derived visibility<br/>tab, window, lock and pane zoom"]
+    Visibility["Host-derived visibility<br/>tab, window and lock"]
     Hidden["Hidden presentation<br/>release row, glyph and display-image caches"]
     Retained["Retain session, protocol image pixels<br/>and animation clocks"]
     Snapshot["Visible snapshot<br/>shared row content and changed state"]
@@ -1975,7 +1975,7 @@ Terminal hot-path work should avoid:
 - Long AI summarization.
 - Heavy settings serialization.
 
-The tab host derives render-cache visibility from the active tab, detached windows, workspace lock and pane zoom. A hidden terminal releases row layouts, retained glyph batches and prepared display images; its terminal session, protocol pixels and animation clocks remain owned by the runtime/pane. Showing it again rebuilds presentation resources from current state. Hiding a pane does not disconnect its shared SSH node.
+The tab host derives render-cache visibility from the active tab, detached windows and workspace lock. A hidden terminal releases row layouts, retained glyph batches and prepared display images; its terminal session, protocol pixels and animation clocks remain owned by the runtime/pane. Showing it again rebuilds presentation resources from current state. Hiding a pane does not disconnect its shared SSH node.
 
 The rendering path above is shared across supported platforms. Measurements distinguish parsing, snapshot generation, row layout, scene construction and GPU presentation. CPU benchmark results alone do not establish input-to-display latency or performance on another platform. See [Performance and Benchmarking](../../development/performance-and-benchmarking.md) for paired workloads, results and retained or rejected experiments.
 
@@ -2930,7 +2930,6 @@ flowchart TB
 | Shared GPUI components and platform helpers | `oxideterm-gpui-ui`, `oxideterm-gpui-platform`, `oxideterm-theme` |
 | Terminal rendering and terminal domain | `oxideterm-gpui-terminal`, `oxideterm-terminal`, `oxideterm-terminal-*` |
 | Terminal parsing, grid and history | Workspace forks of `vte` and `alacritty_terminal`; display snapshots in `oxideterm-terminal-model` |
-| BLE terminal transport | `oxideterm-ble`, `oxideterm-terminal/src/session/ble.rs` |
 | Terminal modem transfers | `oxideterm-modem-transfer`, terminal modem worker integration |
 | SSH, node routing, reconnect | `oxideterm-ssh`, `oxideterm-topology`, `oxideterm-session-adapter` |
 | Host Tools and connection monitoring | `oxideterm-connection-monitor`, app connection monitor surface |

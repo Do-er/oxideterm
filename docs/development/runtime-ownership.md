@@ -74,7 +74,7 @@ The layout model is in [oxideterm-workspace](../../crates/oxideterm-workspace/sr
 
 ### Move, Close, And Reopen
 
-The shared layout limit is `MAX_PANES_PER_TAB` (16). Split, combination and tiling validate this limit before changing source/destination trees or session locations. Layout moves reuse existing panes and sessions; rejected operations leave both layouts intact.
+The shared layout limit is `MAX_PANES_PER_TAB` (4). Split and combination validate this limit before changing source/destination trees or session locations. Layout moves reuse existing panes and sessions; rejected operations leave both layouts intact.
 
 Tab filtering does not move or close resources. Resolve membership from the actual page/connection binding, including plugin pages and mixed layouts. Each window owns its current scope and last-selected tab per scope. Use the same visible list for navigation and bulk operations; only explicit user navigation may reveal another scope. Host actions still resolve the active pane or selected tool connection, never the scope label.
 
