@@ -1,7 +1,7 @@
 # main → dev 同步台账
 
 - 基线：`b4e5c653`（dev 从 main 分叉前最后一个 main 提交）
-- 已同步水位：`c9c25ae62`（2026-11-02，#56 为止）。范围内 56 个提交全部处置完毕，#51 确认不采纳。#57–#79 中 #59、#62、#64、#65、#66、#68、#69、#70、#75 已处置，其余待处理，水位暂不推进
+- 已同步水位：`c9c25ae62`（2026-11-02，#56 为止）。范围内 56 个提交全部处置完毕，#51 确认不采纳。#57–#79 中除 #57、#76、#79 外均已处置，水位暂不推进
 - 清单覆盖至：`617d889ac`（2026-11-06，main 当前最新）
 - 统计时间：2026-11-06
 - 合并提交不计入清单：`995e4ac01..617d889ac` 范围内共 2 个合并提交（`2772315c1` PR #749、`16773b33a` PR #750），均为纯自动合并（两父重建 tree 与合并 tree 一致）。`5c186c012..c9c25ae62` 范围内无合并提交。再上一批 46 条范围内共 10 个 PR / 分支合并提交，其中 9 个为纯自动合并；`3a000e01b`（PR #731）含 2 行手工解决，为 `export-ble`、`ble-local-echo` 两个复选框补上控件身份参数
@@ -50,11 +50,11 @@ dev 自合并基点 `f2593f3bd` 起改动 270 个文件，集中在 `gpui-app`(1
 
 ## 提交清单
 
-共 79 个提交。#1–#56 全部已处置，#57–#79 中 18 个已处置、5 个待处理。只追加，不删行。
+共 79 个提交。#1–#56 全部已处置，#57–#79 中 20 个已处置、3 个待处理。只追加，不删行。
 
-`未处理` 的 5 条及依赖：#57 历史建议、#63/#67 平铺链、#76 BLE、#79 2.3.1 发布。
+`未处理` 的 3 条及依赖：#57 历史建议、#76 BLE、#79 2.3.1 发布。
 
-`处置` 取值及本表分布：`直接继承` 4、`cherry-pick 合入` 51、`手工移植` 10、`不同步` 9、`未处理` 5。
+`处置` 取值及本表分布：`直接继承` 4、`cherry-pick 合入` 52、`手工移植` 11、`不同步` 9、`未处理` 3。
 
 | # | main 提交 | 内容 | 领域 | 状态 | 处置 | 说明 | dev 侧提交 |
 | --- | --- | --- | --- | --- | --- | --- | --- |
@@ -120,11 +120,11 @@ dev 自合并基点 `f2593f3bd` 起改动 270 个文件，集中在 `gpui-app`(1
 | 60 | `af468f4c2` | SFTP 界面字号随应用 UI 缩放 | 应用层 UI | ✅ | 手工移植 | `layout.rs` 的 `SftpUiMetrics`/`sftp_ui_metrics()` 与 `sftp.rs` 的 `sftp_file_list_virtual_spec(row_height)`、`SftpWorkspaceEntity::file_row_height` 直接摘取；其余文件按 dev 现存渲染路径逐处替换，`ui.size()` 在默认 `ui_text_xs == SFTP_TEXT_XS` 时折叠为原值。`sftp/tree.rs` 为 modify/delete，dev 无该文件（#12 判不同步），跳过；`file_list.rs` 的树模式行渲染与 `simulate_mouse_down` 键盘分派测试 dev 未采用，仅保留面板行与拖拽测试的字号覆盖 | `3c2d8933a` |
 | 61 | `074910e08` | SSH 延迟监控：传输层采样与命令条展示 | 协议 / 依赖底层 + 应用层 UI | ✅ | 手工移植 | 三层拆开处理。底层 `oxideterm-ssh/src/transport/latency.rs`、`runtime_entity.rs` 采样调度、`tabs/nodes.rs` 的 `LatencyUpdated` 事件直接摘取。UI 层无宿主：`render_terminal_target_indicator` 与 cwd/git/project 上下文 chip 已被 `aaad32c98` 删除、命令条改为 composer 结构，故 `context.rs`/`bar.rs`/`privilege.rs` 保留 dev 侧，另行手写 `render_terminal_ssh_latency_chip` 落到右侧动作簇（与上游 #72 最终形态同一位置），`render_terminal_command_bar` 增加 `window` 参数 | `1c894e18a` |
 | 62 | `dae89e399` | 全部本地化 README 增加 Star History 图表 | 文档 | ✅ | cherry-pick 合入 | 零冲突，11 个 README 各追加 10 行 | `c43e0e499` |
-| 63 | `99102cf7a` | 平铺选中会话并放大窗格 | 应用层 UI / workspace 核心 | ⬜ | 未处理 | 代码文件可自动合入，仅 11 个 `terminal.json` 的 broadcast 键冲突。`oxideterm-workspace` 的 `MAX_PANES_PER_TAB: 4 → 16`、`PaneNode::tiled`、`tabs/entity.rs` 的 `tile_terminal_panes`/`zoomed_panes` 为纯逻辑层；`pane_tree.rs` 双击放大与 `bar.rs` 广播菜单入口需按 dev 的 composer 结构重写 | — |
+| 63 | `99102cf7a` | 平铺选中会话并放大窗格 | 应用层 UI / workspace 核心 | ✅ | 手工移植 | `oxideterm-workspace` 的 `MAX_PANES_PER_TAB: 4 → 16`、`PaneNode::tiled` 及其用例、`tabs/entity.rs` 的 `zoomed_panes`/`tile_terminal_panes`/`toggle_pane_zoom`、`pane_tree.rs` 的缩放短路与 `min_*_0` 几何、`bar.rs` 广播菜单入口均按 dev 现状落位。删掉两处 dev 没有的宿主：`tiles` 里的 `self.affinities.remove`（dev 的亲和性是 `pane_window_affinities`，按 pane 而非 tab 记录）与 `detach.rs` 的 `reveal_tab_scope`（dev 已把标签范围筛选换成标签清理菜单，`TabScope` 全域不存在）。11 个 `terminal.json` 只并入 `tile_selected`/`tile_selection_hint`/`tiled_title`，dev 已无 `members_hint`。文档按 dev 实际入口改称「广播输入」「启用广播」，并把 `architecture.md`、`runtime-ownership.md` 的窗格上限同步到 16 | `003e20c1e` |
 | 64 | `4f617dfe9` | 按输入分块保留 UTF-8 控制符分派 | 终端内核 | ✅ | cherry-pick 合入 | 零冲突，单文件。dev 仅额外持有 `graphics_attribute` 分支。新增跨分块 C1 控制符保持用例 | `e61c902bb` |
 | 65 | `7f2288f9a` | OSC 载荷整段批量扫描并扩充流基准 | 终端内核 | ✅ | cherry-pick 合入 | 零冲突，5 个文件。`graphics/ingress.rs` 用 `memchr` 批量定位，新增 ingress 用例与三个基准的 OSC 工作负载 | `6e04c866d` |
 | 66 | `5de97ca3b` | 增量绘制复用字形批次 | 渲染 / 图形底座 | ✅ | cherry-pick 合入 | 零冲突，13 个文件。`LinePaintCache` 在 dev 已由 #31 之前的 `f7673e0ce` 引入，本条补充 prepared batch 复用、`RecentCache` 行键与语义角色缓存；新增 `cached_line_paint` 集成测试与 `performance-and-benchmarking.md` 对应章节 | `f10a7e246` |
-| 67 | `b11057b9c` | 标签拖放测试对齐窗格上限 | 测试 | ⬜ | 未处理 | 零冲突，仅 `tabs/entity.rs` 测试。依赖 #63 把上限提到 16，dev 当前为 4，需与 #63 同批处理 | — |
+| 67 | `b11057b9c` | 标签拖放测试对齐窗格上限 | 测试 | ✅ | cherry-pick 合入 | 零冲突，仅 `tabs/entity.rs` 测试。依赖 #63 把上限提到 16，同批合入：`detached_page_drop_uses_the_destination_leaf_and_preserves_owners` 先按 `MAX_PANES_PER_TAB` 填满、再溢出一个窗格，验证超限丢弃不改变两侧布局树与会话位置，并验证删掉溢出行后能在上限处合并 | `003e20c1e` |
 | 68 | `62703e53a` | 扩充原生子系统架构图与所有权流程 | 文档 | ✅ | 手工移植 | 代码零冲突，但正文夹带 main 独有能力。按文档跟随所属代码领域的原则改回 dev 实测行为后合入：删除 BLE 后端（`session/ble.rs` 与 `oxideterm-ble` 在 dev 不存在）、`MAX_PANES_PER_TAB` 由 16 改回 4、删除平铺与窗格放大（dev 只有 `move_terminal_pane_to_tab`/`combine_pages`，无 `zoomed_panes`），en 与 zh-Hans 同步 | `67f65ec53`、`9410f170b` |
 | 69 | `d9ce2404c` | 开发者与用户指南修订 | 文档 | ✅ | 手工移植 | 零代码冲突。`runtime-ownership.md` 同批夹带 main 的 `MAX_PANES_PER_TAB` (16) 与 tiling 描述，改回 dev 的 4 与「拆分/合并」后合入；其余为 crate-map 入口表、CLI 同步命令说明与 IDE 访问方式，已核对 `cloud-sync sync/push/pull/apply`、`--strategy local-wins`、Pure Shell/Agent 访问、目录监控能力在 dev 均存在 | `e3a555f9f` |
 | 70 | `30656e547` | 可选连续曲率圆角 | 渲染 / 图形底座 | ✅ | cherry-pick 合入 | 唯一冲突 `OXIDETERM_PATCHES.md`：dev 已有「Window level pinning and macOS hover ownership」一节，与上游「Optional continuous Bézier corners」相邻，两节并列保留。引入 `CornerShape`、`Window::set_corner_shape`、Metal/HLSL/WGSL 三后端轮廓、`CornerStyle` 设置与 11 个语言包标签 | `0494ed3c3` |
