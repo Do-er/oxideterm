@@ -265,6 +265,13 @@ impl WorkspaceApp {
                 self.tokens.ui.text_muted,
                 cx,
             ))
+            .child(self.render_selectable_text_scoped(
+                "settings-help-legal",
+                "fork",
+                self.i18n.t("settings_view.help.fork_notice"),
+                self.tokens.ui.text_muted,
+                cx,
+            ))
             .child(self.help_outline_button(
                 self.i18n.t("settings_view.help.third_party_notices"),
                 LucideIcon::BookOpen,

@@ -1703,6 +1703,7 @@
       "safety_secrets": "Thông tin xác thực và API key nên được giữ trong kho bảo mật của hệ thống khi được hỗ trợ. Trước khi chia sẻ nhật ký, ảnh chụp, gói xuất, chẩn đoán hoặc prompt, hãy kiểm tra và che bí mật, tên máy chủ, tên người dùng và đường dẫn nội bộ.",
       "safety_ai": "OxideSens chỉ gửi ngữ cảnh do người dùng chọn đến endpoint mô hình đã cấu hình. Hãy xem lại gợi ý và lệnh của AI trước khi thực thi, và không gửi khóa riêng, mật khẩu, bí mật sản xuất hoặc dữ liệu chịu quản lý cho mô hình.",
       "license": "OxideTerm là phần mềm tự do được cấp phép theo Giấy phép Công cộng GNU v3.0 (GPL-3.0).",
+      "fork_notice": "Đây là bản fork cộng đồng của OxideTerm do Do-er duy trì, không phải bản phát hành chính thức.",
       "copyright": "Bản quyền © {{year}} {{author}}",
       "shortcut_keyboard_shortcuts": "Phím tắt bàn phím",
       "check_update": "Kiểm tra cập nhật",

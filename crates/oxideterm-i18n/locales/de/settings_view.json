@@ -1703,6 +1703,7 @@
       "safety_secrets": "Zugangsdaten und API-Schlüssel sollten, sofern unterstützt, im sicheren Systemspeicher bleiben. Prüfen und schwärzen Sie Geheimnisse, Hostnamen, Benutzernamen und interne Pfade, bevor Sie Logs, Screenshots, Exporte, Diagnosen oder Prompts teilen.",
       "safety_ai": "OxideSens sendet nur vom Benutzer ausgewählten Kontext an den konfigurierten Modell-Endpunkt. Prüfen Sie KI-Vorschläge und Befehle vor der Ausführung und senden Sie keine privaten Schlüssel, Passwörter, Produktionsgeheimnisse oder regulierten Daten an Modelle.",
       "license": "OxideTerm ist freie Software unter der GNU General Public License v3.0 (GPL-3.0).",
+      "fork_notice": "Dies ist ein Community-Fork von OxideTerm, gepflegt von Do-er, und keine offizielle OxideTerm-Version.",
       "copyright": "Urheberrecht © {{year}} {{author}}",
       "shortcut_keyboard_shortcuts": "Tastenkürzel",
       "check_update": "Nach Updates suchen",

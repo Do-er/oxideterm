@@ -1703,6 +1703,7 @@
       "safety_secrets": "凭据和 API Key 应尽量保存在系统安全存储中。分享日志、截图、导出包、诊断信息或提示词前，请先检查并脱敏秘密、主机名、用户名和内部路径。",
       "safety_ai": "OxideSens 只会把用户选择的上下文发送到配置的模型端点。执行前请审查 AI 建议和命令，不要把私钥、密码、生产秘密或受监管数据发送给模型。",
       "license": "OxideTerm 是基于 GNU 通用公共许可证 v3.0 (GPL-3.0) 的开源软件。",
+      "fork_notice": "本应用是 OxideTerm 的社区定制分支，由 Do-er 维护，非官方发布版本。",
       "copyright": "版权所有 © {{year}} {{author}}",
       "shortcut_keyboard_shortcuts": "键盘快捷键",
       "check_update": "检查更新",
