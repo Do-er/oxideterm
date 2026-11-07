@@ -52,7 +52,7 @@ dev 自合并基点 `f2593f3bd` 起改动 270 个文件，集中在 `gpui-app`(1
 
 共 79 个提交，全部已处置。只追加，不删行。
 
-`处置` 取值及本表分布：`直接继承` 4、`cherry-pick 合入` 53、`手工移植` 11、`不同步` 11。
+`处置` 取值及本表分布：`直接继承` 4、`cherry-pick 合入` 53、`手工移植` 12、`不同步` 10。
 
 | # | main 提交 | 内容 | 领域 | 状态 | 处置 | 说明 | dev 侧提交 |
 | --- | --- | --- | --- | --- | --- | --- | --- |
@@ -67,7 +67,7 @@ dev 自合并基点 `f2593f3bd` 起改动 270 个文件，集中在 `gpui-app`(1
 | 9 | `20da6d5cf` | 分组视图中区分 SSH 端口与跳板路由展示 | 应用层 UI | ✅ | 不同步 | #7 的显示修复，无独立宿主：`session_group_connection_name`、`render_session_group_member_label`、`ActiveSessionSidebarViewMode::Host` 均只由 #7 引入，dev 零引用。两项改进 dev 已具备：端口贴在截断名称后（`sessions.rs` 的 `port_text`）区分同名不同端口；跳板路径由树层级表达。唯一缺失的跳板路径 tooltip 已确认不需要 | — |
 | 10 | `978b70fc3` | CI 去重 Linux 检查，跳过 draft 与文档类重任务 | CI | ✅ | cherry-pick 合入 | — | `886ed5330` |
 | 11 | `c05a8f665` | push 时不再重复执行平台检查 | CI | ✅ | cherry-pick 合入 | — | `07ee7e0c5` |
-| 12 | `8631ffaaa` | SFTP 树视图、终端目录同步、拖放上传、路径书签、连接即开 SFTP | 应用层 UI | ✅ | 不同步 | 73 个文件。`git merge-tree` 预览仅 3 处冲突：`sidebar/sessions.rs`、`session_manager/views.rs`（dev 已删除 main 的 Active Session 焦点/面包屑模型）、`new_connection/ssh_flow/save.rs`（`open_sftp_on_connect` 参数）。SFTP 侧 `sftp/{tree,bookmarks,file_list,menus}.rs` 在 dev 与合并基点一致，可原样落地。不采纳的原因是功能取舍：dev 侧 SFTP 使用需求低，故不承担这三处会话侧边栏改写 | — |
+| 12 | `8631ffaaa` | SFTP 树视图、终端目录同步、拖放上传、路径书签、连接即开 SFTP | 应用层 UI | ✅ | 手工移植 | 73 个文件，按功能拆分后只移植三项：路径书签（`sftp/bookmarks.rs` 独立 JSON 持久化 + 右键菜单 + 重命名对话框）、终端目录同步（工具栏按钮向配对终端窗格发送 `cd`）、终端拖放上传（终端 crate 只把 OS 路径交给 Workspace，由 Workspace 解出窗格 cwd 后走 SFTP 上传）。树视图与连接即开 SFTP 不移植。`git merge-tree` 复核为 5 文件 7 处冲突，多于早先记录的 3 处：除 `sidebar/sessions.rs`、`session_manager/views.rs`（dev 已删除 main 的 Active Session 焦点/面包屑模型，仅邻接冲突）与 `new_connection/ssh_flow/save.rs`（`open_sftp_on_connect` 参数）外，dev 在 2026-10-31 之后的改动又使 `sftp/file_list.rs`、`gpui-terminal/src/app/render.rs` 进入冲突集 | `51c71c5c6` |
 | 13 | `a04862646` | ProxyCommand 辅助进程在 Windows 上不弹控制台窗口 | 协议 / 依赖底层 | ✅ | cherry-pick 合入 | — | `d74d9ceb7` |
 | 14 | `5097dfdfd` | SFTP 树循环防护，操作路由到安全目标 | 应用层 UI | ✅ | 不同步 | 依赖 #12；`sftp/tree.rs` 在 dev 中不存在，循环防护无宿主。dev 若需要树视图应连同 cycle guard 一起自研 | — |
 | 15 | `f0c9e3975` | Markdown 预览支持选中与复制文本 | 编辑器 / IDE 内核 | ✅ | cherry-pick 合入 | — | `726a29de4` |
