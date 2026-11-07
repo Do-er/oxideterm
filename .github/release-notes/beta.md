@@ -60,6 +60,5 @@ sudo dpkg -i OxideTerm_*_linux_*.deb && sudo apt-get install -f
 
 ## Links
 
-- Documentation: https://oxideterm.app
-- GitHub Issues: https://github.com/AnalyseDeCircuit/oxideterm/issues
-- Changelog: https://github.com/AnalyseDeCircuit/oxideterm/tree/main/docs/changelog
+- GitHub: https://github.com/Do-er/oxideterm
+- Changelog: https://github.com/Do-er/oxideterm/blob/dev/.github/release-notes/stable-changelog.md
