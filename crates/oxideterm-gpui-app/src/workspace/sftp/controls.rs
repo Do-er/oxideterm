@@ -151,6 +151,82 @@ impl WorkspaceApp {
         )
     }
 
+    pub(in crate::workspace::sftp) fn render_sftp_sync_terminal_directory_button(
+        &self,
+        cx: &mut Context<Self>,
+    ) -> AnyElement {
+        let path = self.sftp_terminal_sync_target_path(cx);
+        let enabled = self.sftp_terminal_target_pane(cx).is_some() && !path.is_empty();
+        let mut title = self.i18n.t("sftp.toolbar.sync_directory_to_terminal");
+        title.push('\n');
+        if path.is_empty() {
+            title.push_str(&self.i18n.t("sftp.toolbar.terminal_directory_unavailable"));
+        } else {
+            title.push_str(&path);
+        }
+        self.workspace_tooltip_icon_button(
+            LucideIcon::FolderSync,
+            SFTP_ICON_SM,
+            rgb(self.tokens.ui.text),
+            IconButtonOptions {
+                disabled: !enabled,
+                ..IconButtonOptions::opaque_toolbar(SFTP_TOOL_BUTTON, ButtonRadius::Md)
+            },
+            title,
+            "sftp-sync-terminal-directory",
+            true,
+            self.sftp_listener(cx, |this, _event, window, cx| {
+                // The sync action focuses the terminal pane itself; focusing the
+                // workspace root here would steal that focus back.
+                this.sync_sftp_directory_to_terminal(window, cx);
+                cx.stop_propagation();
+            }),
+            cx.entity(),
+        )
+    }
+
+    pub(in crate::workspace::sftp) fn render_sftp_bookmarks_button(
+        &self,
+        cx: &mut Context<Self>,
+    ) -> AnyElement {
+        // A remote-to-remote pair has no local pane; the saved pair would be
+        // ambiguous, so the entry point is disabled with an explanatory tooltip.
+        let pair_mode = self.sftp_pair_primary_remote_id(cx).is_some();
+        let has_remote = self.sftp_view().read(cx).current_remote_id.is_some();
+        let title = if pair_mode {
+            self.i18n.t("sftp.bookmarks.unavailable_pair")
+        } else {
+            self.i18n.t("sftp.bookmarks.title")
+        };
+        self.workspace_tooltip_icon_button(
+            LucideIcon::Star,
+            SFTP_ICON_SM,
+            rgb(self.tokens.ui.text),
+            IconButtonOptions {
+                disabled: pair_mode || !has_remote,
+                ..IconButtonOptions::opaque_toolbar(SFTP_TOOL_BUTTON, ButtonRadius::Md)
+            },
+            title,
+            "sftp-bookmarks",
+            true,
+            self.sftp_listener(cx, |this, event: &MouseDownEvent, _window, cx| {
+                this.ensure_sftp_path_bookmarks_loaded();
+                let open = this.sftp_view().read(cx).bookmark_menu.is_some();
+                let next = (!open).then(|| SftpBookmarkMenu {
+                    x: f32::from(event.position.x),
+                    y: f32::from(event.position.y),
+                });
+                this.sftp_view().update(cx, |sftp, cx| {
+                    sftp.dismiss_context_menu(cx);
+                    sftp.bookmark_menu = next;
+                    cx.notify();
+                });
+                cx.stop_propagation();
+            }),
+            cx.entity(),
+        )
+    }
+
     pub(in crate::workspace::sftp) fn render_sftp_refresh_button(
         &self,
         pane: SftpPane,

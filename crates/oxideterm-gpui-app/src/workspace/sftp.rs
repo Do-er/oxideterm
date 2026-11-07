@@ -50,8 +50,11 @@ use std::{
     time::{Duration, Instant},
 };
 
+pub(in crate::workspace) mod bookmarks;
 pub(super) mod ftp;
 pub(super) mod native_video;
+
+pub(in crate::workspace) use bookmarks::SftpPathBookmark;
 
 use native_video::{SharedSftpNativeVideoSurface, sftp_native_video_element};
 
@@ -698,6 +701,14 @@ struct SftpContextMenu {
     y: f32,
 }
 
+/// Window-anchored bookmark popover; the bookmark data itself lives on
+/// `WorkspaceApp` because it is shared across SFTP tabs.
+#[derive(Clone, Copy, Debug)]
+pub(in crate::workspace) struct SftpBookmarkMenu {
+    x: f32,
+    y: f32,
+}
+
 #[derive(Clone, Copy, Debug, Eq, PartialEq)]
 enum SftpSortField {
     Name,
@@ -967,6 +978,9 @@ pub(super) enum SftpDialog {
         pane: SftpPane,
         old_name: String,
     },
+    BookmarkRename {
+        bookmark_id: String,
+    },
     NewFolder {
         pane: SftpPane,
     },
@@ -1113,6 +1127,7 @@ pub(super) struct SftpWorkspaceEntity {
     context_menu: Option<SftpContextMenu>,
     context_menu_presence: oxideterm_gpui_ui::motion::ExitPresence,
     context_menu_exit_generation: Option<u64>,
+    bookmark_menu: Option<SftpBookmarkMenu>,
     folder_picker_task: Option<Task<()>>,
     drag_state: Option<SftpDragState>,
     drag_over_pane: Option<SftpPane>,
@@ -1262,6 +1277,7 @@ impl Default for SftpWorkspaceEntity {
             context_menu: None,
             context_menu_presence: oxideterm_gpui_ui::motion::ExitPresence::visible(),
             context_menu_exit_generation: None,
+            bookmark_menu: None,
             folder_picker_task: None,
             drag_state: None,
             drag_over_pane: None,
@@ -1594,9 +1610,10 @@ impl SftpWorkspaceEntity {
 
     pub(super) fn clear_context_menu_immediately(&mut self) -> bool {
         let changed = self.context_menu.take().is_some();
+        let bookmark_changed = self.bookmark_menu.take().is_some();
         self.context_menu_exit_generation = None;
         self.context_menu_presence.reopen();
-        changed
+        changed || bookmark_changed
     }
 
     pub(in crate::workspace::sftp) fn activate_file(

@@ -1,6 +1,63 @@
 use super::dialog_lifecycle::sftp_i18n_count;
 use super::*;
 
+pub(in crate::workspace::sftp) fn build_sftp_pending_uploads(
+    paths: &[std::path::PathBuf],
+) -> Vec<SftpPendingTransfer> {
+    paths
+        .iter()
+        .filter_map(|path| {
+            let normalized = normalize_external_dropped_path(path)?;
+            let metadata = std::fs::symlink_metadata(&normalized).ok()?;
+            let name = normalized.file_name()?.to_string_lossy().to_string();
+            if name.is_empty() {
+                return None;
+            }
+            let modified = metadata
+                .modified()
+                .ok()
+                .and_then(|mtime| mtime.duration_since(std::time::UNIX_EPOCH).ok())
+                .map(|duration| duration.as_secs() as i64);
+            let source = SftpFileEntry {
+                name: name.clone(),
+                path: normalized.to_string_lossy().to_string(),
+                file_type: if metadata.is_dir() {
+                    SftpFileType::Directory
+                } else {
+                    SftpFileType::File
+                },
+                size_known: true,
+                size: metadata.len(),
+                modified,
+                permissions: None,
+                owner: None,
+                group: None,
+                is_symlink: metadata.file_type().is_symlink(),
+                symlink_target: std::fs::read_link(&normalized)
+                    .ok()
+                    .map(|target| target.to_string_lossy().to_string()),
+            };
+            Some(SftpPendingTransfer {
+                name,
+                direction: SftpTransferDirection::Upload,
+                source,
+                protocol_override: None,
+            })
+        })
+        .collect()
+}
+
+pub(in crate::workspace::sftp) fn sftp_terminal_drop_conflict_resolution(
+    action: oxideterm_settings::ConflictAction,
+) -> SftpConflictResolution {
+    match action {
+        // A terminal drop has no visible SFTP dialog to ask through; keep both
+        // files instead of silently overwriting the destination.
+        oxideterm_settings::ConflictAction::Ask => SftpConflictResolution::Rename,
+        other => sftp_conflict_resolution_from_settings(other),
+    }
+}
+
 struct SftpTransferLaunch {
     id: u64,
     transfer_id: String,
@@ -158,6 +215,7 @@ impl SftpWorkspaceEntity {
         remote_id: SftpRemoteId,
         pending_transfers: Vec<SftpPendingTransfer>,
         resolved_actions: HashMap<String, SftpConflictResolution>,
+        upload_target: Option<(&str, &[SftpFileEntry])>,
         configured_protocol: RemoteTransferProtocol,
         cx: &mut Context<Self>,
     ) -> Vec<SftpTransferLaunch> {
@@ -165,8 +223,13 @@ impl SftpWorkspaceEntity {
             return Vec::new();
         };
 
-        // Resolve names against the current target snapshot before mutating queue state.
-        let target_files = self.target_files(direction);
+        // Resolve names against the target snapshot before mutating queue state.
+        // Explicit upload targets (terminal drop) are resolved against the
+        // destination directory, not the SFTP pane's visible directory.
+        let target_files = match upload_target {
+            Some((_, target_files)) => target_files,
+            None => self.target_files(direction),
+        };
         let mut batch = SftpTransferBatch {
             direction,
             total: 0,
@@ -212,7 +275,12 @@ impl SftpWorkspaceEntity {
                 SftpTransferDirection::Download => join_local_path(&self.local_path, &target_name),
             };
             let remote_path = match direction {
-                SftpTransferDirection::Upload => join_sftp_path(&self.remote_path, &target_name),
+                SftpTransferDirection::Upload => {
+                    let target_dir = upload_target
+                        .map(|(target_dir, _)| target_dir)
+                        .unwrap_or(&self.remote_path);
+                    join_sftp_path(target_dir, &target_name)
+                }
                 SftpTransferDirection::Download => transfer.source.path,
             };
             let protocol = transfer.protocol_override.unwrap_or(configured_protocol);
@@ -443,7 +511,16 @@ impl WorkspaceApp {
         if pending_transfers.is_empty() {
             return;
         }
+        self.queue_sftp_pending_transfers(remote_id, pane, pending_transfers, cx);
+    }
 
+    fn queue_sftp_pending_transfers(
+        &mut self,
+        remote_id: SftpRemoteId,
+        pane: SftpPane,
+        pending_transfers: Vec<SftpPendingTransfer>,
+        cx: &mut Context<Self>,
+    ) {
         let conflict_action = self.settings_store.settings().sftp.conflict_action;
         let conflicts = self
             .sftp_view()
@@ -466,7 +543,13 @@ impl WorkspaceApp {
                 )
             })
             .collect::<HashMap<_, _>>();
-        self.execute_sftp_pending_transfers(remote_id, pending_transfers, resolved_actions, cx);
+        self.execute_sftp_pending_transfers(
+            remote_id,
+            pending_transfers,
+            resolved_actions,
+            None,
+            cx,
+        );
         self.clear_sftp_selection(pane, cx);
     }
 
@@ -496,47 +579,7 @@ impl WorkspaceApp {
         paths: &[std::path::PathBuf],
         cx: &mut Context<Self>,
     ) {
-        let pending_transfers = paths
-            .iter()
-            .filter_map(|path| {
-                let normalized = normalize_external_dropped_path(path)?;
-                let metadata = std::fs::symlink_metadata(&normalized).ok()?;
-                let name = normalized.file_name()?.to_string_lossy().to_string();
-                if name.is_empty() {
-                    return None;
-                }
-                let modified = metadata
-                    .modified()
-                    .ok()
-                    .and_then(|mtime| mtime.duration_since(std::time::UNIX_EPOCH).ok())
-                    .map(|duration| duration.as_secs() as i64);
-                let source = SftpFileEntry {
-                    name: name.clone(),
-                    path: normalized.to_string_lossy().to_string(),
-                    file_type: if metadata.is_dir() {
-                        SftpFileType::Directory
-                    } else {
-                        SftpFileType::File
-                    },
-                    size_known: true,
-                    size: metadata.len(),
-                    modified,
-                    permissions: None,
-                    owner: None,
-                    group: None,
-                    is_symlink: metadata.file_type().is_symlink(),
-                    symlink_target: std::fs::read_link(&normalized)
-                        .ok()
-                        .map(|target| target.to_string_lossy().to_string()),
-                };
-                Some(SftpPendingTransfer {
-                    name,
-                    direction: SftpTransferDirection::Upload,
-                    source,
-                    protocol_override: None,
-                })
-            })
-            .collect::<Vec<_>>();
+        let pending_transfers = build_sftp_pending_uploads(paths);
         if pending_transfers.is_empty() {
             return;
         }
@@ -564,7 +607,13 @@ impl WorkspaceApp {
                 )
             })
             .collect::<HashMap<_, _>>();
-        self.execute_sftp_pending_transfers(remote_id, pending_transfers, resolved_actions, cx);
+        self.execute_sftp_pending_transfers(
+            remote_id,
+            pending_transfers,
+            resolved_actions,
+            None,
+            cx,
+        );
     }
 
     pub(in crate::workspace::sftp) fn execute_sftp_pending_transfers(
@@ -572,9 +621,15 @@ impl WorkspaceApp {
         remote_id: SftpRemoteId,
         pending_transfers: Vec<SftpPendingTransfer>,
         resolved_actions: HashMap<String, SftpConflictResolution>,
+        upload_target: Option<(&str, &[SftpFileEntry])>,
         cx: &mut Context<Self>,
     ) {
-        let pair_primary_remote_id = self.sftp_pair_primary_remote_id(cx);
+        // Explicit upload targets (terminal drop) must never inherit a pair
+        // view from the currently visible SFTP surface.
+        let pair_primary_remote_id = upload_target
+            .is_none()
+            .then(|| self.sftp_pair_primary_remote_id(cx))
+            .flatten();
         let configured_protocol = if pair_primary_remote_id.is_some() {
             RemoteTransferProtocol::Sftp
         } else {
@@ -585,6 +640,7 @@ impl WorkspaceApp {
                 remote_id.clone(),
                 pending_transfers,
                 resolved_actions,
+                upload_target,
                 configured_protocol,
                 cx,
             )
@@ -646,6 +702,7 @@ impl WorkspaceApp {
                     remote_id,
                     pending_transfers,
                     resolved_actions,
+                    None,
                     cx,
                 );
             }
@@ -769,4 +826,117 @@ fn format_sftp_remote_extract_error(output: oxideterm_ssh::SshCommandOutput) -> 
         message.push_str(" (output truncated)");
     }
     message
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+    use gpui::TestAppContext;
+
+    fn file(name: &str, path: &str, file_type: SftpFileType) -> SftpFileEntry {
+        SftpFileEntry {
+            name: name.to_string(),
+            path: path.to_string(),
+            file_type,
+            size_known: true,
+            size: 1,
+            modified: None,
+            permissions: None,
+            owner: None,
+            group: None,
+            is_symlink: false,
+            symlink_target: None,
+        }
+    }
+
+    fn pending(name: &str) -> SftpPendingTransfer {
+        SftpPendingTransfer {
+            name: name.to_string(),
+            direction: SftpTransferDirection::Upload,
+            source: SftpFileEntry {
+                name: name.to_string(),
+                path: format!("C:\\local\\{name}"),
+                file_type: SftpFileType::File,
+                size_known: true,
+                size: 1,
+                modified: None,
+                permissions: None,
+                owner: None,
+                group: None,
+                is_symlink: false,
+                symlink_target: None,
+            },
+            protocol_override: None,
+        }
+    }
+
+    #[gpui::test]
+    fn terminal_drop_uploads_use_explicit_target_directory(cx: &mut TestAppContext) {
+        let entity = cx.new(SftpWorkspaceEntity::new);
+        entity.update(cx, |sftp, _cx| {
+            sftp.remote_path = "/visible".to_string();
+        });
+        let target_files = vec![file(
+            "existing.txt",
+            "/target/existing.txt",
+            SftpFileType::File,
+        )];
+        let launches = entity.update(cx, |sftp, cx| {
+            sftp.prepare_transfer_launches(
+                SftpRemoteId::Node(NodeId::new("node")),
+                vec![pending("dropped.txt")],
+                HashMap::new(),
+                Some(("/target", &target_files)),
+                RemoteTransferProtocol::Sftp,
+                cx,
+            )
+        });
+        assert_eq!(launches.len(), 1);
+        assert_eq!(launches[0].remote_path, "/target/dropped.txt");
+        assert_ne!(launches[0].remote_path, "/visible/dropped.txt");
+    }
+
+    #[gpui::test]
+    fn terminal_drop_rename_conflict_uses_target_snapshot(cx: &mut TestAppContext) {
+        let entity = cx.new(SftpWorkspaceEntity::new);
+        let target_files = vec![file(
+            "dropped.txt",
+            "/target/dropped.txt",
+            SftpFileType::File,
+        )];
+        let resolved_actions =
+            HashMap::from([("dropped.txt".to_string(), SftpConflictResolution::Rename)]);
+        let launches = entity.update(cx, |sftp, cx| {
+            sftp.prepare_transfer_launches(
+                SftpRemoteId::Node(NodeId::new("node")),
+                vec![pending("dropped.txt")],
+                resolved_actions,
+                Some(("/target", &target_files)),
+                RemoteTransferProtocol::Sftp,
+                cx,
+            )
+        });
+        assert_eq!(launches.len(), 1);
+        assert_eq!(launches[0].remote_path, "/target/dropped (1).txt");
+    }
+
+    #[test]
+    fn terminal_drop_ask_keeps_both_files() {
+        assert_eq!(
+            sftp_terminal_drop_conflict_resolution(oxideterm_settings::ConflictAction::Ask),
+            SftpConflictResolution::Rename
+        );
+        assert_eq!(
+            sftp_terminal_drop_conflict_resolution(oxideterm_settings::ConflictAction::Overwrite),
+            SftpConflictResolution::Overwrite
+        );
+        assert_eq!(
+            sftp_terminal_drop_conflict_resolution(oxideterm_settings::ConflictAction::Skip),
+            SftpConflictResolution::Skip
+        );
+        assert_eq!(
+            sftp_terminal_drop_conflict_resolution(oxideterm_settings::ConflictAction::Rename),
+            SftpConflictResolution::Rename
+        );
+    }
 }

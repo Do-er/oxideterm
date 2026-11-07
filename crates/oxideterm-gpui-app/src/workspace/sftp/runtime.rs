@@ -258,6 +258,7 @@ impl SftpWorkspaceEntity {
         self.drag_autoscroll_position = None;
         self.drag_autoscroll_scheduled = false;
         self.clear_context_menu_immediately();
+        self.bookmark_menu = None;
         self.begin_dialog_exit(Duration::ZERO, cx);
         // Transfer tasks own their remote consumer and survive removal of this UI projection.
         cx.notify();
@@ -919,11 +920,15 @@ impl WorkspaceApp {
         });
     }
 
-    pub(in crate::workspace::sftp) fn sftp_terminal_directory(&self, cx: &App) -> Option<String> {
-        if !self.terminal_current_directory_awareness_enabled() {
-            return None;
-        }
+    /// Resolve the terminal pane that a terminal-directory action should target.
+    ///
+    /// This intentionally does not consult the cwd-awareness setting: reading the
+    /// terminal cwd is gated by that setting, writing a `cd` command is not.
+    pub(in crate::workspace::sftp) fn sftp_terminal_target_pane(&self, cx: &App) -> Option<PaneId> {
         let remote = self.sftp_view().read(cx).current_remote_id.as_ref()?;
+        let SftpRemoteId::Node(node) = remote else {
+            return None;
+        };
         // A detached browser must not mistake the main window's selected tab for its focus.
         let active = match self.sftp_surface_id() {
             SftpSurfaceId::Sidebar => self.active_terminal_cwd_scope_and_pane(cx),
@@ -934,9 +939,6 @@ impl WorkspaceApp {
             active,
             &self.terminal.read(cx).last_ssh_terminal_panes,
         )?;
-        let SftpRemoteId::Node(node) = remote else {
-            return None;
-        };
         let session = self.session_id_for_pane(pane_id, cx)?;
         // Recheck the live registration: a closed or replaced pane cannot select another server.
         if self
@@ -948,6 +950,17 @@ impl WorkspaceApp {
         {
             return None;
         }
+        Some(pane_id)
+    }
+
+    pub(in crate::workspace::sftp) fn sftp_terminal_directory(&self, cx: &App) -> Option<String> {
+        if !self.terminal_current_directory_awareness_enabled() {
+            return None;
+        }
+        let pane_id = self.sftp_terminal_target_pane(cx)?;
+        let SftpRemoteId::Node(node) = self.sftp_view().read(cx).current_remote_id.clone()? else {
+            return None;
+        };
         let host = self.tab_host.read(cx);
         let pane = host.panes().get(&pane_id)?.read(cx);
         super::super::terminal_cwd::terminal_cwd_snapshot_from_pane(
@@ -955,6 +968,90 @@ impl WorkspaceApp {
             pane,
         )
         .map(|snapshot| snapshot.path().to_string())
+    }
+
+    /// Directory the sync action will send.
+    pub(in crate::workspace::sftp) fn sftp_terminal_sync_target_path(&self, cx: &App) -> String {
+        self.sftp_view()
+            .read(cx)
+            .remote_path
+            .trim()
+            .to_string()
+    }
+
+    /// Send the visible SFTP directory to the matching SSH terminal as a visible `cd`.
+    pub(in crate::workspace::sftp) fn sync_sftp_directory_to_terminal(
+        &mut self,
+        window: &mut Window,
+        cx: &mut Context<Self>,
+    ) {
+        let path = self.sftp_terminal_sync_target_path(cx);
+        if path.is_empty() {
+            return;
+        }
+        let Some(pane_id) = self.sftp_terminal_target_pane(cx) else {
+            return;
+        };
+        let Some(command) = oxideterm_environment::current_directory_cd_command(&path) else {
+            return;
+        };
+        let Some(pane) = self.tab_host.read(cx).panes().get(&pane_id).cloned() else {
+            return;
+        };
+        if !pane.read(cx).can_switch_working_directory_from_chrome() {
+            self.push_sftp_toast(
+                self.i18n.t("sftp.toast.sync_terminal_busy"),
+                None,
+                TerminalNoticeVariant::Error,
+                cx,
+            );
+            return;
+        }
+        // The SFTP path bar may still look focused after the terminal takes over.
+        self.sftp_view().update(cx, |sftp, cx| {
+            sftp.clear_input_focus(cx);
+            sftp.dismiss_context_menu(cx);
+        });
+        let sent = pane.update(cx, |pane, cx| {
+            if !pane.send_command_line(&command, cx) {
+                return false;
+            }
+            // The command mark remains authoritative for success/rollback.
+            pane.set_pending_current_working_directory_from_terminal_action(
+                path.clone(),
+                command.clone(),
+                cx,
+            );
+            true
+        });
+        if !sent {
+            self.push_sftp_toast(
+                self.i18n.t("sftp.toast.sync_terminal_failed"),
+                None,
+                TerminalNoticeVariant::Error,
+                cx,
+            );
+            return;
+        }
+        let tab_id = self
+            .tabs(cx)
+            .iter()
+            .find(|tab| {
+                tab.root_pane
+                    .as_ref()
+                    .is_some_and(|root| root.contains_pane(pane_id))
+            })
+            .map(|tab| tab.id);
+        let Some(tab_id) = tab_id else {
+            return;
+        };
+        self.tab_host
+            .update(cx, |host, _| host.set_active_pane(Some(tab_id), pane_id));
+        if !self.tab_host.read(cx).is_outside_main_window(tab_id) {
+            self.set_main_window_active_tab(Some(tab_id), cx);
+            self.focus_active_pane(window, cx);
+        }
+        cx.notify();
     }
 
     pub(in crate::workspace::sftp) fn reveal_sftp_terminal_directory(
