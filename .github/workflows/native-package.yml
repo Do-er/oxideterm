@@ -1,5 +1,5 @@
 name: Native Package
-run-name: Native Package ${{ inputs.release_tag || inputs.version || github.sha }}
+run-name: Native Package ${{ inputs.release_tag || inputs.version || github.ref_name || github.sha }}
 
 on:
   workflow_dispatch:
@@ -17,12 +17,17 @@ on:
         required: false
         default: false
         type: boolean
+  # Fork release path: pushing a v* tag publishes that tag directly without a
+  # dispatch. The main-scoped workflow_dispatch path is kept for cache warmth.
+  push:
+    tags:
+      - 'v*'
 
 permissions:
   contents: read
 
 concurrency:
-  group: native-package-${{ inputs.release_tag || github.sha }}
+  group: native-package-${{ inputs.release_tag || github.ref_name || github.sha }}
   cancel-in-progress: true
 
 jobs:
@@ -55,7 +60,16 @@ jobs:
           release_commit="${GITHUB_SHA}"
           release_tag=""
 
-          if [[ "${INPUT_UPLOAD_RELEASE}" == "true" ]]; then
+          if [[ "${GITHUB_REF_TYPE}" == "tag" ]]; then
+            # Tag pushes self-select the release: GITHUB_SHA is already the tagged
+            # commit, so the working-tree Cargo.toml is the tagged workspace version.
+            release_tag="${GITHUB_REF_NAME}"
+            if [[ ! "${release_tag}" =~ ^(v|native-v|gpui-v)[0-9]+\.[0-9]+\.[0-9]+(-[0-9A-Za-z-]+(\.[0-9A-Za-z-]+)*)?$ ]]; then
+              echo "Unsupported release tag: ${release_tag}" >&2
+              exit 1
+            fi
+            raw_version="${release_tag}"
+          elif [[ "${INPUT_UPLOAD_RELEASE}" == "true" ]]; then
             if [[ "${GITHUB_REF}" != "refs/heads/main" ]]; then
               echo "Release publishing must be dispatched from main, not ${GITHUB_REF}." >&2
               exit 1
@@ -428,7 +442,7 @@ jobs:
       - validate-release-request
       - package
     runs-on: ubuntu-latest
-    if: inputs.upload_release
+    if: inputs.upload_release || github.event_name == 'push'
     permissions:
       contents: write
     outputs:
@@ -600,7 +614,7 @@ jobs:
     name: Generate updater manifest
     needs: release
     runs-on: ubuntu-latest
-    if: inputs.upload_release
+    if: inputs.upload_release || github.event_name == 'push'
     permissions:
       contents: write
     steps:
@@ -874,7 +888,7 @@ jobs:
       - release
       - publish-updater
     runs-on: ubuntu-latest
-    if: inputs.upload_release
+    if: inputs.upload_release || github.event_name == 'push'
     permissions:
       contents: write
     steps:
@@ -907,7 +921,7 @@ jobs:
       - publish-updater
       - cleanup-sigs
     runs-on: ubuntu-latest
-    if: inputs.upload_release
+    if: inputs.upload_release || github.event_name == 'push'
     permissions:
       contents: read
     steps:

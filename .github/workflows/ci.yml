@@ -3,7 +3,8 @@ name: CI
 on:
   workflow_dispatch:
   push:
-    branches: [main, experiment/rust-native-v2]
+    branches:
+      - experiment/rust-native-v2
     paths:
       - 'crates/**'
       - 'scripts/**'
