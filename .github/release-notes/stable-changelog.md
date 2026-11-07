@@ -3,6 +3,84 @@
 Stable releases are listed newest first. The release workflow uses each versioned
 section as the detailed changelog attached to the corresponding GitHub Release.
 
+## 3.0.0
+
+### 中文
+
+OxideTerm 3.0.0 是由 Do-er 维护的社区定制分支的首个版本，包含上游 v2.2.6 及其后主干更新的全部功能，并从本版起使用独立的 3.x 版本号。除上游能力外，本分支加入以下自有更新：
+
+#### 🖥️ 主机工具
+
+- 主机工具支持在本地机器上运行。
+- 支持 Zellij 和 Herdr 会话与 tmux 并行管理。
+- 本地命令保留宿主目标并约束本地进程生命周期。
+
+#### 🗂️ SFTP
+
+- 新增路径书签：保存常用本地/远程目录组合并快速切换。
+- 新增同步终端目录：向配对的终端发送 cd 到当前目录。
+- 支持把系统文件拖入 SSH 终端面板，通过 SFTP 上传到当前目录。
+- 悬停文件时显示完整的本地修改时间。
+- SFTP 界面跟随应用字号设置缩放。
+
+#### ⌨️ 终端
+
+- 支持平铺选中的活动会话并单独缩放面板。
+- 修复历史建议的恢复，并允许覆盖导航按键。
+
+#### 🌐 SSH 与转发
+
+- 命令条显示共享连接的延迟。
+- 支持原地启动选中的 SSH 隧道。
+
+#### 🍎 macOS 与外观
+
+- macOS 新增可配置的隐藏与最小化快捷键。
+- 外观支持可选择的连续圆角。
+
+#### 📦 分支发布
+
+- 帮助页保留上游版权，并新增社区分支标识（11 种语言）。
+- 发布流水线改为由 v* tag 触发，版本号独立于上游仓库。
+
+### English
+
+OxideTerm 3.0.0 is the first release of the Do-er-maintained community fork, carrying all upstream v2.2.6 features and the mainline updates after it, and starting an independent 3.x version line. On top of upstream capabilities, this fork adds:
+
+#### 🖥️ Host Tools
+
+- Host Tools can run on the local machine.
+- Zellij and Herdr sessions are managed alongside tmux.
+- Local commands preserve host targets and bound local process lifetimes.
+
+#### 🗂️ SFTP
+
+- Path bookmarks save frequent local/remote directory pairs for quick switching.
+- Sync terminal directory sends a cd to the paired terminal pane.
+- OS files dropped on an SSH pane upload through SFTP into its current directory.
+- Hovering a file shows the full local modification time.
+- The SFTP surface follows the application font size setting.
+
+#### ⌨️ Terminal
+
+- Selected live sessions can be tiled and panes zoomed individually.
+- History suggestions recover correctly, and navigation key overrides are allowed.
+
+#### 🌐 SSH and Forwarding
+
+- The command bar shows shared connection latency.
+- Selected SSH tunnels can be started in place.
+
+#### 🍎 macOS and Appearance
+
+- macOS gains configurable hide and minimize shortcuts.
+- Appearance supports selectable continuous corners.
+
+#### 📦 Fork releases
+
+- The Help & About footer keeps the upstream copyright and adds a community-fork notice in all 11 locales.
+- Release packaging is triggered by v* tags, with versioning independent of the upstream repository.
+
 ## 2.2.6
 
 ### 中文
