@@ -880,7 +880,7 @@
       "app_icon": "アプリアイコン",
       "app_icon_desc": "Dock またはタスクバーのアイコン色を選択します。",
       "app_icon_variant": "アイコンカラー",
-      "app_icon_variant_hint": "Dock やタスクバーに表示するアイコンの色を選びます。対応環境では実行中に反映されます。",
+      "app_icon_variant_hint": "ウィンドウを開き直すと反映される場合があります。",
       "theme": "テーマ",
       "theme_desc": "アプリとターミナルのテーマ、システム外観への追従を選択します。",
       "application_theme": "アプリのテーマ",

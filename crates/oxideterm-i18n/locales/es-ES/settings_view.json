@@ -880,7 +880,7 @@
       "app_icon": "Icono de la aplicación",
       "app_icon_desc": "Elige el color del icono del Dock o de la barra de tareas.",
       "app_icon_variant": "Color del icono",
-      "app_icon_variant_hint": "Elige el color del icono del Dock o de la barra de tareas. El cambio en ejecución se aplica en las plataformas compatibles.",
+      "app_icon_variant_hint": "Puede que los cambios se apliquen tras volver a abrir la ventana.",
       "theme": "Tema",
       "theme_desc": "Elige el tema de la aplicación y del terminal, y si seguir la apariencia del sistema.",
       "application_theme": "Tema de la aplicación",

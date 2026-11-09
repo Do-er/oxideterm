@@ -3,6 +3,28 @@
 Stable releases are listed newest first. The release workflow uses each versioned
 section as the detailed changelog attached to the corresponding GitHub Release.
 
+## 3.0.1
+
+### 中文
+
+OxideTerm 3.0.1 修复 Windows 安装版更换图标颜色后任务栏图标不更新的问题。Windows 11 会从与应用关联的快捷方式解析任务栏按钮的图标，而不读取运行中窗口的图标，导致图标变化只出现在托盘和 Alt+Tab 中。
+
+#### 🖥️ 任务栏图标
+
+- 安装版更换图标颜色时，同步改写开始菜单、桌面和任务栏固定快捷方式的图标指向所选颜色，并重建任务栏按钮使更改立即生效。
+- 每次启动会把快捷方式图标与已保存的图标颜色对齐，修正此前安装遗留的默认色快捷方式。
+- 无写权限的机器级快捷方式自动跳过，不影响其余快捷方式的更新。
+
+### English
+
+OxideTerm 3.0.1 fixes the Windows taskbar icon not updating after changing the icon color in installed builds. Windows 11 resolves the taskbar button icon from the shortcut associated with the installed executable instead of the live window icon, so icon changes only appeared in the tray and Alt+Tab.
+
+#### 🖥️ Taskbar icon
+
+- Changing the icon color rewrites the Start Menu, desktop, and taskbar-pinned shortcut icons to the selected variant and rebuilds the taskbar tab so the change applies immediately.
+- Every launch aligns shortcut icons with the saved icon color, fixing default-colored shortcuts left by earlier installs.
+- Machine-wide shortcuts without write permission are skipped without affecting the remaining shortcuts.
+
 ## 3.0.0
 
 ### 中文

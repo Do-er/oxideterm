@@ -880,7 +880,7 @@
       "app_icon": "Ícone do aplicativo",
       "app_icon_desc": "Escolha a cor do ícone do Dock ou da barra de tarefas.",
       "app_icon_variant": "Cor do ícone",
-      "app_icon_variant_hint": "Escolha a cor do ícone no Dock ou na barra de tarefas. A troca em tempo de execução é aplicada nas plataformas compatíveis.",
+      "app_icon_variant_hint": "Pode ser necessário reabrir a janela para aplicar a mudança.",
       "theme": "Tema",
       "theme_desc": "Escolha o tema do aplicativo e do terminal e se seguir a aparência do sistema.",
       "application_theme": "Tema do aplicativo",

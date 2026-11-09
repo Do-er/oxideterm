@@ -880,7 +880,7 @@
       "app_icon": "Biểu tượng ứng dụng",
       "app_icon_desc": "Chọn màu biểu tượng Dock hoặc thanh tác vụ.",
       "app_icon_variant": "Màu biểu tượng",
-      "app_icon_variant_hint": "Chọn màu biểu tượng trên Dock hoặc thanh tác vụ. Nền tảng hỗ trợ sẽ áp dụng ngay khi đang chạy.",
+      "app_icon_variant_hint": "Có thể cần mở lại cửa sổ để thay đổi có hiệu lực.",
       "theme": "Giao diện",
       "theme_desc": "Chọn chủ đề cho ứng dụng và terminal, đồng thời quyết định có theo giao diện hệ thống hay không.",
       "application_theme": "Giao diện ứng dụng",

@@ -880,7 +880,7 @@
       "app_icon": "App-Symbol",
       "app_icon_desc": "Wähle die Farbe des Dock- oder Taskleisten-Symbols.",
       "app_icon_variant": "Symbolfarbe",
-      "app_icon_variant_hint": "Wähle die Farbe des Dock- oder Taskleistensymbols. Laufzeitwechsel werden auf unterstützten Plattformen sofort angewendet.",
+      "app_icon_variant_hint": "Möglicherweise wird die Änderung erst nach dem erneuten Öffnen des Fensters wirksam.",
       "theme": "Design",
       "theme_desc": "Wähle das App- und Terminal-Theme und ob das Systemerscheinungsbild übernommen wird.",
       "application_theme": "Anwendungsdesign",

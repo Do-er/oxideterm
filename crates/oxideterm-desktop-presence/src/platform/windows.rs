@@ -192,6 +192,13 @@ pub(crate) fn set_application_icon(icon_path: &Path) -> anyhow::Result<()> {
         }
     }
 
+    // The taskbar button icon resolves from the shortcut Windows associates with
+    // the installed executable (implicit AppUserModelID), not from WM_SETICON, so
+    // keep the shell shortcuts pointing at the selected variant icon; a visible
+    // window then gets its taskbar tab rebuilt to re-resolve the new icon source.
+    let main_hwnd = (!main_hwnd.is_invalid()).then(|| main_hwnd.0 as isize);
+    super::windows_shortcuts::schedule_shortcut_icon_update(icon_path, main_hwnd);
+
     Ok(())
 }
 

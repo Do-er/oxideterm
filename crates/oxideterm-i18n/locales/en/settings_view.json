@@ -880,7 +880,7 @@
       "app_icon": "App Icon",
       "app_icon_desc": "Choose the Dock or taskbar icon color.",
       "app_icon_variant": "Icon Color",
-      "app_icon_variant_hint": "Choose the Dock/taskbar icon color. Runtime switching is applied where the platform supports it.",
+      "app_icon_variant_hint": "May take effect after reopening the window.",
       "theme": "Theme",
       "theme_desc": "Pick the application and terminal theme, and whether to follow the system appearance.",
       "application_theme": "Application theme",

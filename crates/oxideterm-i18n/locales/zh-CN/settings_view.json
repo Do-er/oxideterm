@@ -880,7 +880,7 @@
       "app_icon": "应用图标",
       "app_icon_desc": "选择 Dock 或任务栏图标颜色。",
       "app_icon_variant": "图标颜色",
-      "app_icon_variant_hint": "选择 Dock 或任务栏图标颜色。支持运行时切换的平台会立即生效。",
+      "app_icon_variant_hint": "可能要重新打开窗口后生效。",
       "theme": "主题",
       "theme_desc": "选择应用与终端主题，并决定是否跟随系统外观。",
       "application_theme": "应用主题",

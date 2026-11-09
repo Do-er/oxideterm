@@ -880,7 +880,7 @@
       "app_icon": "應用程式圖示",
       "app_icon_desc": "選擇 Dock 或工作列圖示顏色。",
       "app_icon_variant": "圖示顏色",
-      "app_icon_variant_hint": "選擇 Dock 或工作列圖示顏色。支援執行期間切換的平台會立即生效。",
+      "app_icon_variant_hint": "可能要重新開啟視窗後生效。",
       "theme": "主題",
       "theme_desc": "選擇應用程式與終端機主題，並決定是否跟隨系統外觀。",
       "application_theme": "應用程式主題",
